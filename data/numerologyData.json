@@ -1,0 +1,230 @@
+{
+  "lifePathNumbers": {
+    "1": {
+      "title": "The Leader",
+      "description": "Independent, pioneering, and ambitious. Natural leaders who like to take charge and initiate new projects.",
+      "strengths": ["Leadership", "Independence", "Innovation", "Determination", "Courage"],
+      "challenges": ["Impatience", "Stubbornness", "Selfishness", "Aggression", "Isolation"],
+      "loveCompatibility": ["Life Path 3", "Life Path 5", "Life Path 6"],
+      "careerPaths": ["CEO", "Entrepreneur", "Manager", "Inventor", "Pioneer"],
+      "luckyNumbers": [1, 10, 19, 28],
+      "luckyColors": ["Red", "Orange", "Yellow"],
+      "luckyStones": ["Ruby", "Garnet", "Diamond"],
+      "characteristics": ["Ambitious", "Self-reliant", "Original", "Dynamic", "Pioneering"],
+      "tantraConnection": "Associated with the Root Chakra - represents grounding and survival instincts",
+      "ayurvedaConnection": "Vata dominant - active, creative, and quick-thinking",
+      "astrologyConnection": "Ruled by the Sun - represents vitality, leadership, and self-expression"
+    },
+    "2": {
+      "title": "The Peacemaker",
+      "description": "Cooperative, diplomatic, and sensitive. Natural mediators who seek harmony and balance.",
+      "strengths": ["Cooperation", "Diplomacy", "Sensitivity", "Intuition", "Patience"],
+      "challenges": ["Indecision", "Over-sensitivity", "Dependency", "Passivity", "Mood swings"],
+      "loveCompatibility": ["Life Path 1", "Life Path 4", "Life Path 8"],
+      "careerPaths": ["Counselor", "Diplomat", "Teacher", "Artist", "Healer"],
+      "luckyNumbers": [2, 11, 20, 29],
+      "luckyColors": ["Blue", "Green", "Silver"],
+      "luckyStones": ["Moonstone", "Pearl", "Opal"],
+      "characteristics": ["Gentle", "Supportive", "Intuitive", "Peaceful", "Harmonious"],
+      "tantraConnection": "Associated with the Sacral Chakra - represents emotions and relationships",
+      "ayurvedaConnection": "Kapha dominant - calm, stable, and nurturing",
+      "astrologyConnection": "Ruled by the Moon - represents emotions, intuition, and receptivity"
+    },
+    "3": {
+      "title": "The Creative",
+      "description": "Artistic, expressive, and optimistic. Natural entertainers who bring joy and creativity to everything.",
+      "strengths": ["Creativity", "Communication", "Optimism", "Inspiration", "Charm"],
+      "challenges": ["Scattered energy", "Superficiality", "Mood swings", "Criticism sensitivity", "Procrastination"],
+      "loveCompatibility": ["Life Path 1", "Life Path 5", "Life Path 7"],
+      "careerPaths": ["Artist", "Writer", "Actor", "Designer", "Musician"],
+      "luckyNumbers": [3, 12, 21, 30],
+      "luckyColors": ["Yellow", "Orange", "Pink"],
+      "luckyStones": ["Citrine", "Topaz", "Amber"],
+      "characteristics": ["Expressive", "Joyful", "Artistic", "Social", "Inspiring"],
+      "tantraConnection": "Associated with the Solar Plexus Chakra - represents personal power and creativity",
+      "ayurvedaConnection": "Pitta dominant - passionate, creative, and expressive",
+      "astrologyConnection": "Ruled by Jupiter - represents expansion, creativity, and wisdom"
+    },
+    "4": {
+      "title": "The Builder",
+      "description": "Practical, reliable, and hardworking. Natural organizers who believe in building solid foundations.",
+      "strengths": ["Reliability", "Organization", "Hard work", "Loyalty", "Practicality"],
+      "challenges": ["Rigidity", "Stubbornness", "Narrow-mindedness", "Pessimism", "Resistance to change"],
+      "loveCompatibility": ["Life Path 2", "Life Path 6", "Life Path 8"],
+      "careerPaths": ["Engineer", "Architect", "Accountant", "Manager", "Builder"],
+      "luckyNumbers": [4, 13, 22, 31],
+      "luckyColors": ["Green", "Brown", "Gray"],
+      "luckyStones": ["Emerald", "Jade", "Sapphire"],
+      "characteristics": ["Stable", "Methodical", "Dependable", "Patient", "Systematic"],
+      "tantraConnection": "Associated with the Heart Chakra - represents stability and grounding",
+      "ayurvedaConnection": "Kapha dominant - steady, reliable, and grounded",
+      "astrologyConnection": "Ruled by Uranus - represents structure, discipline, and innovation"
+    },
+    "5": {
+      "title": "The Adventurer",
+      "description": "Freedom-loving, adventurous, and versatile. Natural explorers who crave variety and new experiences.",
+      "strengths": ["Freedom", "Versatility", "Adventure", "Curiosity", "Progressive thinking"],
+      "challenges": ["Restlessness", "Irresponsibility", "Inconsistency", "Impulsiveness", "Addiction tendencies"],
+      "loveCompatibility": ["Life Path 1", "Life Path 3", "Life Path 7"],
+      "careerPaths": ["Travel guide", "Journalist", "Sales", "Marketing", "Entrepreneur"],
+      "luckyNumbers": [5, 14, 23, 32],
+      "luckyColors": ["Blue", "Turquoise", "Silver"],
+      "luckyStones": ["Aquamarine", "Turquoise", "Sapphire"],
+      "characteristics": ["Dynamic", "Curious", "Adaptable", "Energetic", "Progressive"],
+      "tantraConnection": "Associated with the Throat Chakra - represents communication and expression",
+      "ayurvedaConnection": "Vata dominant - active, changeable, and quick",
+      "astrologyConnection": "Ruled by Mercury - represents communication, travel, and versatility"
+    },
+    "6": {
+      "title": "The Nurturer",
+      "description": "Caring, responsible, and family-oriented. Natural healers who are drawn to helping and nurturing others.",
+      "strengths": ["Nurturing", "Responsibility", "Compassion", "Healing", "Service"],
+      "challenges": ["Over-responsibility", "Martyrdom", "Perfectionism", "Worry", "Interference"],
+      "loveCompatibility": ["Life Path 1", "Life Path 2", "Life Path 9"],
+      "careerPaths": ["Doctor", "Nurse", "Teacher", "Counselor", "Social worker"],
+      "luckyNumbers": [6, 15, 24, 33],
+      "luckyColors": ["Pink", "Blue", "Green"],
+      "luckyStones": ["Rose Quartz", "Emerald", "Pearl"],
+      "characteristics": ["Caring", "Protective", "Responsible", "Harmonious", "Healing"],
+      "tantraConnection": "Associated with the Heart Chakra - represents love and compassion",
+      "ayurvedaConnection": "Kapha dominant - nurturing, stable, and caring",
+      "astrologyConnection": "Ruled by Venus - represents love, beauty, and harmony"
+    },
+    "7": {
+      "title": "The Seeker",
+      "description": "Analytical, spiritual, and introspective. Natural researchers who seek deeper truths and understanding.",
+      "strengths": ["Analysis", "Spirituality", "Intuition", "Research", "Wisdom"],
+      "challenges": ["Isolation", "Skepticism", "Coldness", "Perfectionism", "Escapism"],
+      "loveCompatibility": ["Life Path 3", "Life Path 5", "Life Path 8"],
+      "careerPaths": ["Researcher", "Scientist", "Philosopher", "Psychologist", "Spiritual teacher"],
+      "luckyNumbers": [7, 16, 25, 34],
+      "luckyColors": ["Purple", "Violet", "White"],
+      "luckyStones": ["Amethyst", "Fluorite", "Moonstone"],
+      "characteristics": ["Mystical", "Analytical", "Intuitive", "Spiritual", "Wise"],
+      "tantraConnection": "Associated with the Third Eye Chakra - represents intuition and spiritual insight",
+      "ayurvedaConnection": "Vata dominant - introspective, spiritual, and analytical",
+      "astrologyConnection": "Ruled by Neptune - represents spirituality, intuition, and mysticism"
+    },
+    "8": {
+      "title": "The Achiever",
+      "description": "Ambitious, material-focused, and authoritative. Natural business leaders who understand material success.",
+      "strengths": ["Ambition", "Organization", "Material success", "Authority", "Efficiency"],
+      "challenges": ["Materialism", "Workaholism", "Ruthlessness", "Impatience", "Stress"],
+      "loveCompatibility": ["Life Path 2", "Life Path 4", "Life Path 6"],
+      "careerPaths": ["Business executive", "Banker", "Real estate", "Politician", "Judge"],
+      "luckyNumbers": [8, 17, 26, 35],
+      "luckyColors": ["Black", "Brown", "Dark blue"],
+      "luckyStones": ["Garnet", "Black onyx", "Hematite"],
+      "characteristics": ["Powerful", "Ambitious", "Organized", "Successful", "Authoritative"],
+      "tantraConnection": "Associated with the Solar Plexus Chakra - represents personal power and achievement",
+      "ayurvedaConnection": "Pitta dominant - driven, focused, and goal-oriented",
+      "astrologyConnection": "Ruled by Saturn - represents discipline, structure, and material success"
+    },
+    "9": {
+      "title": "The Humanitarian",
+      "description": "Compassionate, generous, and idealistic. Natural humanitarians who are here to serve humanity.",
+      "strengths": ["Compassion", "Generosity", "Wisdom", "Universal love", "Service"],
+      "challenges": ["Emotional volatility", "Impracticality", "Martyrdom", "Moodiness", "Resentment"],
+      "loveCompatibility": ["Life Path 3", "Life Path 6", "Life Path 9"],
+      "careerPaths": ["Humanitarian", "Artist", "Healer", "Teacher", "Philanthropist"],
+      "luckyNumbers": [9, 18, 27, 36],
+      "luckyColors": ["Gold", "Red", "Orange"],
+      "luckyStones": ["Ruby", "Garnet", "Bloodstone"],
+      "characteristics": ["Compassionate", "Wise", "Generous", "Artistic", "Universal"],
+      "tantraConnection": "Associated with the Crown Chakra - represents universal consciousness and service",
+      "ayurvedaConnection": "Balanced tri-dosha - represents completion and universal understanding",
+      "astrologyConnection": "Ruled by Mars - represents energy, passion, and humanitarian action"
+    },
+    "11": {
+      "title": "The Intuitive",
+      "description": "Highly intuitive, spiritual, and inspirational. Master number with enhanced psychic abilities and spiritual insight.",
+      "strengths": ["Intuition", "Inspiration", "Spirituality", "Psychic abilities", "Idealism"],
+      "challenges": ["Nervous tension", "Impracticality", "Extremism", "Self-doubt", "Oversensitivity"],
+      "loveCompatibility": ["Life Path 2", "Life Path 6", "Life Path 9"],
+      "careerPaths": ["Spiritual teacher", "Psychic", "Artist", "Inventor", "Reformer"],
+      "luckyNumbers": [11, 29, 38, 47],
+      "luckyColors": ["Silver", "White", "Gold"],
+      "luckyStones": ["Clear quartz", "Moonstone", "Labradorite"],
+      "characteristics": ["Inspirational", "Intuitive", "Spiritual", "Visionary", "Sensitive"],
+      "tantraConnection": "Associated with the Crown and Third Eye Chakras - represents spiritual illumination",
+      "ayurvedaConnection": "Vata dominant with spiritual elevation - highly sensitive and intuitive",
+      "astrologyConnection": "Ruled by Moon and Neptune - represents intuition and spiritual connection"
+    },
+    "22": {
+      "title": "The Master Builder",
+      "description": "Practical visionary with the ability to turn dreams into reality on a large scale. Master number combining vision with practical application.",
+      "strengths": ["Vision", "Practicality", "Leadership", "Organization", "Large-scale thinking"],
+      "challenges": ["Pressure", "Self-doubt", "Overwhelm", "Perfectionism", "Stress"],
+      "loveCompatibility": ["Life Path 4", "Life Path 6", "Life Path 8"],
+      "careerPaths": ["Architect", "Engineer", "International business", "Diplomat", "Visionary leader"],
+      "luckyNumbers": [22, 40, 49, 58],
+      "luckyColors": ["Green", "Gold", "Brown"],
+      "luckyStones": ["Emerald", "Coral", "Quartz"],
+      "characteristics": ["Visionary", "Practical", "Powerful", "Organized", "Transformative"],
+      "tantraConnection": "Associated with all chakras - represents mastery and transformation",
+      "ayurvedaConnection": "Balanced doshas with Kapha stability - grounded vision and practical wisdom",
+      "astrologyConnection": "Ruled by Uranus and Earth - represents innovation grounded in practical reality"
+    },
+    "33": {
+      "title": "The Master Teacher",
+      "description": "Compassionate teacher and healer focused on uplifting humanity. Master number representing the highest form of loving service.",
+      "strengths": ["Teaching", "Healing", "Compassion", "Guidance", "Universal love"],
+      "challenges": ["Emotional burden", "Martyrdom", "Overwhelm", "High expectations", "Sacrifice"],
+      "loveCompatibility": ["Life Path 6", "Life Path 9", "Life Path 11"],
+      "careerPaths": ["Spiritual teacher", "Healer", "Counselor", "Humanitarian leader", "Master teacher"],
+      "luckyNumbers": [33, 51, 60, 69],
+      "luckyColors": ["Gold", "White", "Blue"],
+      "luckyStones": ["Diamond", "Clear quartz", "Sapphire"],
+      "characteristics": ["Compassionate", "Wise", "Healing", "Teaching", "Uplifting"],
+      "tantraConnection": "Associated with the Heart and Crown Chakras - represents divine love and teaching",
+      "ayurvedaConnection": "Balanced tri-dosha with emphasis on Kapha - nurturing and healing energy",
+      "astrologyConnection": "Ruled by Jupiter and Venus - represents wisdom, love, and spiritual teaching"
+    }
+  },
+  "destinyNumbers": {
+    "placeholder": "To be populated with PDF content - represents life purpose and mission"
+  },
+  "soulUrgeNumbers": {
+    "placeholder": "To be populated with PDF content - represents inner desires and motivations"
+  },
+  "personalityNumbers": {
+    "placeholder": "To be populated with PDF content - represents outer personality and first impressions"
+  },
+  "birthdayNumbers": {
+    "placeholder": "To be populated with PDF content - represents special talents and abilities"
+  },
+  "compatibilityMatrix": {
+    "placeholder": "To be populated with PDF content - detailed compatibility between all number combinations"
+  },
+  "predictions": {
+    "love": {
+      "placeholder": "Love and relationship predictions based on numerology combinations"
+    },
+    "career": {
+      "placeholder": "Career guidance and predictions based on numerology profile"
+    },
+    "health": {
+      "placeholder": "Health insights based on Ayurvedic connections to numbers"
+    },
+    "spiritual": {
+      "placeholder": "Spiritual growth predictions based on Tantric and astrological connections"
+    },
+    "financial": {
+      "placeholder": "Financial prospects based on numerology profile"
+    }
+  },
+  "remedies": {
+    "gemstones": {
+      "placeholder": "Gemstone recommendations for each number"
+    },
+    "mantras": {
+      "placeholder": "Mantras and chants for each number based on Tantric traditions"
+    },
+    "colors": {
+      "placeholder": "Color therapy recommendations"
+    },
+    "herbs": {
+      "placeholder": "Ayurvedic herbs and remedies for each number"
+    }
+  }
+}

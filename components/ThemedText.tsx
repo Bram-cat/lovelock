@@ -1,60 +1,107 @@
-import { StyleSheet, Text, type TextProps } from 'react-native';
+import React from "react";
+import { StyleSheet, Text, TextProps } from "react-native";
+import { useTheme } from '../contexts/ThemeContext';
 
-import { useThemeColor } from '@/hooks/useThemeColor';
-
-export type ThemedTextProps = TextProps & {
+interface ThemedTextProps extends TextProps {
+  type?: "title" | "link" | "default" | "secondary" | "muted" | "inverse" | "onPrimary" | "onSecondary";
   lightColor?: string;
   darkColor?: string;
-  type?: 'default' | 'title' | 'defaultSemiBold' | 'subtitle' | 'link';
-};
-
-export function ThemedText({
-  style,
-  lightColor,
-  darkColor,
-  type = 'default',
-  ...rest
-}: ThemedTextProps) {
-  const color = useThemeColor({ light: lightColor, dark: darkColor }, 'text');
-
-  return (
-    <Text
-      style={[
-        { color },
-        type === 'default' ? styles.default : undefined,
-        type === 'title' ? styles.title : undefined,
-        type === 'defaultSemiBold' ? styles.defaultSemiBold : undefined,
-        type === 'subtitle' ? styles.subtitle : undefined,
-        type === 'link' ? styles.link : undefined,
-        style,
-      ]}
-      {...rest}
-    />
-  );
 }
 
+const ThemedText = ({ 
+  type = "default", 
+  lightColor, 
+  darkColor, 
+  ...props 
+}: ThemedTextProps) => {
+  const { theme, isDarkMode } = useTheme();
+  
+  const getTextColor = () => {
+    // Use custom colors if provided
+    if (lightColor && darkColor) {
+      return isDarkMode ? darkColor : lightColor;
+    }
+    
+    // Use theme colors based on type
+    switch (type) {
+      case "title":
+        return theme.text;
+      case "link":
+        return theme.primary;
+      case "secondary":
+        return theme.textSecondary;
+      case "muted":
+        return theme.textMuted;
+      case "inverse":
+        return theme.textInverse;
+      case "onPrimary":
+        return theme.textOnPrimary;
+      case "onSecondary":
+        return theme.textOnSecondary;
+      default:
+        return theme.text;
+    }
+  };
+
+  const getTypeStyle = () => {
+    const baseColor = getTextColor();
+    
+    switch (type) {
+      case "title":
+        return {
+          ...styles.title,
+          color: baseColor,
+        };
+      case "link":
+        return {
+          ...styles.link,
+          color: baseColor,
+        };
+      case "secondary":
+        return {
+          ...styles.text,
+          color: baseColor,
+          opacity: 0.8,
+        };
+      case "muted":
+        return {
+          ...styles.text,
+          color: baseColor,
+          opacity: 0.6,
+        };
+      default:
+        return {
+          ...styles.text,
+          color: baseColor,
+        };
+    }
+  };
+
+  return (
+    <Text {...props} style={[getTypeStyle(), props.style]}>
+      {props.children}
+    </Text>
+  );
+};
+
 const styles = StyleSheet.create({
-  default: {
-    fontSize: 16,
-    lineHeight: 24,
-  },
-  defaultSemiBold: {
-    fontSize: 16,
-    lineHeight: 24,
-    fontWeight: '600',
+  text: {
+    fontFamily: "ShortStack",
+    fontWeight: "600",
+    fontSize: 18,
   },
   title: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    lineHeight: 32,
-  },
-  subtitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
+    fontFamily: "ShortStack",
+    fontWeight: "700",
+    fontSize: 24,
+    textAlign: "center",
   },
   link: {
-    lineHeight: 30,
-    fontSize: 16,
-    color: '#0a7ea4',
+    fontFamily: "ShortStack",
+    fontWeight: "600",
+    fontSize: 18,
+    textDecorationLine: "underline",
   },
 });
+
+export default ThemedText;
