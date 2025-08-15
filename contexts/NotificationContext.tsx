@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { AppState, AppStateStatus } from 'react-native';
-import NotificationService, { NotificationPermissionStatus } from '../services/NotificationServiceFallback';
+import NotificationService from '../services/NotificationService';
 
 interface NotificationContextType {
   permissionStatus: NotificationPermissionStatus | null;

@@ -3,10 +3,11 @@ import {
   View,
   Text,
   StyleSheet,
-  ScrollView,
   TouchableOpacity,
+  ScrollView,
+  SafeAreaView,
+  StatusBar,
   Linking,
-  Alert,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
@@ -63,7 +64,7 @@ export default function HelpSupportScreen() {
         
         <Text style={styles.headerTitle}>Help & Support</Text>
         <Text style={styles.headerSubtitle}>
-          We're here to help you
+          We&apos;re here to help you
         </Text>
       </LinearGradient>
 

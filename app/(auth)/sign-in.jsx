@@ -7,7 +7,6 @@ import {
   View, 
   StyleSheet, 
   SafeAreaView, 
-  Alert, 
   KeyboardAvoidingView, 
   Platform,
   Dimensions,
@@ -16,9 +15,8 @@ import {
 import React from "react";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
-import Colors from "../../constants/Colors";
+import { Colors } from "../../constants/Colors";
 
-const { width, height } = Dimensions.get("window");
 
 // Helper function to get user-friendly error messages
 const getErrorMessage = (error) => {
@@ -215,7 +213,7 @@ export default function SignInPage() {
 
             {/* Footer */}
             <View style={styles.footer}>
-              <Text style={styles.footerText}>Don't have an account?</Text>
+              <Text style={styles.footerText}>Don&apos;t have an account?</Text>
               <Link href="/sign-up" style={styles.link}>
                 <Text style={styles.linkText}>Sign Up</Text>
               </Link>

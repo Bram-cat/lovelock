@@ -395,7 +395,7 @@ export default function NumerologyScreen() {
                         <View style={styles.answerHeader}>
                           <Ionicons name="sparkles" size={20} color="#d14fa7" />
                           <Text style={styles.answerTitle}>
-                            Oracle's Answer
+                            Oracle&apos;s Answer
                           </Text>
                         </View>
                         <Text style={styles.answerText}>{aiAnswer}</Text>

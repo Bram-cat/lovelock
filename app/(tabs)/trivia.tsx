@@ -90,7 +90,7 @@ export default function TriviaScreen() {
 
         const triviaResponse = await geminiService.generateContent(triviaPrompt);
         triviaData = JSON.parse(triviaResponse.replace(/```json|```/g, '').trim());
-      } catch (error) {
+      } catch {
         console.log('Using fallback trivia questions');
         triviaData = getFallbackTriviaQuestions();
       }
@@ -121,14 +121,14 @@ export default function TriviaScreen() {
 
         const movieResponse = await geminiService.generateContent(moviePrompt);
         movieData = JSON.parse(movieResponse.replace(/```json|```/g, '').trim());
-      } catch (error) {
+      } catch {
         console.log('Using fallback movie recommendations');
         movieData = getFallbackMovieRecommendations();
       }
       
       setMovieRecommendations(movieData);
       setCurrentStep('selection');
-    } catch (error) {
+    } catch {
       Alert.alert('Error', 'Failed to generate content. Using default recommendations.');
       setTriviaQuestions(getFallbackTriviaQuestions());
       setMovieRecommendations(getFallbackMovieRecommendations());
@@ -424,7 +424,7 @@ export default function TriviaScreen() {
             {questionStep === 'age' && (
               <>
                 <ThemedText style={[styles.questionTitle, { color: theme.text }]}>
-                  What's your age range?
+                  What&apos;s your age range?
                 </ThemedText>
                 <ThemedText style={[styles.questionSubtitle, { color: theme.textSecondary }]}>
                   This helps us recommend age-appropriate content
@@ -473,7 +473,7 @@ export default function TriviaScreen() {
                   What are your interests?
                 </ThemedText>
                 <ThemedText style={[styles.questionSubtitle, { color: theme.textSecondary }]}>
-                  Select topics you're passionate about
+                  Select topics you&apos;re passionate about
                 </ThemedText>
                 <View style={styles.optionsGrid}>
                   {interestOptions.map((interest) => (
@@ -565,7 +565,7 @@ export default function TriviaScreen() {
                   Ready to generate your content?
                 </ThemedText>
                 <ThemedText style={[styles.questionSubtitle, { color: theme.textSecondary }]}>
-                  We'll create personalized trivia questions and movie recommendations just for you!
+                  We&apos;ll create personalized trivia questions and movie recommendations just for you!
                 </ThemedText>
                 
                 {/* Summary */}

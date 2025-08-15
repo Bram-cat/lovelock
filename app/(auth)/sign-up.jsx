@@ -17,9 +17,9 @@ import { useSignUp } from "@clerk/clerk-expo";
 import { Link, useRouter } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
-import Colors from "../../constants/Colors";
+import { Colors } from "../../constants/Colors";
 
-const { width, height } = Dimensions.get("window");
+const { height } = Dimensions.get("window");
 
 // Helper function to get user-friendly error messages
 const getErrorMessage = (error) => {
@@ -282,7 +282,7 @@ export default function SignUpScreen() {
                   onPress={onResendPress}
                   disabled={isLoading}
                 >
-                  <Text style={styles.resendText}>Didn't receive the code? Resend</Text>
+                  <Text style={styles.resendText}>Didn&apos;t receive the code? Resend</Text>
                 </TouchableOpacity>
               </View>
 

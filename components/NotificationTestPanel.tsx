@@ -9,7 +9,7 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
-import Colors from '../constants/Colors';
+import { Colors } from '../constants/Colors';
 import { useNotifications } from '../contexts/NotificationContext';
 
 export default function NotificationTestPanel() {
@@ -34,6 +34,8 @@ export default function NotificationTestPanel() {
       Alert.alert('Error', 'Failed to send test notification.');
     }
   };
+
+  const [, ] = React.useState<string | null>(null);
 
   const handleRefreshStatus = async () => {
     await refreshPermissionStatus();
@@ -168,16 +170,16 @@ export default function NotificationTestPanel() {
         <View style={styles.instructionsCard}>
           <Text style={styles.instructionsTitle}>How to Test:</Text>
           <Text style={styles.instructionText}>
-            1. Tap "Show Permission Prompt" to see the permission dialog
+            1. Tap &quot;Show Permission Prompt&quot; to see the permission dialog
           </Text>
           <Text style={styles.instructionText}>
             2. Grant permissions when prompted
           </Text>
           <Text style={styles.instructionText}>
-            3. Tap "Send Test Notification" to test notifications
+            3. Tap &quot;Send Test Notification&quot; to test notifications
           </Text>
           <Text style={styles.instructionText}>
-            4. Use "Refresh Status" if you change permissions in device settings
+            4. Use &quot;Refresh Status&quot; if you change permissions in device settings
           </Text>
         </View>
       </View>
