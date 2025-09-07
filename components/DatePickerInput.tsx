@@ -1,7 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Modal, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import { DesignSystem, gradients } from '../constants/DesignSystem';
+import GlassCard from './ui/GlassCard';
+import Button from './ui/Button';
 
 interface DatePickerInputProps {
   value: string;
@@ -21,6 +24,12 @@ export default function DatePickerInput({
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear() - 25);
   const [selectedMonth, setSelectedMonth] = useState(0);
   const [selectedDay, setSelectedDay] = useState(1);
+
+  // Update inputValue when value prop changes
+  useEffect(() => {
+    console.log('DatePickerInput: value prop changed to:', value);
+    setInputValue(value);
+  }, [value]);
 
   // Format input as user types
   const formatInput = (text: string): string => {
@@ -102,6 +111,12 @@ export default function DatePickerInput({
 
   // Handle calendar date selection
   const handleCalendarSelect = () => {
+    // Validate that year has been selected first
+    if (selectedYear === new Date().getFullYear() - 25) {
+      Alert.alert('Year Required', 'Please select a year first, then select the month and day.');
+      return;
+    }
+    
     const month = (selectedMonth + 1).toString().padStart(2, '0');
     const day = selectedDay.toString().padStart(2, '0');
     const dateStr = `${month}/${day}/${selectedYear}`;
@@ -109,6 +124,15 @@ export default function DatePickerInput({
     setInputValue(dateStr);
     onDateChange(dateStr);
     setShowCalendar(false);
+  };
+
+  // Handle month selection - alert if year not selected first
+  const handleMonthSelect = (monthIndex: number) => {
+    if (selectedYear === new Date().getFullYear() - 25) {
+      Alert.alert('Select Year First', 'Please select a year first before selecting the month.');
+      return;
+    }
+    setSelectedMonth(monthIndex);
   };
 
   const months = [
@@ -119,23 +143,30 @@ export default function DatePickerInput({
   return (
     <View style={styles.container}>
       {/* Beautiful Input Field */}
-      <TouchableOpacity 
-        style={styles.inputContainer}
-        onPress={() => setShowCalendar(true)}
-      >
-        <LinearGradient
-          colors={['rgba(106, 27, 154, 0.1)', 'rgba(233, 30, 99, 0.1)']}
-          style={styles.inputGradient}
+      <GlassCard intensity="medium" style={styles.inputContainer}>
+        <TouchableOpacity 
+          style={styles.inputTouchable}
+          onPress={() => setShowCalendar(true)}
+          activeOpacity={0.7}
         >
-          <Ionicons name="calendar" size={24} color="#6a1b9a" style={styles.inputIcon} />
+          <Ionicons 
+            name="calendar" 
+            size={DesignSystem.typography.sizes['2xl']} 
+            color={DesignSystem.colors.primary.solidPurple} 
+            style={styles.inputIcon} 
+          />
           <View style={styles.inputContent}>
-            <Text style={styles.inputValue}>
+            <Text style={[styles.inputValue, !inputValue && styles.placeholderValue]}>
               {inputValue || placeholder}
             </Text>
           </View>
-          <Ionicons name="chevron-down" size={20} color="#6a1b9a" />
-        </LinearGradient>
-      </TouchableOpacity>
+          <Ionicons 
+            name="chevron-down" 
+            size={DesignSystem.typography.sizes.lg} 
+            color={DesignSystem.colors.primary.solidPurple} 
+          />
+        </TouchableOpacity>
+      </GlassCard>
 
       {/* Beautiful Modal Date Picker */}
       <Modal
@@ -145,11 +176,7 @@ export default function DatePickerInput({
         onRequestClose={() => setShowCalendar(false)}
       >
         <View style={styles.modalOverlay}>
-          <View style={styles.modalContainer}>
-            <LinearGradient
-              colors={['#667eea', '#764ba2']}
-              style={styles.modalGradient}
-            >
+          <GlassCard intensity="strong" tint="dark" style={styles.modalContainer}>
               {/* Header */}
               <View style={styles.modalHeader}>
                 <TouchableOpacity
@@ -180,7 +207,7 @@ export default function DatePickerInput({
                           styles.monthItem,
                           selectedMonth === index && styles.selectedItem
                         ]}
-                        onPress={() => setSelectedMonth(index)}
+                        onPress={() => handleMonthSelect(index)}
                       >
                         <Text style={[
                           styles.monthText,
@@ -255,15 +282,14 @@ export default function DatePickerInput({
 
               {/* Action Buttons */}
               <View style={styles.actionButtons}>
-                <TouchableOpacity
-                  style={styles.confirmButton}
+                <Button
+                  title="Confirm Date"
                   onPress={handleCalendarSelect}
-                >
-                  <Text style={styles.confirmButtonText}>Confirm Date</Text>
-                </TouchableOpacity>
+                  variant="primary"
+                  icon="checkmark"
+                />
               </View>
-            </LinearGradient>
-          </View>
+          </GlassCard>
         </View>
       </Modal>
     </View>
@@ -274,86 +300,65 @@ const styles = StyleSheet.create({
   container: {
     width: '100%',
   },
-  // Beautiful Input Field Styles
   inputContainer: {
-    borderRadius: 16,
-    overflow: 'hidden',
-    shadowColor: '#6a1b9a',
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 6,
+    marginBottom: 0,
   },
-  inputGradient: {
+  inputTouchable: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 18,
-    backgroundColor: 'rgba(255, 255, 255, 0.95)',
-    borderWidth: 2,
-    borderColor: 'rgba(106, 27, 154, 0.3)',
-    borderRadius: 16,
+    paddingHorizontal: DesignSystem.spacing.scale.lg,
+    paddingVertical: DesignSystem.spacing.scale.lg,
+    minHeight: 56,
   },
   inputIcon: {
-    marginRight: 15,
+    marginRight: DesignSystem.spacing.scale.lg,
   },
   inputContent: {
     flex: 1,
   },
   inputValue: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#2d1b69',
+    fontSize: DesignSystem.typography.sizes.base,
+    fontWeight: DesignSystem.typography.weights.medium,
+    color: DesignSystem.colors.text.primary,
     textAlign: 'center',
+  },
+  placeholderValue: {
+    color: DesignSystem.colors.text.muted,
   },
   // Modal Styles
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: 'rgba(0, 0, 0, 0.8)',
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 20,
+    padding: DesignSystem.spacing.scale.xl,
   },
   modalContainer: {
     width: '100%',
     height: 600,
-    borderRadius: 25,
-    overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 10,
-    },
-    shadowOpacity: 0.3,
-    shadowRadius: 20,
-    elevation: 15,
-  },
-  modalGradient: {
-    height: '100%',
-    padding: 20,
-    justifyContent: 'space-between',
+    marginBottom: 0,
   },
   modalHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 25,
+    marginBottom: DesignSystem.spacing.scale['2xl'],
+    paddingTop: DesignSystem.spacing.scale.xl,
   },
   closeButton: {
     width: 40,
     height: 40,
-    borderRadius: 20,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    borderRadius: DesignSystem.borderRadius.full,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
     alignItems: 'center',
     justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
   },
   modalTitle: {
-    fontSize: 22,
-    fontWeight: 'bold',
-    color: '#fff',
+    fontSize: DesignSystem.typography.sizes['2xl'],
+    fontWeight: DesignSystem.typography.weights.bold,
+    color: DesignSystem.colors.text.primary,
     textAlign: 'center',
   },
   placeholder: {
@@ -368,10 +373,10 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   selectorTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#fff',
-    marginBottom: 15,
+    fontSize: DesignSystem.typography.sizes.lg,
+    fontWeight: DesignSystem.typography.weights.bold,
+    color: DesignSystem.colors.text.primary,
+    marginBottom: DesignSystem.spacing.scale.lg,
     textAlign: 'center',
   },
   // Month Selector
@@ -456,26 +461,7 @@ const styles = StyleSheet.create({
   // Action Buttons
   actionButtons: {
     alignItems: 'center',
-    marginTop: 10,
-  },
-  confirmButton: {
-    backgroundColor: 'rgba(255, 255, 255, 0.9)',
-    paddingHorizontal: 40,
-    paddingVertical: 15,
-    borderRadius: 25,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 6,
-  },
-  confirmButtonText: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#6a1b9a',
-    textAlign: 'center',
+    marginTop: DesignSystem.spacing.scale.lg,
+    paddingBottom: DesignSystem.spacing.scale.xl,
   },
 });

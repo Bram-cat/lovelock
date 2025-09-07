@@ -1,8 +1,26 @@
 // Gemini AI Service for Numerology Q&A
-import { NumerologyProfile } from './NumerologyService';
+import { NumerologyProfile } from "./NumerologyService";
+// import { GoogleGenerativeAI } from "@google/genai";
+// Get API keys from environment variables with dual key support
+const PRIMARY_GEMINI_API_KEY =
+  process.env.GOOGLE_AI_API_KEY ||
+  process.env.EXPO_PUBLIC_GOOGLE_AI_API_KEY ||
+  "AIzaSyAzAP3NQJyvY4rglOja86HFxjlJNjWzZJo";
 
-const GEMINI_API_KEY = 'AIzaSyAzAP3NQJyvY4rglOja86HFxjlJNjWzZJo';
-const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent';
+const BACKUP_GEMINI_API_KEY =
+  process.env.BACKUP_GOOGLE_AI_API_KEY ||
+  "AIzaSyBiOdLCC50Gw5valCvGdaR1Umr3CKxYsBs";
+
+console.log(
+  "🔑 Primary Gemini API Key loaded:",
+  PRIMARY_GEMINI_API_KEY ? `${PRIMARY_GEMINI_API_KEY.substring(0, 10)}...` : "NOT FOUND"
+);
+console.log(
+  "🔑 Backup Gemini API Key loaded:",
+  BACKUP_GEMINI_API_KEY ? `${BACKUP_GEMINI_API_KEY.substring(0, 10)}...` : "NOT FOUND"
+);
+const GEMINI_API_URL =
+  "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent";
 
 interface GeminiResponse {
   candidates: {
@@ -14,64 +32,207 @@ interface GeminiResponse {
   }[];
 }
 
+export interface AIProgressCallback {
+  onRetry?: (attempt: number, maxRetries: number, delayMs: number) => void;
+  onProgress?: (message: string) => void;
+}
+
 export class GeminiAIService {
-  
-  async generateContent(prompt: string): Promise<string> {
+  private static readonly MAX_RETRIES = 4;
+  private static readonly BASE_DELAY = 2000; // 2 seconds
+  private static lastRequestTime = 0;
+  private static readonly MIN_REQUEST_INTERVAL = 3000; // Reduced to 3 seconds for better UX
+  private static readonly RATE_LIMIT_COOLDOWN = 60000; // 1 minute cooldown after consecutive rate limits
+  private static consecutiveRateLimits = 0;
+  private static currentApiKeyIndex = 0; // Track which API key to use
+  private static readonly API_KEYS = [PRIMARY_GEMINI_API_KEY, BACKUP_GEMINI_API_KEY];
+
+  static async delay(ms: number): Promise<void> {
+    return new Promise((resolve) => setTimeout(resolve, ms));
+  }
+
+  static async rateLimitedRequest<T>(requestFn: () => Promise<T>): Promise<T> {
+    const now = Date.now();
+    const timeSinceLastRequest = now - this.lastRequestTime;
+
+    if (timeSinceLastRequest < this.MIN_REQUEST_INTERVAL) {
+      const waitTime = this.MIN_REQUEST_INTERVAL - timeSinceLastRequest;
+      await this.delay(waitTime);
+    }
+
+    this.lastRequestTime = Date.now();
+    const result = await requestFn();
+    return result;
+  }
+
+  static switchToNextApiKey() {
+    this.currentApiKeyIndex = (this.currentApiKeyIndex + 1) % this.API_KEYS.length;
+    console.log(`🔄 Switched to API key index ${this.currentApiKeyIndex}`);
+  }
+
+  static getCurrentApiKey(): string {
+    return this.API_KEYS[this.currentApiKeyIndex];
+  }
+
+  async generateContent(
+    prompt: string,
+    retryCount: number = 0,
+    progressCallback?: AIProgressCallback
+  ): Promise<string> {
+    const currentApiKey = GeminiAIService.getCurrentApiKey();
+    
+    if (!currentApiKey || currentApiKey === "YOUR_GEMINI_API_KEY_HERE") {
+      console.error("❌ Gemini API key not configured:", currentApiKey);
+      throw new Error(
+        "Gemini API key not configured. Please set GOOGLE_AI_API_KEY in your environment variables."
+      );
+    }
+
+    console.log(
+      `✅ Using Gemini API key (index ${GeminiAIService.currentApiKeyIndex}):`,
+      currentApiKey.substring(0, 15) + "..."
+    );
+    console.log('🔗 Full API URL:', `${GEMINI_API_URL}?key=${currentApiKey.substring(0, 10)}...`);
+
+    if (retryCount >= GeminiAIService.MAX_RETRIES) {
+      throw new Error("Max retries exceeded for Gemini API");
+    }
+
     try {
-      const response = await fetch(`${GEMINI_API_URL}?key=${GEMINI_API_KEY}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          contents: [{
-            parts: [{
-              text: prompt
-            }]
-          }],
-          generationConfig: {
-            temperature: 0.7,
-            topK: 40,
-            topP: 0.95,
-            maxOutputTokens: 1000,
-          },
-          safetySettings: [
-            {
-              category: "HARM_CATEGORY_HARASSMENT",
-              threshold: "BLOCK_MEDIUM_AND_ABOVE"
-            },
-            {
-              category: "HARM_CATEGORY_HATE_SPEECH",
-              threshold: "BLOCK_MEDIUM_AND_ABOVE"
-            },
-            {
-              category: "HARM_CATEGORY_SEXUALLY_EXPLICIT",
-              threshold: "BLOCK_MEDIUM_AND_ABOVE"
-            },
-            {
-              category: "HARM_CATEGORY_DANGEROUS_CONTENT",
-              threshold: "BLOCK_MEDIUM_AND_ABOVE"
-            }
-          ]
-        }),
+      progressCallback?.onProgress?.(
+        `Generating AI response... (attempt ${retryCount + 1})`
+      );
+
+      console.log('🚀 Making Gemini API request to:', GEMINI_API_URL);
+      console.log('🔧 Request payload preview:', {
+        prompt: prompt.substring(0, 100) + '...',
+        promptLength: prompt.length
       });
 
-      if (!response.ok) {
-        throw new Error(`Gemini API error: ${response.status}`);
-      }
+      const response = await GeminiAIService.rateLimitedRequest(async () => {
+        console.log('📡 Making fetch request to Gemini API...');
+        
+        try {
+          const currentApiKey = GeminiAIService.getCurrentApiKey();
+          const result = await fetch(`${GEMINI_API_URL}?key=${currentApiKey}`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              contents: [
+                {
+                  parts: [{ text: prompt }],
+                },
+              ],
+              generationConfig: {
+                temperature: 0.7,
+                topK: 32,
+                topP: 0.8,
+                maxOutputTokens: 2048,
+              },
+            }),
+          });
+
+          console.log('📡 Fetch completed, response:', result ? 'received' : 'undefined');
+          
+          if (!result) {
+            throw new Error('Fetch returned undefined response');
+          }
+
+          if (!result.ok) {
+            const errorText = await result.text();
+            console.error('🔴 Gemini API Error Details:', {
+              status: result.status,
+              statusText: result.statusText,
+              errorText: errorText,
+              headers: Object.fromEntries(result.headers.entries())
+            });
+            
+            throw new Error(`Gemini API Error: ${result.status} - ${errorText}`);
+          }
+
+          return result;
+        } catch (fetchError: any) {
+          console.error('🔴 Fetch error:', fetchError.message);
+          throw fetchError;
+        }
+      });
 
       const data: GeminiResponse = await response.json();
-      
-      if (data.candidates && data.candidates.length > 0) {
-        return data.candidates[0].content.parts[0].text;
-      } else {
-        throw new Error('No response from Gemini AI');
+
+      if (!data.candidates || !data.candidates[0]?.content?.parts?.[0]?.text) {
+        throw new Error("Invalid response from Gemini API");
       }
-    } catch (error) {
-      console.error('Gemini AI Service Error:', error);
+
+      const content = data.candidates[0].content.parts[0].text.trim();
+
+      // Reset consecutive rate limits on success
+      GeminiAIService.consecutiveRateLimits = 0;
+
+      return content;
+    } catch (error: any) {
+      console.error(
+        `Gemini API attempt ${retryCount + 1} failed:`,
+        error.message
+      );
+
+      // Handle rate limiting and API key switching
+      if (
+        error.message.includes("429") ||
+        error.message.includes("rate limit") ||
+        error.message.includes("quota") ||
+        error.message.includes("403")
+      ) {
+        console.log(`🔑 API key ${GeminiAIService.currentApiKeyIndex} hit limits, switching to backup`);
+        GeminiAIService.switchToNextApiKey();
+        
+        // If we've tried both keys and still hitting limits, wait longer
+        if (GeminiAIService.currentApiKeyIndex === 0) {
+          GeminiAIService.consecutiveRateLimits++;
+          const exponentialDelay =
+            GeminiAIService.BASE_DELAY * Math.pow(2, retryCount) +
+            GeminiAIService.consecutiveRateLimits *
+              GeminiAIService.RATE_LIMIT_COOLDOWN;
+
+          progressCallback?.onRetry?.(
+            retryCount + 1,
+            GeminiAIService.MAX_RETRIES,
+            exponentialDelay
+          );
+
+          console.log(
+            `All API keys hit limits. Waiting ${exponentialDelay}ms before retry ${retryCount + 1}...`
+          );
+          await GeminiAIService.delay(exponentialDelay);
+        } else {
+          // Quick retry with backup key
+          console.log('🚀 Retrying immediately with backup API key');
+          await GeminiAIService.delay(1000); // Short delay
+        }
+
+        return this.generateContent(prompt, retryCount + 1, progressCallback);
+      }
+
+      // For other errors, also retry with exponential backoff
+      if (retryCount < GeminiAIService.MAX_RETRIES - 1) {
+        const delay = GeminiAIService.BASE_DELAY * Math.pow(2, retryCount);
+        progressCallback?.onRetry?.(
+          retryCount + 1,
+          GeminiAIService.MAX_RETRIES,
+          delay
+        );
+
+        console.log(`Retrying in ${delay}ms...`);
+        await GeminiAIService.delay(delay);
+
+        return this.generateContent(prompt, retryCount + 1, progressCallback);
+      }
+
       throw error;
     }
   }
+
   private buildNumerologyContext(profile: NumerologyProfile): string {
     return `
 NUMEROLOGY PROFILE CONTEXT:
@@ -83,170 +244,147 @@ NUMEROLOGY PROFILE CONTEXT:
 
 PERSONALITY INSIGHTS:
 - Life Path Description: ${profile.lifePathInfo?.description}
-- Strengths: ${profile.lifePathInfo?.strengths?.join(', ')}
-- Challenges: ${profile.lifePathInfo?.challenges?.join(', ')}
-- Career Paths: ${profile.lifePathInfo?.careerPaths?.join(', ')}
-- Relationships: ${profile.lifePathInfo?.relationships}
-- Life Approach: ${profile.lifePathInfo?.lifeApproach}
+- Strengths: ${profile.lifePathInfo?.strengths?.join(", ")}
+- Challenges: ${profile.lifePathInfo?.challenges?.join(", ")}
+- Career Paths: ${profile.lifePathInfo?.careerPaths?.join(", ")}
+- Relationship Style: ${profile.lifePathInfo?.relationships}
 
-DESTINY & PURPOSE:
-- Destiny Description: ${profile.destinyInfo?.description}
-- Life Purpose: ${profile.destinyInfo?.purpose}
-- Natural Talents: ${profile.destinyInfo?.talents?.join(', ')}
-- Life Mission: ${profile.destinyInfo?.mission}
+DESTINY INSIGHTS:
+- Purpose: ${profile.destinyInfo?.purpose}
+- Description: ${profile.destinyInfo?.description}
 
-INNER DESIRES:
-- Soul Urge Description: ${profile.soulUrgeInfo?.description}
-- Heart's Desires: ${profile.soulUrgeInfo?.desires?.join(', ')}
-- Core Motivation: ${profile.soulUrgeInfo?.motivation}
-- Path to Fulfillment: ${profile.soulUrgeInfo?.fulfillment}
-
-CHARACTER ANALYSIS: ${profile.characterAnalysis}
-`;
+This person is seeking guidance about their numerological profile. Please provide insightful, encouraging, and specific advice based on these numbers.
+    `;
   }
 
-  private buildPrompt(profile: NumerologyProfile, question: string): string {
-    const context = this.buildNumerologyContext(profile);
+  static async answerNumerologyQuestion(
+    profile: NumerologyProfile,
+    question: string,
+    progressCallback?: AIProgressCallback
+  ): Promise<string> {
+    const service = new GeminiAIService();
+    const context = service.buildNumerologyContext(profile);
     
-    return `You are a wise, compassionate numerology expert and spiritual guide. You have deep knowledge of numerology, astrology, psychology, and personal development. Your role is to provide insightful, encouraging, and semi-positive guidance based on the user's numerology profile.
+    const prompt = `${context}
 
-${context}
+QUESTION: "${question}"
 
-INSTRUCTIONS:
-1. Answer the user's question using their specific numerology numbers and profile
-2. Draw insights from numerology wisdom, psychology, and spiritual guidance
-3. Use elegant, uplifting language that inspires and empowers
-4. Be semi-positive - acknowledge challenges but frame them as growth opportunities
-5. Provide practical advice and actionable insights
-6. Reference their specific numbers (Life Path, Destiny, Soul Urge, etc.) when relevant
-7. Keep responses between 100-200 words for mobile readability
-8. Use a warm, personal tone as if speaking to a close friend
+Please provide a thoughtful, encouraging response that:
+1. References specific aspects of their numerology numbers
+2. Offers practical guidance
+3. Maintains a positive and supportive tone
+4. Keeps the response under 200 words
+5. Addresses their question directly using their numerological insights
 
-USER'S QUESTION: "${question}"
+Response:`;
 
-Please provide a thoughtful, personalized response based on their numerology profile:`;
+    return await service.generateContent(prompt, 0, progressCallback);
   }
 
-  async answerNumerologyQuestion(profile: NumerologyProfile, question: string): Promise<string> {
-    try {
-      const prompt = this.buildPrompt(profile, question);
-      
-      const response = await fetch(`${GEMINI_API_URL}?key=${GEMINI_API_KEY}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          contents: [{
-            parts: [{
-              text: prompt
-            }]
-          }],
-          generationConfig: {
-            temperature: 0.7,
-            topK: 40,
-            topP: 0.95,
-            maxOutputTokens: 300,
-          },
-          safetySettings: [
-            {
-              category: "HARM_CATEGORY_HARASSMENT",
-              threshold: "BLOCK_MEDIUM_AND_ABOVE"
-            },
-            {
-              category: "HARM_CATEGORY_HATE_SPEECH",
-              threshold: "BLOCK_MEDIUM_AND_ABOVE"
-            },
-            {
-              category: "HARM_CATEGORY_SEXUALLY_EXPLICIT",
-              threshold: "BLOCK_MEDIUM_AND_ABOVE"
-            },
-            {
-              category: "HARM_CATEGORY_DANGEROUS_CONTENT",
-              threshold: "BLOCK_MEDIUM_AND_ABOVE"
-            }
-          ]
-        }),
-      });
+  static async generatePersonalizedCharacterAnalysis(
+    profile: NumerologyProfile,
+    fullName: string
+  ): Promise<string> {
+    const service = new GeminiAIService();
+    const prompt = `Generate a detailed character analysis for ${fullName} based on their numerology profile:
 
-      if (!response.ok) {
-        throw new Error(`Gemini API error: ${response.status}`);
-      }
+Life Path: ${profile.lifePathNumber}
+Destiny: ${profile.destinyNumber} 
+Soul Urge: ${profile.soulUrgeNumber}
+Personality: ${profile.personalityNumber}
 
-      const data: GeminiResponse = await response.json();
-      
-      if (data.candidates && data.candidates.length > 0) {
-        const aiResponse = data.candidates[0].content.parts[0].text;
-        return this.enhanceResponse(aiResponse);
-      } else {
-        throw new Error('No response from Gemini AI');
-      }
-    } catch (error) {
-      console.error('Gemini AI Service Error:', error);
-      return this.getFallbackResponse(profile, question);
-    }
+Please provide:
+1. Core personality traits
+2. Natural talents and gifts
+3. Life purpose and mission
+4. How others perceive them
+5. Areas for personal growth
+6. Unique characteristics of this number combination
+
+Keep it encouraging, insightful, and personalized. Limit to 150 words.`;
+
+    return await service.generateContent(prompt);
   }
 
-  private enhanceResponse(response: string): string {
-    // Add some spiritual emojis and formatting for better presentation
-    const enhanced = response
-      .replace(/\n\n/g, '\n\n✨ ')
-      .replace(/^/, '🌟 ');
+  static async generatePersonalizedPredictions(
+    profile: NumerologyProfile,
+    fullName: string
+  ): Promise<string> {
+    const service = new GeminiAIService();
+    const context = service.buildNumerologyContext(profile);
     
-    return enhanced;
+    const prompt = `${context}
+
+Generate personalized predictions for ${fullName} for the next 6-12 months based on their numerology profile.
+
+Focus on:
+1. Career and professional opportunities
+2. Relationships and personal connections
+3. Personal growth and spiritual development
+4. Challenges to be aware of and how to overcome them
+5. Lucky periods and best timing for major decisions
+
+Keep it encouraging, specific, and actionable. Limit to 200 words.`;
+
+    return await service.generateContent(prompt);
   }
 
-  private getFallbackResponse(profile: NumerologyProfile, question: string): string {
-    const responses = [
-      `🌟 As a Life Path ${profile.lifePathNumber}, your journey is unique and meaningful. Your question touches on something important to your spiritual growth. Trust your inner wisdom and remember that every challenge is an opportunity for transformation. ✨`,
-      
-      `✨ Your Destiny Number ${profile.destinyNumber} suggests you have special gifts to share with the world. The answer you seek lies within your own intuitive understanding. Take time for reflection and listen to what your heart is telling you. 🌟`,
-      
-      `🌟 With your Soul Urge ${profile.soulUrgeNumber}, you're naturally drawn to seek deeper meaning. Your question shows your commitment to personal growth. Trust the process and know that the universe is guiding you toward your highest good. ✨`,
-    ];
+  static async generateDeadlySinWarning(
+    profile: NumerologyProfile,
+    fullName: string
+  ): Promise<{
+    sin: string;
+    warning: string;
+    consequences: string;
+  }> {
+    const service = new GeminiAIService();
+    const prompt = `Based on ${fullName}'s numerology profile (Life Path: ${profile.lifePathNumber}, Destiny: ${profile.destinyNumber}), identify their primary spiritual challenge from the seven deadly sins (Pride, Envy, Wrath, Sloth, Greed, Gluttony, Lust).
+
+Respond in this exact format:
+SIN: [specific sin]
+WARNING: [brief spiritual warning about this tendency]
+CONSEQUENCES: [how this could impact relationships and trust]
+
+Keep each section under 30 words and focus on spiritual growth.`;
+
+    const response = await service.generateContent(prompt);
     
-    return responses[Math.floor(Math.random() * responses.length)];
+    // Parse the response
+    const sinMatch = response.match(/SIN:\s*([^\n]+)/i);
+    const warningMatch = response.match(/WARNING:\s*([^\n]+)/i);
+    const consequencesMatch = response.match(/CONSEQUENCES:\s*([^\n]+)/i);
+
+    return {
+      sin: sinMatch ? sinMatch[1].trim() : 'Pride',
+      warning: warningMatch ? warningMatch[1].trim() : 'Be mindful of ego and stay humble in relationships.',
+      consequences: consequencesMatch ? consequencesMatch[1].trim() : 'May create barriers to authentic connection and trust.',
+    };
   }
 
-  // Method for general numerology insights without specific questions
-  async generateDailyInsight(profile: NumerologyProfile): Promise<string> {
-    const prompt = `Based on this numerology profile, provide a brief, uplifting daily insight or affirmation:
+  static async generateAdvancedPrompt(prompt: string): Promise<string> {
+    const service = new GeminiAIService();
+    return await service.generateContent(prompt);
+  }
 
-${this.buildNumerologyContext(profile)}
+  static async generateCelebrityMatchReason(
+    userLifePath: number,
+    celebrityName: string,
+    celebrityLifePath: number,
+    compatibilityScore: number
+  ): Promise<string> {
+    const service = new GeminiAIService();
+    const prompt = `Explain why someone with Life Path ${userLifePath} is ${compatibilityScore}% compatible with ${celebrityName} (Life Path ${celebrityLifePath}).
 
-Generate a 50-80 word positive insight for today that relates to their numbers and encourages personal growth.`;
+Keep it:
+- Under 50 words
+- Romantic but realistic
+- Focused on personality compatibility
+- Encouraging and positive
 
-    try {
-      const response = await fetch(`${GEMINI_API_URL}?key=${GEMINI_API_KEY}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          contents: [{
-            parts: [{
-              text: prompt
-            }]
-          }],
-          generationConfig: {
-            temperature: 0.8,
-            maxOutputTokens: 150,
-          }
-        }),
-      });
+Format: "You and ${celebrityName} share [specific trait/energy]. This ${compatibilityScore}% compatibility suggests [reason for connection]. [Encouraging insight about the match]."`;
 
-      if (response.ok) {
-        const data: GeminiResponse = await response.json();
-        if (data.candidates && data.candidates.length > 0) {
-          return '🌟 ' + data.candidates[0].content.parts[0].text + ' ✨';
-        }
-      }
-    } catch (error) {
-      console.error('Daily insight error:', error);
-    }
-
-    return `🌟 Today is a perfect day to embrace your Life Path ${profile.lifePathNumber} energy. Trust in your journey and let your authentic self shine brightly. ✨`;
+    return await service.generateContent(prompt);
   }
 }
 
-export default new GeminiAIService();
+export default GeminiAIService;

@@ -1,8 +1,6 @@
 import React from 'react';
-import { View, StyleSheet, ColorValue, ActivityIndicator } from 'react-native';
+import { View, StyleSheet, ColorValue, ActivityIndicator, Text } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import ThemedText from './ThemedText';
-import Colors from '../constants/Colors';
 
 interface LoadingScreenProps {
   message?: string;
@@ -28,18 +26,17 @@ export default function LoadingScreen({
         <View style={styles.content}>
           <ActivityIndicator 
             size="large" 
-            color={Colors.text.white}
+            color="#FFFFFF"
           />
           {showMessage && (
-            <ThemedText style={styles.loadingText}>
+            <Text style={styles.loadingText}>
               {message}
-            </ThemedText>
+            </Text>
           )}
           
-          {/* App branding */}
           <View style={styles.brandingContainer}>
-            <ThemedText style={styles.appName}>Love Lock</ThemedText>
-            <ThemedText style={styles.tagline}>Finding love through connection</ThemedText>
+            <Text style={styles.appName}>Love Lock</Text>
+            <Text style={styles.tagline}>Finding love through connection</Text>
           </View>
         </View>
       </LinearGradient>

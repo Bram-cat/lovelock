@@ -13,7 +13,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { BlurView } from 'expo-blur';
 import Colors from '../constants/Colors';
-import NotificationService, { NotificationPermissionStatus } from '../services/NotificationServiceFallback';
+import NotificationService, { NotificationPermissionStatus } from '../services/NotificationService';
 
 const { width, height } = Dimensions.get('window');
 

@@ -19,6 +19,7 @@
     "app/(auth)/_layout.jsx",
     "app/test-home.jsx",
     "app/simple-layout.jsx",
-    "app/numerology.jsx"
+    "app/numerology.jsx",
+    "nativewind-env.d.ts"
   ]
 }

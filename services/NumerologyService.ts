@@ -417,7 +417,9 @@ class NumerologyService {
         characterAnalysis: this.generateCharacterAnalysis(
           lifePathResult.number,
           destinyResult.number,
-          soulUrgeResult.number
+          soulUrgeResult.number,
+          fullName,
+          personalityResult.number
         ),
         predictions: [], // Will be generated separately
         calculations: {
@@ -436,13 +438,114 @@ class NumerologyService {
   generateCharacterAnalysis(
     lifePath: number,
     destiny: number,
-    soulUrge: number
+    soulUrge: number,
+    name?: string,
+    personalityNumber?: number
   ): string {
     const lifePathInfo = this.getLifePathInfo(lifePath);
     const destinyInfo = this.getDestinyInfo(destiny);
     const soulUrgeInfo = this.getSoulUrgeInfo(soulUrge);
+    
+    const personalityInfo = personalityNumber ? this.getPersonalityInfo(personalityNumber) : null;
+    
+    let analysis = `${name ? name + ', y' : 'Y'}our Life Path ${lifePath} (${lifePathInfo.title}) reveals your natural journey through life. `;
+    
+    // Add specific insights based on number combinations
+    if (lifePath === destiny) {
+      analysis += `Remarkably, your Life Path and Destiny numbers are identical (${lifePath}), indicating that your soul's journey and life purpose are perfectly aligned. This rare alignment suggests you have a clear, focused mission in this lifetime. `;
+    }
+    
+    if (lifePath === soulUrge) {
+      analysis += `Your Life Path and Soul Urge numbers match (${lifePath}), showing that what you naturally become is exactly what your heart desires. This creates inner harmony and makes following your path feel deeply fulfilling. `;
+    }
+    
+    analysis += `Your Destiny ${destiny} (${destinyInfo.title}) shows your ultimate purpose: ${destinyInfo.purpose}. `;
+    
+    analysis += `Deep within, your Soul Urge ${soulUrge} (${soulUrgeInfo.title}) drives you toward ${soulUrgeInfo.motivation}. `;
+    
+    if (personalityInfo) {
+      analysis += `Others see you as ${personalityInfo.title.toLowerCase()}, drawn to your ${personalityInfo.attraction}. `;
+    }
+    
+    // Add compatibility insights
+    const compatibility = this.getNumberCompatibility(lifePath, destiny, soulUrge);
+    analysis += compatibility;
+    
+    analysis += ` Together, these numbers create your unique cosmic blueprint—a sacred geometry that guides your spiritual evolution and personal growth.`;
+    
+    return analysis;
+  }
 
-    return `Your Life Path ${lifePath} (${lifePathInfo.title}) reveals your natural journey through life, while your Destiny ${destiny} (${destinyInfo.title}) shows your ultimate purpose. Your Soul Urge ${soulUrge} (${soulUrgeInfo.title}) represents your heart's deepest desires. Together, these numbers create a unique cosmic blueprint that guides your spiritual evolution and personal growth.`;
+  private getSeasonalEnergy(month: number): string {
+    if (month >= 3 && month <= 5) {
+      return "Spring's renewal energy surrounds you now.";
+    } else if (month >= 6 && month <= 8) {
+      return "Summer's passionate energy flows through your life.";
+    } else if (month >= 9 && month <= 11) {
+      return "Autumn's transformative energy is at work.";
+    } else {
+      return "Winter's introspective energy brings deep insights.";
+    }
+  }
+
+  private getLoveGuidance(lifePathNumber: number): string {
+    const guidance = {
+      1: "attracts partners who admire your leadership and independence.",
+      2: "thrives in partnerships built on mutual respect and emotional connection.",
+      3: "draws creative, expressive partners who appreciate your joyful spirit.",
+      4: "seeks stable, reliable partners who value commitment and growth.",
+      5: "needs partners who share your love of adventure and freedom.",
+      6: "attracts nurturing souls who value family and deep commitment.",
+      7: "connects with spiritually-minded partners who respect your depth.",
+      8: "draws ambitious partners who understand your drive for success.",
+      9: "attracts compassionate partners who share humanitarian values.",
+      11: "needs intuitive partners who appreciate your spiritual gifts.",
+      22: "connects with visionary partners who support your big dreams.",
+      33: "attracts healing-oriented partners who understand your calling."
+    };
+    return guidance[lifePathNumber] || "attracts partners who appreciate your unique qualities.";
+  }
+
+  private getCareerGuidance(personalYear: number): string {
+    const guidance = {
+      1: "brings new career opportunities and leadership roles.",
+      2: "favors collaboration and partnership in business ventures.",
+      3: "highlights creative projects and communication-based work.",
+      4: "emphasizes building solid foundations and long-term planning.",
+      5: "brings changes, travel, and new experiences in your career.",
+      6: "focuses on service, teaching, and family-related businesses.",
+      7: "encourages research, study, and developing expertise.",
+      8: "is powerful for business success and financial advancement.",
+      9: "completes cycles and prepares for new career beginnings."
+    };
+    return guidance[personalYear] || "brings unique opportunities for growth.";
+  }
+
+  private getSpiritualGuidance(personalYear: number): string {
+    const guidance = {
+      1: "initiates a new spiritual cycle and personal awakening.",
+      2: "deepens your connection to others and universal love.",
+      3: "expands your creative expression and joy-based spirituality.",
+      4: "grounds your spiritual practice in daily life.",
+      5: "brings spiritual adventures and expanded consciousness.",
+      6: "focuses on service to others as a spiritual path.",
+      7: "intensifies your spiritual seeking and inner wisdom.",
+      8: "teaches you to balance material and spiritual success.",
+      9: "completes your spiritual journey and prepares for rebirth."
+    };
+    return guidance[personalYear] || "brings unique spiritual opportunities.";
+  }
+
+  private getNumberCompatibility(lifePath: number, destiny: number, soulUrge: number): string {
+    const total = lifePath + destiny + soulUrge;
+    
+    if (total <= 15) {
+      return `Your number combination (${lifePath}-${destiny}-${soulUrge}) creates a grounded, practical energy that helps you manifest your dreams into reality. `;
+    } else if (total <= 25) {
+      return `Your number combination (${lifePath}-${destiny}-${soulUrge}) creates a balanced energy between material and spiritual pursuits, giving you the best of both worlds. `;
+    } else {
+      return `Your number combination (${lifePath}-${destiny}-${soulUrge}) creates highly spiritual, intuitive energy that connects you to higher realms of consciousness. `;
+    }
   }
 
 
@@ -453,7 +556,7 @@ class NumerologyService {
       1: {
         title: "The Leader",
         description:
-          "Natural born leaders with strong independence and pioneering spirit.",
+          "🔥 You're destined to be a BOSS! Natural-born alpha with magnetic leadership energy.",
         strengths: [
           "Leadership",
           "Independence",
@@ -487,7 +590,7 @@ class NumerologyService {
       3: {
         title: "The Creative Communicator",
         description:
-          "Naturally creative and expressive with exceptional communication skills.",
+          "✨ You're a creative GENIUS! Words, art, and charm are your superpowers.",
         strengths: [
           "Creativity",
           "Communication",
@@ -506,7 +609,7 @@ class NumerologyService {
       4: {
         title: "The Builder",
         description:
-          "Practical, reliable, and hardworking with exceptional organizational skills.",
+          "💪 You're the FOUNDATION everyone relies on! Master of making dreams reality.",
         strengths: ["Reliability", "Organization", "Hard work", "Practicality"],
         challenges: [
           "Rigidity",
@@ -524,7 +627,7 @@ class NumerologyService {
       5: {
         title: "The Freedom Seeker",
         description:
-          "Adventurous and versatile with insatiable curiosity about life.",
+          "🌍 You're a FREE SPIRIT! Adventure and excitement follow you everywhere.",
         strengths: ["Adaptability", "Curiosity", "Freedom", "Versatility"],
         challenges: ["Restlessness", "Inconsistency", "Commitment issues"],
         careerPaths: ["Travel Writer", "Sales", "Marketing", "Journalist"],
@@ -538,7 +641,7 @@ class NumerologyService {
       6: {
         title: "The Nurturer",
         description:
-          "Naturally caring and responsible with desire to help others.",
+          "💖 You're a HEALING FORCE! People feel safe and loved around you.",
         strengths: ["Nurturing", "Responsibility", "Compassion", "Healing"],
         challenges: ["Over-responsibility", "Martyrdom", "Perfectionism"],
         careerPaths: ["Healthcare", "Teaching", "Counseling", "Social Work"],
@@ -551,7 +654,7 @@ class NumerologyService {
       },
       7: {
         title: "The Seeker",
-        description: "Deeply spiritual and analytical with quest for truth.",
+        description: "🔮 You're a TRUTH DETECTOR! Secrets and mysteries reveal themselves to you.",
         strengths: ["Intuition", "Analysis", "Spirituality", "Research"],
         challenges: ["Isolation", "Overthinking", "Skepticism"],
         careerPaths: [
@@ -570,7 +673,7 @@ class NumerologyService {
       8: {
         title: "The Achiever",
         description:
-          "Naturally ambitious and business-minded with ability to manifest success.",
+          "💰 You're a MONEY MAGNET! Success and wealth flow to you naturally.",
         strengths: [
           "Ambition",
           "Business acumen",
@@ -594,7 +697,7 @@ class NumerologyService {
       9: {
         title: "The Humanitarian",
         description:
-          "Naturally compassionate and idealistic with desire to serve humanity.",
+          "🌎 You're a WORLD CHANGER! Your heart holds the power to heal humanity.",
         strengths: ["Compassion", "Wisdom", "Generosity", "Idealism"],
         challenges: ["Impracticality", "Emotional extremes", "Disappointment"],
         careerPaths: [
@@ -613,7 +716,7 @@ class NumerologyService {
       11: {
         title: "The Intuitive Illuminator",
         description:
-          "Master number with heightened intuition and spiritual awareness.",
+          "✨ You're PSYCHIC! Master number with supernatural intuitive powers.",
         strengths: [
           "Intuition",
           "Inspiration",
@@ -631,7 +734,7 @@ class NumerologyService {
       },
       22: {
         title: "The Master Builder",
-        description: "Master number with ability to turn dreams into reality.",
+        description: "🏰 You're a REALITY CREATOR! Master number that manifests impossible dreams.",
         strengths: [
           "Vision",
           "Practical application",
@@ -850,7 +953,7 @@ class NumerologyService {
     return {
       1: {
         title: "The Leader Personality",
-        description: "You appear confident and capable.",
+        description: "🔥 You radiate BOSS energy! People instantly see your power.",
         traits: ["Confident", "Independent"],
         impression: "Natural leader.",
         attraction: "Confidence and initiative.",
@@ -864,14 +967,14 @@ class NumerologyService {
       },
       3: {
         title: "The Creative Personality",
-        description: "You appear artistic and expressive.",
+        description: "✨ You're pure MAGIC! Your creativity lights up every room.",
         traits: ["Creative", "Expressive"],
         impression: "Brings joy.",
         attraction: "Creativity and energy.",
       },
       4: {
         title: "The Reliable Personality",
-        description: "You appear stable and dependable.",
+        description: "💪 You're the ROCK everyone needs! Strength and stability personified.",
         traits: ["Reliable", "Practical"],
         impression: "Can be counted on.",
         attraction: "Stability and trust.",
@@ -1108,6 +1211,11 @@ class NumerologyService {
     const lifePathInfo = this.getLifePathInfo(profile.lifePathNumber);
     const destinyInfo = this.getDestinyInfo(profile.destinyNumber);
     const soulUrgeInfo = this.getSoulUrgeInfo(profile.soulUrgeNumber);
+    const personalityInfo = this.getPersonalityInfo(profile.personalityNumber);
+    
+    // Get current month for seasonal insights
+    const currentMonth = new Date().getMonth() + 1;
+    const seasonalEnergy = this.getSeasonalEnergy(currentMonth);
     
     return [
       {
@@ -1115,10 +1223,13 @@ class NumerologyService {
         icon: "heart",
         timeframe: "Next 3 months",
         predictions: [
-          `Your Life Path ${profile.lifePathNumber} brings ${lifePathInfo.title.toLowerCase()} energy to your relationships.`,
-          "Deep emotional connections are highlighted in your cosmic blueprint.",
-          "Focus on authentic communication with your partner or future love.",
-          "Your heart chakra is opening to receive and give unconditional love."
+          `Your Life Path ${profile.lifePathNumber} (${lifePathInfo.title}) ${this.getLoveGuidance(profile.lifePathNumber)}`,
+          `${seasonalEnergy} This energy amplifies your natural charm and magnetism.`,
+          `Your Soul Urge ${profile.soulUrgeNumber} reveals you're seeking ${soulUrgeInfo.desires.join(' and ').toLowerCase()} in relationships.`,
+          `Compatible partners will be drawn to your ${personalityInfo.attraction}.`,
+          profile.personalYearNumber === 2 || profile.personalYearNumber === 6 ? 
+            "This is a powerful year for deepening romantic connections." :
+            "Focus on authentic self-expression to attract your ideal partner."
         ],
         strength: "high"
       },
@@ -1127,12 +1238,13 @@ class NumerologyService {
         icon: "briefcase",
         timeframe: "Next 6 months",
         predictions: [
-          `Your Destiny Number ${profile.destinyNumber} (${destinyInfo.title}) reveals your true calling.`,
-          "Professional opportunities aligned with your soul purpose are emerging.",
-          "Financial abundance flows when you follow your authentic path.",
-          "Trust your intuition in career decisions this season."
+          `Your Destiny Number ${profile.destinyNumber} (${destinyInfo.title}) reveals your true calling: ${destinyInfo.purpose}`,
+          `Your Life Path ${profile.lifePathNumber} suggests career success in: ${lifePathInfo.careerPaths.slice(0, 2).join(', ')}.`,
+          `Personal Year ${profile.personalYearNumber} ${this.getCareerGuidance(profile.personalYearNumber)}`,
+          `Your natural talents (${destinyInfo.talents.join(', ')}) will be recognized and rewarded.`,
+          "Financial abundance flows when you align your work with your soul's mission."
         ],
-        strength: "medium"
+        strength: profile.personalYearNumber === 8 || profile.personalYearNumber === 1 ? "high" : "medium"
       },
       {
         category: "Health & Wellness",
@@ -1151,12 +1263,15 @@ class NumerologyService {
         icon: "leaf",
         timeframe: "This year",
         predictions: [
-          `Your Soul Urge ${profile.soulUrgeNumber} (${soulUrgeInfo.title}) guides your spiritual evolution.`,
-          "A period of profound spiritual awakening is beginning.",
-          "Trust your inner wisdom and embrace your psychic abilities.",
-          "Ancient knowledge and mystical practices will call to you."
+          `Your Soul Urge ${profile.soulUrgeNumber} (${soulUrgeInfo.title}) guides your spiritual evolution: ${soulUrgeInfo.fulfillment}`,
+          `Life Path ${profile.lifePathNumber} reveals your spiritual approach: ${lifePathInfo.lifeApproach}`,
+          `Personal Year ${profile.personalYearNumber} ${this.getSpiritualGuidance(profile.personalYearNumber)}`,
+          `Your hidden depth: ${lifePathInfo.hiddenDepth}`,
+          profile.lifePathNumber === 7 || profile.lifePathNumber === 11 || profile.lifePathNumber === 22 ?
+            "Master number or spiritual path - you're a natural mystic and teacher." :
+            "Trust your intuition and embrace your unique spiritual gifts."
         ],
-        strength: "high"
+        strength: [7, 9, 11, 22, 33].includes(profile.lifePathNumber) ? "high" : "medium"
       }
     ];
   }

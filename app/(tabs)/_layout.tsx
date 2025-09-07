@@ -1,199 +1,177 @@
-import { Tabs, usePathname, useRouter } from "expo-router";
-import React, { useState } from "react";
-import {
-  StyleSheet,
-  TouchableOpacity,
-  View,
-  Text,
-  Dimensions,
-  Platform,
-  Animated,
-} from "react-native";
+import { Tabs, Redirect } from "expo-router";
+import React, { useState, useEffect } from "react";
 import { Ionicons } from "@expo/vector-icons";
-import { useTheme } from "../../contexts/ThemeContext";
-import ThemedText from "../../components/ThemedText";
+import { useUserSync } from "../../lib/user-sync";
+import { SignedIn, SignedOut, useUser } from "@clerk/clerk-expo";
+import { ProfileProvider, useProfile } from "../../contexts/ProfileContext";
+import { AlertProvider, useAlert, setGlobalAlertInstance } from "../../contexts/AlertContext";
+import { DesignSystem } from "../../constants/DesignSystem";
+import OnboardingScreen from "../../components/OnboardingScreen";
+import { StripeService } from "../../services/StripeService";
 
-const { width: screenWidth } = Dimensions.get("window");
-const isIOS = Platform.OS === "ios";
+// Wrapper component that uses the profile context
+function TabsWithOnboarding() {
+  const { profileData, loading, markOnboardingCompleted } = useProfile();
+  const { user } = useUser();
+  const alertContext = useAlert();
+  const [showOnboarding, setShowOnboarding] = useState(false);
 
-// Tab configuration with theme-aware colors
-const tabs = [
-  {
-    name: "index",
-    route: "/",
-    title: "Home",
-    icon: "home-outline",
-    activeIcon: "home",
-  },
-  {
-    name: "numerology",
-    route: "/numerology",
-    title: "Numbers",
-    icon: "calculator-outline",
-    activeIcon: "calculator",
-  },
-  {
-    name: "trivia",
-    route: "/trivia",
-    title: "Trivia",
-    icon: "bulb-outline",
-    activeIcon: "bulb",
-  },
-  {
-    name: "love-match",
-    route: "/love-match",
-    title: "Love Match",
-    icon: "heart-outline",
-    activeIcon: "heart",
-  },
-  {
-    name: "profile",
-    route: "/profile",
-    title: "Profile",
-    icon: "person-outline",
-    activeIcon: "person",
-  },
-];
+  // Set global alert instance on mount
+  React.useEffect(() => {
+    setGlobalAlertInstance(alertContext);
+  }, [alertContext]);
 
-function ThemedNavBar() {
-  const pathname = usePathname();
-  const router = useRouter();
-  const { theme } = useTheme();
-  const [hoveredTab, setHoveredTab] = useState<string | null>(null);
+  useEffect(() => {
+    // Show onboarding if profile exists but onboarding hasn't been completed
+    if (!loading && profileData && !profileData.onboarding_completed) {
+      setShowOnboarding(true);
+    }
+  }, [profileData, loading]);
 
-  const handleTabPress = (route: string) => {
-    router.push(route as any);
+  const handleOnboardingComplete = async () => {
+    await markOnboardingCompleted();
+    setShowOnboarding(false);
+  };
+
+  const handleUpgradeToPremium = async () => {
+    try {
+      if (!user) {
+        alertContext.showError('Error', 'Please sign in to upgrade to premium');
+        return;
+      }
+
+      const result = await StripeService.createCheckoutSession(
+        user.id,
+        user.emailAddresses[0]?.emailAddress || '',
+        'subscription'
+      );
+
+      if (result.error) {
+        alertContext.showError('Error', `Failed to create checkout session: ${result.error}`);
+      } else if (result.url) {
+        // Open Stripe checkout in browser
+        await StripeService.redirectToCheckout(result.url);
+        // Mark onboarding as completed after attempting to start checkout
+        await markOnboardingCompleted();
+        setShowOnboarding(false);
+      }
+    } catch (error) {
+      alertContext.showError('Error', 'Something went wrong. Please try again.');
+      console.error('Premium upgrade error:', error);
+    }
   };
 
   return (
-    <View
-      style={[
-        styles.container,
-        { backgroundColor: theme.card, borderTopColor: theme.border },
-      ]}
-    >
-      {tabs.map((tab, index) => {
-        const isActive = pathname === tab.route;
-        const isHovered = hoveredTab === tab.name;
-
-        return (
-          <TouchableOpacity
-            key={tab.name}
-            style={[styles.tabItem]}
-            onPress={() => handleTabPress(tab.route)}
-            onPressIn={() => setHoveredTab(tab.name)}
-            onPressOut={() => setHoveredTab(null)}
-            activeOpacity={0.8}
-          >
-            <Animated.View
-              style={[
-                styles.iconContainer,
-                isActive && {
-                  backgroundColor: theme.primary + "20",
-                  borderRadius: 12,
-                  transform: [{ scale: 1.1 }],
-                },
-                isHovered &&
-                  !isActive && {
-                    backgroundColor: theme.primary + "10",
-                    borderRadius: 8,
-                    transform: [{ scale: 1.05 }],
-                  },
-              ]}
-            >
-              <Ionicons
-                name={isActive ? (tab.activeIcon as any) : (tab.icon as any)}
-                size={isActive ? 26 : 24}
-                color={
-                  isActive
-                    ? theme.primary
-                    : isHovered
-                      ? theme.primary
-                      : theme.textSecondary
-                }
-              />
-            </Animated.View>
-            <ThemedText
-              type={isActive ? "default" : "secondary"}
-              style={[
-                styles.tabLabel,
-                {
-                  fontWeight: isActive ? "700" : isHovered ? "600" : "500",
-                },
-              ]}
-            >
-              {tab.title}
-            </ThemedText>
-          </TouchableOpacity>
-        );
-      })}
-    </View>
+    <>
+      <OnboardingScreen 
+        visible={showOnboarding}
+        onComplete={handleOnboardingComplete}
+        onUpgradeToPremium={handleUpgradeToPremium}
+      />
+        <Tabs
+          screenOptions={{
+            tabBarActiveTintColor: DesignSystem.colors.primary.solidPurple,
+            tabBarInactiveTintColor: DesignSystem.colors.text.muted,
+            tabBarStyle: {
+              backgroundColor: 'rgba(0, 0, 0, 0.95)',
+              borderTopColor: 'rgba(124, 58, 237, 0.3)',
+              borderTopWidth: 1,
+              height: DesignSystem.components.tabBar.height,
+              paddingTop: DesignSystem.spacing.scale.sm,
+              paddingBottom: DesignSystem.spacing.scale['3xl'],
+              ...DesignSystem.shadows.glow,
+              position: 'absolute' as const,
+              backdropFilter: 'blur(20px)',
+            },
+            headerStyle: {
+              backgroundColor: DesignSystem.colors.backgrounds.dark,
+              borderBottomWidth: 0,
+              shadowOpacity: 0,
+            },
+            headerTintColor: DesignSystem.colors.text.primary,
+            headerTitleStyle: {
+              fontSize: DesignSystem.typography.sizes.lg,
+              fontWeight: DesignSystem.typography.weights.semibold,
+            },
+            tabBarLabelStyle: {
+              fontSize: DesignSystem.components.tabBar.item.labelSize,
+              fontWeight: DesignSystem.typography.weights.semibold,
+              marginTop: DesignSystem.spacing.scale.xs,
+            },
+            tabBarIconStyle: {
+              marginTop: DesignSystem.spacing.scale.xs,
+            },
+            tabBarItemStyle: {
+              paddingVertical: DesignSystem.spacing.scale.sm,
+            },
+          }}
+        >
+          <Tabs.Screen
+            name="index"
+            options={{
+              title: 'Home',
+              tabBarIcon: ({ color, focused }) => (
+                <Ionicons name={focused ? 'home' : 'home-outline'} size={24} color={color} />
+              ),
+            }}
+          />
+          <Tabs.Screen
+            name="numerology"
+            options={{
+              title: 'Numbers',
+              tabBarIcon: ({ color, focused }) => (
+                <Ionicons name={focused ? 'calculator' : 'calculator-outline'} size={24} color={color} />
+              ),
+            }}
+          />
+          <Tabs.Screen
+            name="love-match"
+            options={{
+              title: 'Love',
+              tabBarIcon: ({ color, focused }) => (
+                <Ionicons name={focused ? 'heart' : 'heart-outline'} size={24} color={color} />
+              ),
+            }}
+          />
+          <Tabs.Screen
+            name="trust-assessment"
+            options={{
+              title: 'Trust',
+              tabBarIcon: ({ color, focused }) => (
+                <Ionicons name={focused ? 'shield' : 'shield-outline'} size={24} color={color} />
+              ),
+            }}
+          />
+          <Tabs.Screen
+            name="profile"
+            options={{
+              title: 'Profile',
+              tabBarIcon: ({ color, focused }) => (
+                <Ionicons name={focused ? 'person' : 'person-outline'} size={24} color={color} />
+              ),
+            }}
+          />
+        </Tabs>
+    </>
   );
 }
 
 export default function TabLayout() {
-  const { theme } = useTheme();
+  // Sync user with Supabase when they access the tabs
+  useUserSync();
 
   return (
-    <View
-      style={[styles.layoutContainer, { backgroundColor: theme.background }]}
-    >
-      <Tabs
-        screenOptions={{
-          headerShown: false,
-          tabBarStyle: { display: "none" }, // Hide default tab bar
-        }}
-      >
-        <Tabs.Screen name="index" />
-        <Tabs.Screen name="numerology" />
-        <Tabs.Screen name="trivia" />
-        <Tabs.Screen name="love-match" />
-        <Tabs.Screen name="profile" />
-      </Tabs>
-      <ThemedNavBar />
-    </View>
+    <>
+      <SignedIn>
+        <AlertProvider>
+          <ProfileProvider>
+            <TabsWithOnboarding />
+          </ProfileProvider>
+        </AlertProvider>
+      </SignedIn>
+      <SignedOut>
+        <Redirect href="/(auth)/sign-in" />
+      </SignedOut>
+    </>
   );
 }
-
-const styles = StyleSheet.create({
-  layoutContainer: {
-    flex: 1,
-  },
-  container: {
-    position: "absolute",
-    bottom: 0,
-    left: 0,
-    right: 0,
-    flexDirection: "row",
-    paddingTop: 12,
-    paddingBottom: isIOS ? 34 : 20,
-    paddingHorizontal: 16,
-    borderTopWidth: 1,
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: -2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 10,
-  },
-  tabItem: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    paddingVertical: 8,
-  },
-  iconContainer: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 4,
-  },
-  tabLabel: {
-    fontSize: 12,
-    textAlign: "center",
-  },
-});
