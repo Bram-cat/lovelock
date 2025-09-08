@@ -4,12 +4,10 @@ import { NumerologyProfile } from "./NumerologyService";
 // Get API keys from environment variables with dual key support
 const PRIMARY_GEMINI_API_KEY =
   process.env.GOOGLE_AI_API_KEY ||
-  process.env.EXPO_PUBLIC_GOOGLE_AI_API_KEY ||
-  "AIzaSyAzAP3NQJyvY4rglOja86HFxjlJNjWzZJo";
+  process.env.EXPO_PUBLIC_GOOGLE_AI_API_KEY;
 
 const BACKUP_GEMINI_API_KEY =
-  process.env.BACKUP_GOOGLE_AI_API_KEY ||
-  "AIzaSyBiOdLCC50Gw5valCvGdaR1Umr3CKxYsBs";
+  process.env.BACKUP_GOOGLE_AI_API_KEY;
 
 console.log(
   "🔑 Primary Gemini API Key loaded:",

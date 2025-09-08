@@ -2,8 +2,8 @@
 import { NumerologyProfile } from './NumerologyService';
 
 // Environment variables
-const GEMINI_KEY_1 = process.env.GOOGLE_AI_API_KEY || "AIzaSyAzAP3NQJyvY4rglOja86HFxjlJNjWzZJo";
-const GEMINI_KEY_2 = process.env.BACKUP_GOOGLE_AI_API_KEY || "AIzaSyBiOdLCC50Gw5valCvGdaR1Umr3CKxYsBs";
+const GEMINI_KEY_1 = process.env.GOOGLE_AI_API_KEY;
+const GEMINI_KEY_2 = process.env.BACKUP_GOOGLE_AI_API_KEY;
 const OPENAI_KEY = process.env.OPENAI_API_SECRET_KEY;
 
 const GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent";
@@ -16,6 +16,10 @@ interface AIResponse {
 export class SimpleAIService {
   
   private static async tryGemini(prompt: string, apiKey: string): Promise<string> {
+    if (!apiKey) {
+      throw new Error('Gemini API key not configured');
+    }
+    
     const response = await fetch(`${GEMINI_URL}?key=${apiKey}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
