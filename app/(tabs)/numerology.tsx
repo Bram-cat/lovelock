@@ -400,7 +400,11 @@ export default function NumerologyScreen() {
                   {renderShimmerLine("70%")}
                 </View>
               ) : (
-                <ReadMoreText text={profile.characterAnalysis} />
+                <ReadMoreText 
+                  text={profile.characterAnalysis}
+                  style={styles.analysisText}
+                  readMoreStyle={styles.readMoreText}
+                />
               )}
             </GlassCard>
           </View>
@@ -731,5 +735,15 @@ const styles = StyleSheet.create({
   },
   bottomPadding: {
     height: 40,
+  },
+  analysisText: {
+    color: "rgba(255,255,255,0.9)",
+    fontSize: 16,
+    lineHeight: 24,
+  },
+  readMoreText: {
+    color: "#FF6B9D",
+    fontSize: 14,
+    fontWeight: "600",
   },
 });
