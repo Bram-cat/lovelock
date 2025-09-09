@@ -1,10 +1,10 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { 
-  View, 
-  Text, 
-  StyleSheet, 
-  SafeAreaView, 
-  ScrollView, 
+import React, { useState, useEffect, useMemo } from "react";
+import {
+  View,
+  Text,
+  StyleSheet,
+  SafeAreaView,
+  ScrollView,
   TouchableOpacity,
   TextInput,
   Alert,
@@ -14,35 +14,64 @@ import {
   Platform,
   Share,
   Dimensions,
-  Animated
-} from 'react-native';
-import { useUser } from '@clerk/clerk-expo';
-import { Ionicons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
-import NumerologyService from '../../services/NumerologyService';
-import type { NumerologyProfile } from '../../services/NumerologyService';
-import UniversalAIService, { AIProvider } from '../../services/UniversalAIService';
-import { ProkeralaNumerologyService } from '../../services/ProkeralaNumerologyService';
-import { supabase } from '../../lib/supabase-client';
-import { useProfile } from '../../contexts/ProfileContext';
-import { SubscriptionService } from '../../services/SubscriptionService';
-import { NumerologyLoadingSkeleton } from '../../components/LoadingSkeletons';
-import AILoadingIndicator from '../../components/AILoadingIndicator';
-import CustomAlert, { useCustomAlert } from '../../components/CustomAlert';
-import { DesignSystem } from '../../constants/DesignSystem';
-import { DatePicker, ShadcnButton, ShadcnInput } from '../../components/ui';
-import GlassCard from '../../components/ui/GlassCard';
-import Badge from '../../components/ui/Badge';
-import ReadMoreText from '../../components/ReadMoreText';
-import { StaticDataService } from '../../services/StaticDataService';
+  Animated,
+} from "react-native";
+import { useUser } from "@clerk/clerk-expo";
+import { Ionicons } from "@expo/vector-icons";
+import { LinearGradient } from "expo-linear-gradient";
+import NumerologyService from "../../services/NumerologyService";
+import type { NumerologyProfile } from "../../services/NumerologyService";
+import SimpleAIService from "../../services/SimpleAIService";
+import UsageTrackingService from "../../services/UsageTrackingService";
+import {
+  ProkeralaNumerologyService,
+  NumerologyReading,
+} from "../../services/ProkeralaNumerologyService";
+import { supabase } from "../../lib/supabase-client";
+import { useProfile } from "../../contexts/ProfileContext";
+import { SubscriptionService } from "../../services/SubscriptionService";
+import { NumerologyLoadingSkeleton } from "../../components/LoadingSkeletons";
+import AILoadingIndicator from "../../components/AILoadingIndicator";
+import CustomAlert, { useCustomAlert } from "../../components/CustomAlert";
+import { DesignSystem } from "../../constants/DesignSystem";
+import { DatePicker, ShadcnButton, ShadcnInput } from "../../components/ui";
+import GlassCard from "../../components/ui/GlassCard";
+import Badge from "../../components/ui/Badge";
+import ReadMoreText from "../../components/ReadMoreText";
+import { StaticDataService } from "../../services/StaticDataService";
 
-const { width: screenWidth } = Dimensions.get('window');
+const { width: screenWidth } = Dimensions.get("window");
 
 // Modern Numerology Card Component
-const ModernNumerologyCard = ({ title, number, description, gradient, icon, onPress, style }) => {
+type ModernNumerologyCardProps = {
+  title: string;
+  number: number | string;
+  description: string;
+  gradient: string[];
+  icon: React.ComponentProps<typeof Ionicons>["name"];
+  onPress: () => void;
+  style?: any;
+};
+
+const ModernNumerologyCard = ({
+  title,
+  number,
+  description,
+  gradient,
+  icon,
+  onPress,
+  style,
+}: ModernNumerologyCardProps) => {
   return (
-    <TouchableOpacity onPress={onPress} style={[styles.modernCard, style]} activeOpacity={0.8}>
-      <LinearGradient colors={gradient} style={styles.modernCardGradient}>
+    <TouchableOpacity
+      onPress={onPress}
+      style={[styles.modernCard, style]}
+      activeOpacity={0.8}
+    >
+      <LinearGradient
+        colors={gradient as [string, string, ...string[]]}
+        style={styles.modernCardGradient}
+      >
         <View style={styles.modernCardHeader}>
           <View style={styles.modernCardIconContainer}>
             <Ionicons name={icon} size={28} color="white" />
@@ -52,26 +81,51 @@ const ModernNumerologyCard = ({ title, number, description, gradient, icon, onPr
           </View>
         </View>
         <Text style={styles.modernCardTitle}>{title}</Text>
-        <Text style={styles.modernCardDescription} numberOfLines={2}>{description}</Text>
+        <Text style={styles.modernCardDescription} numberOfLines={2}>
+          {description}
+        </Text>
       </LinearGradient>
     </TouchableOpacity>
   );
 };
 
 // Life Aspect Card Component
-const LifeAspectCard = ({ aspect, icon, color, insights, expanded, onToggle }) => {
+type LifeAspectCardProps = {
+  aspect: string;
+  icon: React.ComponentProps<typeof Ionicons>["name"];
+  color: string;
+  insights: string[];
+  expanded: boolean;
+  onToggle: () => void;
+};
+
+const LifeAspectCard = ({
+  aspect,
+  icon,
+  color,
+  insights,
+  expanded,
+  onToggle,
+}: LifeAspectCardProps) => {
   return (
-    <TouchableOpacity onPress={onToggle} style={styles.aspectCard} activeOpacity={0.9}>
-      <LinearGradient colors={[color, `${color}CC`]} style={styles.aspectCardGradient}>
+    <TouchableOpacity
+      onPress={onToggle}
+      style={styles.aspectCard}
+      activeOpacity={0.9}
+    >
+      <LinearGradient
+        colors={[color, `${color}CC`]}
+        style={styles.aspectCardGradient}
+      >
         <View style={styles.aspectHeader}>
           <View style={styles.aspectIconContainer}>
             <Ionicons name={icon} size={24} color="white" />
           </View>
           <Text style={styles.aspectTitle}>{aspect}</Text>
-          <Ionicons 
-            name={expanded ? "chevron-up" : "chevron-down"} 
-            size={20} 
-            color="rgba(255,255,255,0.8)" 
+          <Ionicons
+            name={expanded ? "chevron-up" : "chevron-down"}
+            size={20}
+            color="rgba(255,255,255,0.8)"
           />
         </View>
         {expanded && (
@@ -94,17 +148,19 @@ export default function NumerologyScreen() {
   const { profileData, updateProfileData } = useProfile();
   const [profile, setProfile] = useState<NumerologyProfile | null>(null);
   const [showInput, setShowInput] = useState(false);
-  const [birthDate, setBirthDate] = useState('');
-  const [userName, setUserName] = useState('');
+  const [birthDate, setBirthDate] = useState("");
+  const [userName, setUserName] = useState("");
   const [loading, setLoading] = useState(false);
+  const [aiEnhancing, setAiEnhancing] = useState(false);
+  const [prokeralaLoading, setProkeralaLoading] = useState(false);
   const [expandedAspect, setExpandedAspect] = useState<string | null>(null);
   const [showAIChat, setShowAIChat] = useState(false);
-  const [aiQuestion, setAiQuestion] = useState('');
-  const [aiResponse, setAiResponse] = useState('');
+  const [aiQuestion, setAiQuestion] = useState("");
+  const [aiResponse, setAiResponse] = useState("");
   const [aiLoading, setAiLoading] = useState(false);
   const [aiRetryAttempt, setAiRetryAttempt] = useState(0);
-  const [aiProgressMessage, setAiProgressMessage] = useState('');
-  const [currentAiProvider, setCurrentAiProvider] = useState<AIProvider>(AIProvider.OPENAI);
+  const [aiProgressMessage, setAiProgressMessage] = useState("");
+  const [currentAiProvider, setCurrentAiProvider] = useState("openai");
   const [usageStats, setUsageStats] = useState<any>(null);
   const { showAlert, AlertComponent } = useCustomAlert();
   const [enhancedProfile, setEnhancedProfile] = useState(false);
@@ -112,7 +168,10 @@ export default function NumerologyScreen() {
 
   // Global name synchronization
   useEffect(() => {
-    const globalName = profileData?.full_name || user?.fullName || `${user?.firstName || ''} ${user?.lastName || ''}`.trim();
+    const globalName =
+      profileData?.full_name ||
+      user?.fullName ||
+      `${user?.firstName || ""} ${user?.lastName || ""}`.trim();
     if (globalName && globalName !== userName) {
       setUserName(globalName);
     }
@@ -123,15 +182,15 @@ export default function NumerologyScreen() {
     setUserName(newName);
     if (user?.id && newName.trim()) {
       try {
-        console.log('🔄 Numerology: Updating profile name to:', newName.trim());
+        console.log("🔄 Numerology: Updating profile name to:", newName.trim());
         const result = await updateProfileData({ full_name: newName.trim() });
         if (result) {
-          console.log('✅ Numerology: Profile name updated successfully');
+          console.log("✅ Numerology: Profile name updated successfully");
         } else {
-          console.error('❌ Numerology: Profile name update failed');
+          console.error("❌ Numerology: Profile name update failed");
         }
       } catch (error) {
-        console.error('❌ Error updating profile name:', error);
+        console.error("❌ Error updating profile name:", error);
       }
     }
   };
@@ -144,16 +203,18 @@ export default function NumerologyScreen() {
           const stats = await SubscriptionService.getUsageStats(user.id);
           const resetDate = new Date(stats.numerology.resetsAt);
           const now = new Date();
-          const daysUntilReset = Math.ceil((resetDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
-          
+          const daysUntilReset = Math.ceil(
+            (resetDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)
+          );
+
           setUsageStats({
             numerologyUsage: stats.numerology.totalUsed,
             numerologyRemaining: stats.numerology.remaining,
             daysUntilReset: Math.max(0, daysUntilReset),
-            isPremium: stats.isPremium
+            isPremium: stats.isPremium,
           });
         } catch (error) {
-          console.error('Error loading usage stats:', error);
+          console.error("Error loading usage stats:", error);
         }
       }
     };
@@ -165,12 +226,15 @@ export default function NumerologyScreen() {
     if (profileData?.birth_date) {
       let formattedBirthDate = profileData.birth_date;
       try {
-        if (profileData.birth_date.includes('-') && profileData.birth_date.length === 10) {
-          const [year, month, day] = profileData.birth_date.split('-');
-          formattedBirthDate = `${month.padStart(2, '0')}/${day.padStart(2, '0')}/${year}`;
+        if (
+          profileData.birth_date.includes("-") &&
+          profileData.birth_date.length === 10
+        ) {
+          const [year, month, day] = profileData.birth_date.split("-");
+          formattedBirthDate = `${month.padStart(2, "0")}/${day.padStart(2, "0")}/${year}`;
         }
       } catch (error) {
-        console.log('Error formatting birth date:', error);
+        console.log("Error formatting birth date:", error);
       }
       setBirthDate(formattedBirthDate);
     }
@@ -178,16 +242,24 @@ export default function NumerologyScreen() {
 
   // Initialize input mode if needed
   useEffect(() => {
-    const globalName = profileData?.full_name || user?.fullName || `${user?.firstName || ''} ${user?.lastName || ''}`.trim();
-    if (globalName && globalName !== '' && !profile) {
+    const globalName =
+      profileData?.full_name ||
+      user?.fullName ||
+      `${user?.firstName || ""} ${user?.lastName || ""}`.trim();
+    if (globalName && globalName !== "" && !profile) {
       setShowInput(true);
     }
   }, [user, profile, profileData]);
 
   // Redirect unknown users
   useEffect(() => {
-    if (profile && !userName.trim() && !profileData?.full_name && !user?.fullName) {
-      console.log('Unknown user detected, redirecting to input form');
+    if (
+      profile &&
+      !userName.trim() &&
+      !profileData?.full_name &&
+      !user?.fullName
+    ) {
+      console.log("Unknown user detected, redirecting to input form");
       setProfile(null);
       setShowInput(true);
     }
@@ -202,13 +274,15 @@ export default function NumerologyScreen() {
         const stats = await SubscriptionService.getUsageStats(user.id);
         const resetDate = new Date(stats.numerology.resetsAt);
         const now = new Date();
-        const daysUntilReset = Math.ceil((resetDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
-        
+        const daysUntilReset = Math.ceil(
+          (resetDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)
+        );
+
         const newStats = {
           numerologyUsage: stats.numerology.totalUsed,
           numerologyRemaining: stats.numerology.remaining,
           daysUntilReset: Math.max(0, daysUntilReset),
-          isPremium: stats.isPremium
+          isPremium: stats.isPremium,
         };
 
         setUsageStats(newStats);
@@ -216,38 +290,40 @@ export default function NumerologyScreen() {
         // Show upgrade prompts
         if (!stats.isPremium && stats.numerology.remaining === 1 && !profile) {
           showAlert({
-            title: '⚠️ Last Free Reading!',
+            title: "⚠️ Last Free Reading!",
             message: `You have only 1 numerology reading remaining this month. After this, you'll need to wait ${daysUntilReset} days or upgrade to Premium for unlimited access.`,
-            type: 'warning',
+            type: "warning",
             buttons: [
-              { text: 'Continue with Last Reading', style: 'cancel' },
-              { 
-                text: 'Upgrade to Premium ($4.99/mo)', 
-                style: 'primary',
+              { text: "Continue with Last Reading", style: "cancel" },
+              {
+                text: "Upgrade to Premium ($4.99/mo)",
+                style: "primary",
                 onPress: async () => {
                   try {
-                    const result = await SubscriptionService.purchasePremiumSubscription(
-                      user.id,
-                      user.primaryEmailAddress?.emailAddress || ''
-                    );
+                    const result =
+                      await SubscriptionService.purchasePremiumSubscription(
+                        user.id,
+                        user.primaryEmailAddress?.emailAddress || ""
+                      );
                     if (result.success) {
                       showAlert({
-                        title: '🎉 Welcome to Premium!',
-                        message: 'You now have unlimited access to all numerology features!',
-                        type: 'success'
+                        title: "🎉 Welcome to Premium!",
+                        message:
+                          "You now have unlimited access to all numerology features!",
+                        type: "success",
                       });
                       updateUsageStats();
                     }
                   } catch (error) {
-                    console.error('Upgrade error:', error);
+                    console.error("Upgrade error:", error);
                   }
-                }
-              }
-            ]
+                },
+              },
+            ],
           });
         }
       } catch (error) {
-        console.error('Error updating usage stats:', error);
+        console.error("Error updating usage stats:", error);
       }
     };
 
@@ -256,64 +332,78 @@ export default function NumerologyScreen() {
     return () => clearInterval(interval);
   }, [user?.id, profile]);
 
-  const calculateNumerologyWithProfile = async (fullName: string, date: string, profileData?: any) => {
+  const calculateNumerologyWithProfile = async (
+    fullName: string,
+    date: string,
+    profileData?: any
+  ) => {
     setLoading(true);
     try {
-      if (profileData && (profileData.birth_location || profileData.birth_time)) {
-        console.log('🔮 Using Prokerala API for enhanced numerology...');
-        const prokeralaReading = await ProkeralaNumerologyService.getNumerologyReading(
-          fullName,
-          date,
-          profileData?.birth_time,
-          profileData?.birth_location
-        );
-        
+      if (
+        profileData &&
+        (profileData.birth_location || profileData.birth_time)
+      ) {
+        console.log("🔮 Using Prokerala API for enhanced numerology...");
+        const prokeralaReading =
+          await ProkeralaNumerologyService.getNumerologyReading(
+            fullName,
+            date,
+            profileData?.birth_time,
+            profileData?.birth_location
+          );
+
         if (prokeralaReading) {
           const numerologyProfile = {
             lifePathNumber: prokeralaReading.life_path_number,
             destinyNumber: prokeralaReading.destiny_number,
             soulUrgeNumber: prokeralaReading.soul_urge_number,
             personalityNumber: prokeralaReading.personality_number,
-            personalYearNumber: new Date().getFullYear() % 9 + 1,
+            personalYearNumber: (new Date().getFullYear() % 9) + 1,
             lifePathInfo: {
-              title: 'Enhanced by Prokerala API',
+              title: "Enhanced by Prokerala API",
               description: prokeralaReading.life_path_description,
               strengths: prokeralaReading.strengths,
               challenges: prokeralaReading.challenges,
               careerPaths: [prokeralaReading.career_guidance],
-              relationships: prokeralaReading.relationship_guidance
+              relationships: prokeralaReading.relationship_guidance,
             },
-            characterAnalysis: (await UniversalAIService.generatePersonalizedCharacterAnalysis(
-              {
-                lifePathNumber: prokeralaReading.life_path_number,
-                destinyNumber: prokeralaReading.destiny_number,
-                soulUrgeNumber: prokeralaReading.soul_urge_number,
-                personalityNumber: prokeralaReading.personality_number,
-                personalYearNumber: new Date().getFullYear() % 9 + 1
-              } as any,
-              fullName
-            )).content,
-            predictions: (await UniversalAIService.generateAdvancedPrompt(`Generate personalized predictions for ${fullName} based on their numerology: Life Path ${prokeralaReading.life_path_number}, Destiny ${prokeralaReading.destiny_number}, Personal Year ${new Date().getFullYear() % 9 + 1}. Focus on: what this year holds, opportunities, personal development, relationships, career guidance. Keep under 150 words.`)).content,
+            characterAnalysis:
+              await SimpleAIService.generateOptimizedCharacterAnalysis(
+                {
+                  lifePathNumber: prokeralaReading.life_path_number,
+                  destinyNumber: prokeralaReading.destiny_number,
+                  soulUrgeNumber: prokeralaReading.soul_urge_number,
+                  personalityNumber: prokeralaReading.personality_number,
+                  personalYearNumber: (new Date().getFullYear() % 9) + 1,
+                } as any,
+                fullName
+              ),
+            predictions: await SimpleAIService.generateResponse(
+              `Generate personalized predictions for ${fullName} based on their numerology: Life Path ${prokeralaReading.life_path_number}, Destiny ${prokeralaReading.destiny_number}, Personal Year ${(new Date().getFullYear() % 9) + 1}. Focus on: what this year holds, opportunities, personal development, relationships, career guidance. Keep under 150 words.`,
+              "numerology"
+            ),
             luckyNumbers: prokeralaReading.lucky_numbers,
-            luckyColors: prokeralaReading.lucky_colors
+            luckyColors: prokeralaReading.lucky_colors,
           };
 
           setProfile(numerologyProfile as any);
           setEnhancedProfile(true);
-          console.log('✨ Enhanced numerology profile generated with Prokerala API + AI!');
+          console.log(
+            "✨ Enhanced numerology profile generated with Prokerala API + AI!"
+          );
           setShowInput(false);
           setLoading(false);
           return;
         }
       }
-      
+
       await calculateNumerology();
     } catch (error) {
-      console.error('Enhanced numerology calculation error:', error);
+      console.error("Enhanced numerology calculation error:", error);
       try {
         await calculateNumerology();
       } catch (fallbackError) {
-        console.error('Fallback calculation also failed:', fallbackError);
+        console.error("Fallback calculation also failed:", fallbackError);
         setLoading(false);
       }
     } finally {
@@ -323,168 +413,275 @@ export default function NumerologyScreen() {
 
   const calculateNumerology = async () => {
     if (!birthDate) {
-      Alert.alert('Error', 'Please enter your birth date');
+      Alert.alert("Error", "Please enter your birth date");
       setLoading(false);
       return;
     }
 
-    const datePattern = /^(0[1-9]|1[0-2])\/(0[1-9]|[12]\d|3[01])\/(19|20)\d{2}$/;
+    const datePattern =
+      /^(0[1-9]|1[0-2])\/(0[1-9]|[12]\d|3[01])\/(19|20)\d{2}$/;
     if (!datePattern.test(birthDate)) {
-      Alert.alert('Error', 'Please enter date in MM/DD/YYYY format');
+      Alert.alert("Error", "Please enter date in MM/DD/YYYY format");
       setLoading(false);
       return;
     }
 
     // Check usage limits
     if (user?.id) {
-      const usageCheck = await SubscriptionService.canAccessFeature(user.id, 'numerology');
+      const usageCheck = await SubscriptionService.canAccessFeature(
+        user.id,
+        "numerology"
+      );
       if (!usageCheck.canUse) {
         setLoading(false);
         showAlert({
-          title: '⚠️ Usage Limit Reached',
-          message: usageCheck.message || 'You have reached your monthly limit.',
-          type: 'warning',
+          title: "⚠️ Usage Limit Reached",
+          message: usageCheck.message || "You have reached your monthly limit.",
+          type: "warning",
           buttons: [
-            { text: 'Later', style: 'cancel' },
-            { 
-              text: 'Upgrade to Premium ($4.99/month)', 
-              style: 'primary',
+            { text: "Later", style: "cancel" },
+            {
+              text: "Upgrade to Premium ($4.99/month)",
+              style: "primary",
               onPress: async () => {
                 try {
-                  const result = await SubscriptionService.purchasePremiumSubscription(user.id, user.primaryEmailAddress?.emailAddress || '');
+                  const result =
+                    await SubscriptionService.purchasePremiumSubscription(
+                      user.id,
+                      user.primaryEmailAddress?.emailAddress || ""
+                    );
                   if (result.success) {
                     showAlert({
-                      title: '🎉 Welcome to Premium!',
-                      message: 'Your subscription is now active. Enjoy unlimited access!',
-                      type: 'success'
+                      title: "🎉 Welcome to Premium!",
+                      message:
+                        "Your subscription is now active. Enjoy unlimited access!",
+                      type: "success",
                     });
-                    const stats = await SubscriptionService.getUsageStats(user.id);
+                    const stats = await SubscriptionService.getUsageStats(
+                      user.id
+                    );
                     const resetDate = new Date(stats.numerology.resetsAt);
                     const now = new Date();
-                    const daysUntilReset = Math.ceil((resetDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
-            
+                    const daysUntilReset = Math.ceil(
+                      (resetDate.getTime() - now.getTime()) /
+                        (1000 * 60 * 60 * 24)
+                    );
+
                     setUsageStats({
                       numerologyUsage: stats.numerology.totalUsed,
                       numerologyRemaining: stats.numerology.remaining,
                       daysUntilReset: Math.max(0, daysUntilReset),
-                      isPremium: stats.isPremium
+                      isPremium: stats.isPremium,
                     });
                   }
                 } catch (error) {
-                  console.error('Upgrade error:', error);
+                  console.error("Upgrade error:", error);
                   showAlert({
-                    title: 'Error',
-                    message: 'Failed to process upgrade. Please try again.',
-                    type: 'error'
+                    title: "Error",
+                    message: "Failed to process upgrade. Please try again.",
+                    type: "error",
                   });
                 }
-              }
-            }
-          ]
+              },
+            },
+          ],
         });
         return;
       }
     }
 
     setLoading(true);
+
     try {
-      const fullName = userName.trim() || profileData?.full_name || user?.fullName || `${user?.firstName || ''} ${user?.lastName || ''}`.trim();
+      const fullName =
+        userName.trim() ||
+        profileData?.full_name ||
+        user?.fullName ||
+        `${user?.firstName || ""} ${user?.lastName || ""}`.trim();
       if (!fullName) {
-        Alert.alert('Error', 'Please enter your full name');
+        Alert.alert("Error", "Please enter your full name");
         return;
       }
 
-      const numerologyProfile = NumerologyService.generateProfile(fullName, birthDate);
-      
-      // Use static data immediately for fast display
-      const staticInsights = StaticDataService.getStaticNumerologyInsights(numerologyProfile.lifePathNumber, fullName);
-      const staticSinWarning = StaticDataService.getStaticDeadlySinWarning(numerologyProfile.lifePathNumber, fullName);
-      const localPredictions = NumerologyService.generatePredictions(numerologyProfile);
+      // STEP 1: Get ProKerala data immediately and show it
+      setProkeralaLoading(true);
 
-      // Set profile with static data first - instant display
-      setProfile({ 
-        ...numerologyProfile, 
-        characterAnalysis: staticInsights,
-        predictions: localPredictions,
-        deadlySinWarning: staticSinWarning
-      });
-      setShowInput(false);
+      try {
+        // Try ProKerala API first with timeout
+        const prokeralaResponse = await Promise.race([
+          ProkeralaNumerologyService.getNumerologyReading(fullName, birthDate),
+          new Promise((_, reject) =>
+            setTimeout(() => reject(new Error("API timeout")), 3000)
+          ),
+        ]);
 
-      // Always try to enhance with AI in background (after showing static content)
-      setTimeout(() => {
-        // Show progressive loading indicator for AI enhancement
-        console.log('🤖 Numerology: Enhancing content with AI...');
-        
-        Promise.allSettled([
-          UniversalAIService.generatePersonalizedCharacterAnalysis(numerologyProfile, fullName),
-          UniversalAIService.generateDeadlySinWarning(numerologyProfile, fullName),
-          // Add more interesting predictions
-          UniversalAIService.generateAdvancedPrompt(`
-            Create fascinating numerology insights for ${fullName} (Life Path ${numerologyProfile.lifePathNumber}).
-            Focus on:
-            1. Hidden talents they haven't discovered
-            2. Their soul mission in this lifetime
-            3. Unique gifts they bring to the world
-            Keep it inspiring and under 200 words. No asterisks or formatting.
-          `)
-        ]).then((results) => {
-          const [characterResult, warningResult, insightsResult] = results;
-          
-          // Update content as AI results become available
-          if (characterResult.status === 'fulfilled') {
-            console.log('✨ Enhanced character analysis ready');
-            setProfile(prev => ({
-              ...prev,
-              characterAnalysis: characterResult.value?.content || characterResult.value
-            }));
+        if (prokeralaResponse && prokeralaResponse.success && prokeralaResponse.data) {
+          setProkeralaLoading(false);
+          const prokeralaData = prokeralaResponse.data;
+
+          // Create enhanced numerology profile with ProKerala data
+          const baseProfile = NumerologyService.generateProfile(
+            fullName,
+            birthDate
+          );
+          const enhancedProfile = {
+            ...baseProfile,
+            lifePathNumber:
+              prokeralaData.life_path_number || baseProfile.lifePathNumber,
+            destinyNumber:
+              prokeralaData.destiny_number || baseProfile.destinyNumber,
+            soulUrgeNumber:
+              prokeralaData.soul_urge_number || baseProfile.soulUrgeNumber,
+            personalityNumber:
+              prokeralaData.personality_number || baseProfile.personalityNumber,
+            characterAnalysis:
+              prokeralaData.life_path_description ||
+              "Professional analysis loading...",
+            predictions: NumerologyService.generatePredictions(baseProfile),
+            prokeralaInsights: {
+              strengths: Array.isArray(prokeralaData.strengths) ? prokeralaData.strengths : [],
+              challenges: Array.isArray(prokeralaData.challenges) ? prokeralaData.challenges : [],
+              career: prokeralaData.career_guidance || "",
+              relationship: prokeralaData.relationship_guidance || "",
+              spiritual: prokeralaData.spiritual_guidance || "",
+              luckyNumbers: Array.isArray(prokeralaData.lucky_numbers) ? prokeralaData.lucky_numbers : [],
+              luckyColors: Array.isArray(prokeralaData.lucky_colors) ? prokeralaData.lucky_colors : [],
+              lifePathDescription: prokeralaData.life_path_description || "",
+              personalYear:
+                prokeralaData.personal_year_number ||
+                (new Date().getFullYear() % 9) + 1,
+            },
+          };
+
+          // Display ProKerala data immediately
+          setProfile(enhancedProfile);
+          setShowInput(false);
+          setLoading(false);
+
+          // Track usage once
+          if (user?.id) {
+            UsageTrackingService.trackNumerologyUsage(user.id, {
+              name: fullName,
+              birthDate,
+              lifePathNumber: enhancedProfile.lifePathNumber,
+              source: "prokerala",
+            });
           }
-          
-          if (warningResult.status === 'fulfilled') {
-            console.log('✨ Enhanced spiritual warning ready');
-            setProfile(prev => ({
-              ...prev,
-              deadlySinWarning: warningResult.value
-            }));
-          }
-          
-          if (insightsResult.status === 'fulfilled') {
-            console.log('✨ Additional AI insights ready');
-            const content = insightsResult.value?.content || insightsResult.value;
-            setProfile(prev => ({
-              ...prev,
-              aiInsights: typeof content === 'string' ? content.replace(/\*/g, '') : ''
-            }));
-          }
+        } else {
+          throw new Error(prokeralaResponse?.error || "No ProKerala data");
+        }
+      } catch (error) {
+        setProkeralaLoading(false);
+
+        // FALLBACK: Use basic numerology if ProKerala fails
+        const basicProfile = NumerologyService.generateProfile(
+          fullName,
+          birthDate
+        );
+        const staticInsights = StaticDataService.getStaticNumerologyInsights(
+          basicProfile.lifePathNumber,
+          fullName
+        );
+
+        setProfile({
+          ...basicProfile,
+          characterAnalysis: staticInsights,
+          predictions: NumerologyService.generatePredictions(basicProfile),
+          prokeralaInsights: null,
         });
-      }, 2000); // Wait 2 seconds to show static content first
+        setShowInput(false);
+        setLoading(false);
 
-      // Track usage
+        // Track usage
+        if (user?.id) {
+          UsageTrackingService.trackNumerologyUsage(user.id, {
+            name: fullName,
+            birthDate,
+            lifePathNumber: basicProfile.lifePathNumber,
+            source: "local",
+          });
+        }
+      }
+
+      // STEP 2: Minimal AI processing (only deadly sins warning and ProKerala enhancement)
+      setTimeout(async () => {
+        setAiEnhancing(true);
+
+        try {
+          const currentProfile = profile || { lifePathNumber: 1 };
+
+          // Only generate deadly sins warning and enhance ProKerala content if available
+          Promise.allSettled([
+            SimpleAIService.generateDeadlySinWarning(currentProfile),
+            // Enhance ProKerala content only if we have it
+            currentProfile.prokeralaInsights ? 
+              SimpleAIService.generateOptimizedCharacterAnalysis(fullName, currentProfile) : 
+              Promise.resolve(null)
+          ]).then(([warningResult, enhancementResult]) => {
+            // Update deadly sin warning
+            if (warningResult.status === "fulfilled" && warningResult.value) {
+              setProfile((prev) => ({
+                ...prev,
+                deadlySinWarning: warningResult.value,
+              }));
+            } else {
+              // Always provide static fallback warning
+              const staticWarning = StaticDataService.getStaticDeadlySinWarning(
+                currentProfile.lifePathNumber,
+                fullName
+              );
+              setProfile((prev) => ({
+                ...prev,
+                deadlySinWarning: staticWarning,
+              }));
+            }
+
+            // Enhance character analysis only if we have ProKerala data
+            if (enhancementResult.status === "fulfilled" && enhancementResult.value && currentProfile.prokeralaInsights) {
+              setProfile((prev) => ({
+                ...prev,
+                characterAnalysis: enhancementResult.value,
+              }));
+            }
+          });
+        } catch (error) {
+          // Always ensure we have deadly sins warning
+          const currentProfile = profile || { lifePathNumber: 1 };
+          const staticWarning = StaticDataService.getStaticDeadlySinWarning(
+            currentProfile.lifePathNumber,
+            fullName
+          );
+          setProfile((prev) => ({
+            ...prev,
+            deadlySinWarning: staticWarning,
+          }));
+        } finally {
+          setAiEnhancing(false);
+        }
+      }, 1000); // Start minimal AI processing after 1 second
+
+      // Update usage stats
       if (user?.id) {
-        await SubscriptionService.recordUsage(user.id, 'numerology', {
-          reading_type: 'full_profile',
-          user_name: fullName,
-          birth_date: birthDate,
-          life_path_number: numerologyProfile.lifePathNumber,
-          destiny_number: numerologyProfile.destinyNumber,
-          soul_urge_number: numerologyProfile.soulUrgeNumber,
-          personality_number: numerologyProfile.personalityNumber
-        });
-        
         const stats = await SubscriptionService.getUsageStats(user.id);
         const resetDate = new Date(stats.numerology.resetsAt);
         const now = new Date();
-        const daysUntilReset = Math.ceil((resetDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
-        
+        const daysUntilReset = Math.ceil(
+          (resetDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)
+        );
+
         setUsageStats({
           numerologyUsage: stats.numerology.totalUsed,
           numerologyRemaining: stats.numerology.remaining,
           daysUntilReset: Math.max(0, daysUntilReset),
-          isPremium: stats.isPremium
+          isPremium: stats.isPremium,
         });
       }
     } catch (error) {
-      Alert.alert('Error', 'Failed to calculate numerology. Please check your information.');
-      console.error('Numerology calculation error:', error);
+      Alert.alert(
+        "Error",
+        "Failed to calculate numerology. Please check your information."
+      );
+      console.error("Numerology calculation error:", error);
     } finally {
       setLoading(false);
     }
@@ -492,39 +689,51 @@ export default function NumerologyScreen() {
 
   const handleAIQuestion = async () => {
     if (!aiQuestion.trim() || !profile) return;
-    
+
     setAiLoading(true);
     setAiRetryAttempt(0);
-    setAiProgressMessage('');
-    setAiResponse('');
+    setAiProgressMessage("");
+    setAiResponse("");
     setCurrentAiProvider(AIProvider.OPENAI);
-    
+
     try {
-      const result = await UniversalAIService.answerNumerologyQuestion(profile, aiQuestion, {
-        onRetry: (attempt, maxRetries, delayMs) => {
-          setAiRetryAttempt(attempt);
-        },
-        onProgress: (message) => {
-          setAiProgressMessage(message);
-          
-          // Update provider based on progress message
-          if (message.toLowerCase().includes('oracle') || message.toLowerCase().includes('openai')) {
-            setCurrentAiProvider(AIProvider.OPENAI);
-          } else if (message.toLowerCase().includes('backup') || message.toLowerCase().includes('gemini')) {
-            setCurrentAiProvider(AIProvider.GEMINI);
-          }
+      const result = await UniversalAIService.answerNumerologyQuestion(
+        profile,
+        aiQuestion,
+        {
+          onRetry: (attempt, maxRetries, delayMs) => {
+            setAiRetryAttempt(attempt);
+          },
+          onProgress: (message) => {
+            setAiProgressMessage(message);
+
+            // Update provider based on progress message
+            if (
+              message.toLowerCase().includes("oracle") ||
+              message.toLowerCase().includes("openai")
+            ) {
+              setCurrentAiProvider(AIProvider.OPENAI);
+            } else if (
+              message.toLowerCase().includes("backup") ||
+              message.toLowerCase().includes("gemini")
+            ) {
+              setCurrentAiProvider(AIProvider.GEMINI);
+            }
+          },
         }
-      });
-      
+      );
+
       setAiResponse(result.content);
       setCurrentAiProvider(result.provider);
       setAiRetryAttempt(0);
-      setAiProgressMessage('');
+      setAiProgressMessage("");
     } catch (error) {
-      console.error('AI Question error:', error);
-      setAiResponse('I apologize, but I\'m having trouble accessing my wisdom right now. Please try again in a moment.');
+      console.error("AI Question error:", error);
+      setAiResponse(
+        "I apologize, but I'm having trouble accessing my wisdom right now. Please try again in a moment."
+      );
       setAiRetryAttempt(0);
-      setAiProgressMessage('');
+      setAiProgressMessage("");
     }
     setAiLoading(false);
   };
@@ -532,7 +741,7 @@ export default function NumerologyScreen() {
   const resetCalculation = () => {
     setProfile(null);
     setShowInput(true);
-    setBirthDate('');
+    setBirthDate("");
     setLoading(false);
   };
 
@@ -550,10 +759,10 @@ ${profile.characterAnalysis?.substring(0, 150)}...
 
       await Share.share({
         message: shareText,
-        title: 'My Numerology Reading'
+        title: "My Numerology Reading",
       });
     } catch (error) {
-      console.log('Error sharing:', error);
+      console.log("Error sharing:", error);
     }
   };
 
@@ -567,21 +776,24 @@ ${profile.characterAnalysis?.substring(0, 150)}...
         icon: "heart",
         color: "#FF6B9D",
         insights: [
-          profile.lifePathInfo?.relationships || "You seek authentic connections.",
+          profile.lifePathInfo?.relationships ||
+            "You seek authentic connections.",
           "Your magnetic energy attracts soulmate-level relationships.",
           "Deep emotional bonds form through honest communication.",
-          "Trust your intuition when choosing romantic partners."
-        ]
+          "Trust your intuition when choosing romantic partners.",
+        ],
       },
       {
         title: "Career & Wealth",
         icon: "briefcase",
         color: "#4ECDC4",
-        insights: profile.lifePathInfo?.careerPaths?.map(path => `${path} aligns with your natural talents`) || [
+        insights: profile.lifePathInfo?.careerPaths?.map(
+          (path) => `${path} aligns with your natural talents`
+        ) || [
           "Follow your passion to find career fulfillment.",
           "Your leadership skills open doors to advancement.",
-          "Financial success comes through authentic self-expression."
-        ]
+          "Financial success comes through authentic self-expression.",
+        ],
       },
       {
         title: "Health & Vitality",
@@ -591,8 +803,8 @@ ${profile.characterAnalysis?.substring(0, 150)}...
           "Balance physical activity with spiritual practices.",
           "Listen to your body's wisdom for optimal wellness.",
           "Stress management through meditation enhances vitality.",
-          "Your life path supports natural healing abilities."
-        ]
+          "Your life path supports natural healing abilities.",
+        ],
       },
       {
         title: "Family & Relationships",
@@ -602,8 +814,8 @@ ${profile.characterAnalysis?.substring(0, 150)}...
           "Family bonds strengthen through understanding.",
           "You naturally create harmony in group settings.",
           "Your wisdom guides family members through challenges.",
-          "Nurturing relationships brings deep fulfillment."
-        ]
+          "Nurturing relationships brings deep fulfillment.",
+        ],
       },
       {
         title: "Spiritual Growth",
@@ -613,32 +825,34 @@ ${profile.characterAnalysis?.substring(0, 150)}...
           "Your spiritual path involves service to others.",
           "Meditation and reflection accelerate your growth.",
           "Trust your intuitive gifts and inner knowing.",
-          "Universal wisdom flows through your unique perspective."
-        ]
+          "Universal wisdom flows through your unique perspective.",
+        ],
       },
       {
         title: "Life Purpose & Mission",
         icon: "compass",
         color: "#87CEEB",
         insights: [
-          profile.destinyInfo?.purpose || "Your purpose involves inspiring others.",
-          profile.destinyInfo?.mission || "You're here to make a positive impact.",
+          profile.destinyInfo?.purpose ||
+            "Your purpose involves inspiring others.",
+          profile.destinyInfo?.mission ||
+            "You're here to make a positive impact.",
           "Your unique talents serve the greater good.",
-          "Alignment with purpose brings effortless success."
-        ]
-      }
+          "Alignment with purpose brings effortless success.",
+        ],
+      },
     ];
   }, [profile]);
 
   if (showInput || !profile) {
     return (
       <SafeAreaView style={styles.container}>
-        <KeyboardAvoidingView 
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        <KeyboardAvoidingView
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
           style={styles.keyboardAvoid}
         >
-          <ScrollView 
-            style={styles.scrollView} 
+          <ScrollView
+            style={styles.scrollView}
             showsVerticalScrollIndicator={false}
             keyboardShouldPersistTaps="handled"
           >
@@ -651,13 +865,13 @@ ${profile.characterAnalysis?.substring(0, 150)}...
               </Text>
             </View>
 
-            <KeyboardAvoidingView 
+            <KeyboardAvoidingView
               style={styles.inputSection}
-              behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-              keyboardVerticalOffset={Platform.OS === 'ios' ? 100 : 0}
+              behavior={Platform.OS === "ios" ? "padding" : "height"}
+              keyboardVerticalOffset={Platform.OS === "ios" ? 100 : 0}
             >
               <Text style={styles.inputLabel}>Your Information</Text>
-              
+
               <View style={styles.inputContainer}>
                 <ShadcnInput
                   label="Full Name"
@@ -673,21 +887,29 @@ ${profile.characterAnalysis?.substring(0, 150)}...
               <View style={styles.inputContainer}>
                 <DatePicker
                   label="Birth Date"
-                  value={birthDate ? (() => {
-                    try {
-                      const [month, day, year] = birthDate.split('/');
-                      if (month && day && year) {
-                        return new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
-                      }
-                      return undefined;
-                    } catch (error) {
-                      console.log('Error parsing birth date:', error);
-                      return undefined;
-                    }
-                  })() : undefined}
+                  value={
+                    birthDate
+                      ? (() => {
+                          try {
+                            const [month, day, year] = birthDate.split("/");
+                            if (month && day && year) {
+                              return new Date(
+                                parseInt(year),
+                                parseInt(month) - 1,
+                                parseInt(day)
+                              );
+                            }
+                            return undefined;
+                          } catch (error) {
+                            console.log("Error parsing birth date:", error);
+                            return undefined;
+                          }
+                        })()
+                      : undefined
+                  }
                   onSelect={(date) => {
                     if (date) {
-                      const formattedDate = `${(date.getMonth() + 1).toString().padStart(2, '0')}/${date.getDate().toString().padStart(2, '0')}/${date.getFullYear()}`;
+                      const formattedDate = `${(date.getMonth() + 1).toString().padStart(2, "0")}/${date.getDate().toString().padStart(2, "0")}/${date.getFullYear()}`;
                       setBirthDate(formattedDate);
                     }
                   }}
@@ -699,16 +921,20 @@ ${profile.characterAnalysis?.substring(0, 150)}...
               <ShadcnButton
                 onPress={() => {
                   if (!userName.trim()) {
-                    Alert.alert('Error', 'Please enter your full name');
+                    Alert.alert("Error", "Please enter your full name");
                     return;
                   }
                   if (!birthDate.trim()) {
-                    Alert.alert('Error', 'Please enter your birth date');
+                    Alert.alert("Error", "Please enter your birth date");
                     return;
                   }
-                  
+
                   if (profileData?.birth_location || profileData?.birth_time) {
-                    calculateNumerologyWithProfile(userName, birthDate, profileData);
+                    calculateNumerologyWithProfile(
+                      userName,
+                      birthDate,
+                      profileData
+                    );
                   } else {
                     calculateNumerology();
                   }
@@ -720,7 +946,7 @@ ${profile.characterAnalysis?.substring(0, 150)}...
                 startIcon="calculator"
                 style={styles.calculateButton}
               >
-                {loading ? 'Calculating Your Numbers...' : 'Reveal My Numbers'}
+                {loading ? "Calculating Your Numbers..." : "Reveal My Numbers"}
               </ShadcnButton>
             </KeyboardAvoidingView>
           </ScrollView>
@@ -735,15 +961,18 @@ ${profile.characterAnalysis?.substring(0, 150)}...
 
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView 
-        style={styles.scrollView} 
+      <ScrollView
+        style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
         {/* Simple Header with Back Button */}
         <View style={styles.profileHeader}>
           <View style={styles.headerTop}>
-            <TouchableOpacity onPress={resetCalculation} style={styles.resetButton}>
+            <TouchableOpacity
+              onPress={resetCalculation}
+              style={styles.resetButton}
+            >
               <Ionicons name="arrow-back" size={20} color="#E91E63" />
               <Text style={styles.resetButtonText}>Back</Text>
             </TouchableOpacity>
@@ -753,26 +982,37 @@ ${profile.characterAnalysis?.substring(0, 150)}...
             </TouchableOpacity>
           </View>
           <Text style={styles.profileSubtitle}>
-            {userName || profileData?.full_name || 'Your Reading'}
+            {userName || profileData?.full_name || "Your Reading"}
           </Text>
 
           {/* Usage Stats */}
           {usageStats && !usageStats.isPremium && (
-            <View style={[styles.modernUsageStats, 
-              usageStats.numerologyRemaining <= 1 && styles.urgentUsageStats
-            ]}>
+            <View
+              style={[
+                styles.modernUsageStats,
+                usageStats.numerologyRemaining <= 1 && styles.urgentUsageStats,
+              ]}
+            >
               <View style={styles.usageStatsContent}>
-                <Ionicons 
-                  name={usageStats.numerologyRemaining <= 1 ? "warning" : "flash"} 
-                  size={16} 
-                  color={usageStats.numerologyRemaining <= 1 ? "#FF3B30" : "#FFD700"} 
+                <Ionicons
+                  name={
+                    usageStats.numerologyRemaining <= 1 ? "warning" : "flash"
+                  }
+                  size={16}
+                  color={
+                    usageStats.numerologyRemaining <= 1 ? "#FF3B30" : "#FFD700"
+                  }
                 />
-                <Text style={[styles.usageStatsText, 
-                  usageStats.numerologyRemaining <= 1 && styles.urgentUsageText
-                ]}>
-                  {usageStats.numerologyRemaining === 0 
-                    ? "No free readings remaining" 
-                    : `${usageStats.numerologyRemaining} free reading${usageStats.numerologyRemaining === 1 ? '' : 's'} left`}
+                <Text
+                  style={[
+                    styles.usageStatsText,
+                    usageStats.numerologyRemaining <= 1 &&
+                      styles.urgentUsageText,
+                  ]}
+                >
+                  {usageStats.numerologyRemaining === 0
+                    ? "No free readings remaining"
+                    : `${usageStats.numerologyRemaining} free reading${usageStats.numerologyRemaining === 1 ? "" : "s"} left`}
                 </Text>
               </View>
             </View>
@@ -793,7 +1033,7 @@ ${profile.characterAnalysis?.substring(0, 150)}...
               </Text>
             </View>
             <Text style={styles.modernProfileName}>
-              {userName || profileData?.full_name || 'Your Reading'}
+              {userName || profileData?.full_name || "Your Reading"}
             </Text>
             {enhancedProfile && (
               <Badge variant="cosmic" style={styles.enhancedBadge}>
@@ -803,28 +1043,52 @@ ${profile.characterAnalysis?.substring(0, 150)}...
           </View>
         </View>
 
+        {/* Loading Indicators */}
+        {(prokeralaLoading || aiEnhancing) && (
+          <View style={styles.loadingIndicators}>
+            {prokeralaLoading && (
+              <View style={styles.loadingItem}>
+                <ActivityIndicator size="small" color="#4ECDC4" />
+                <Text style={styles.loadingText}>
+                  Getting professional insights...
+                </Text>
+              </View>
+            )}
+            {aiEnhancing && (
+              <View style={styles.loadingItem}>
+                <ActivityIndicator size="small" color="#FFD700" />
+                <Text style={styles.loadingText}>
+                  AI enhancing your analysis...
+                </Text>
+              </View>
+            )}
+          </View>
+        )}
+
         {/* Your Numbers */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Your Core Numbers</Text>
-          
+
           <View style={styles.numbersGrid}>
             <View style={styles.numberCard}>
               <Text style={styles.numberValue}>{profile.lifePathNumber}</Text>
               <Text style={styles.numberLabel}>Life Path</Text>
             </View>
-            
+
             <View style={styles.numberCard}>
               <Text style={styles.numberValue}>{profile.destinyNumber}</Text>
               <Text style={styles.numberLabel}>Destiny</Text>
             </View>
-            
+
             <View style={styles.numberCard}>
               <Text style={styles.numberValue}>{profile.soulUrgeNumber}</Text>
               <Text style={styles.numberLabel}>Soul Urge</Text>
             </View>
 
             <View style={styles.numberCard}>
-              <Text style={styles.numberValue}>{profile.personalityNumber}</Text>
+              <Text style={styles.numberValue}>
+                {profile.personalityNumber}
+              </Text>
               <Text style={styles.numberLabel}>Personality</Text>
             </View>
           </View>
@@ -833,8 +1097,10 @@ ${profile.characterAnalysis?.substring(0, 150)}...
         {/* Life Aspects */}
         <View style={styles.lifeAspectsSection}>
           <Text style={styles.sectionTitle}>Life Aspects Analysis</Text>
-          <Text style={styles.sectionSubtitle}>Comprehensive insights into all areas of your life</Text>
-          
+          <Text style={styles.sectionSubtitle}>
+            Comprehensive insights into all areas of your life
+          </Text>
+
           {lifeAspects.map((aspect, index) => (
             <LifeAspectCard
               key={index}
@@ -843,7 +1109,11 @@ ${profile.characterAnalysis?.substring(0, 150)}...
               color={aspect.color}
               insights={aspect.insights}
               expanded={expandedAspect === aspect.title}
-              onToggle={() => setExpandedAspect(expandedAspect === aspect.title ? null : aspect.title)}
+              onToggle={() =>
+                setExpandedAspect(
+                  expandedAspect === aspect.title ? null : aspect.title
+                )
+              }
             />
           ))}
         </View>
@@ -852,14 +1122,17 @@ ${profile.characterAnalysis?.substring(0, 150)}...
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Your Character Analysis</Text>
-            <TouchableOpacity onPress={() => setShowAIChat(true)} style={styles.aiChatButton}>
+            <TouchableOpacity
+              onPress={() => setShowAIChat(true)}
+              style={styles.aiChatButton}
+            >
               <Ionicons name="chatbubble-ellipses" size={20} color="#E91E63" />
               <Text style={styles.aiChatButtonText}>Ask AI</Text>
             </TouchableOpacity>
           </View>
           <View style={styles.analysisCard}>
-            <ReadMoreText 
-              text={profile.characterAnalysis} 
+            <ReadMoreText
+              text={profile.characterAnalysis}
               maxLength={300}
               style={styles.analysisText}
             />
@@ -870,14 +1143,16 @@ ${profile.characterAnalysis?.substring(0, 150)}...
         {profile.aiInsights && (
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>✨ Hidden Talents & Soul Mission</Text>
+              <Text style={styles.sectionTitle}>
+                ✨ Hidden Talents & Soul Mission
+              </Text>
               <Badge variant="cosmic" style={styles.aiEnhancedBadge}>
                 AI Enhanced
               </Badge>
             </View>
             <View style={styles.analysisCard}>
-              <ReadMoreText 
-                text={profile.aiInsights} 
+              <ReadMoreText
+                text={profile.aiInsights}
                 maxLength={250}
                 style={styles.analysisText}
               />
@@ -886,13 +1161,110 @@ ${profile.characterAnalysis?.substring(0, 150)}...
         )}
 
         {/* Spiritual Warning */}
+        {/* ProKerala Professional Insights */}
+        {profile.prokeralaInsights && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>🔮 Professional Insights</Text>
+
+            {profile.prokeralaInsights.strengths &&
+              profile.prokeralaInsights.strengths.length > 0 && (
+                <View style={styles.insightCard}>
+                  <Text style={styles.insightTitle}>✨ Your Strengths</Text>
+                  {profile.prokeralaInsights.strengths.map(
+                    (strength, index) => (
+                      <Text key={index} style={styles.insightBullet}>
+                        • {strength}
+                      </Text>
+                    )
+                  )}
+                </View>
+              )}
+
+            {profile.prokeralaInsights.challenges &&
+              profile.prokeralaInsights.challenges.length > 0 && (
+                <View style={styles.insightCard}>
+                  <Text style={styles.insightTitle}>⚡ Growth Areas</Text>
+                  {profile.prokeralaInsights.challenges.map(
+                    (challenge, index) => (
+                      <Text key={index} style={styles.insightBullet}>
+                        • {challenge}
+                      </Text>
+                    )
+                  )}
+                </View>
+              )}
+
+            {profile.prokeralaInsights.career && (
+              <View style={styles.insightCard}>
+                <Text style={styles.insightTitle}>💼 Career Guidance</Text>
+                <Text style={styles.insightText}>
+                  {profile.prokeralaInsights.career}
+                </Text>
+              </View>
+            )}
+
+            {profile.prokeralaInsights.relationship && (
+              <View style={styles.insightCard}>
+                <Text style={styles.insightTitle}>💕 Relationship Style</Text>
+                <Text style={styles.insightText}>
+                  {profile.prokeralaInsights.relationship}
+                </Text>
+              </View>
+            )}
+
+            {profile.prokeralaInsights.spiritual && (
+              <View style={styles.insightCard}>
+                <Text style={styles.insightTitle}>🙏 Spiritual Path</Text>
+                <Text style={styles.insightText}>
+                  {profile.prokeralaInsights.spiritual}
+                </Text>
+              </View>
+            )}
+
+            {(profile.prokeralaInsights.luckyNumbers?.length > 0 ||
+              profile.prokeralaInsights.luckyColors?.length > 0) && (
+              <View style={styles.insightCard}>
+                <Text style={styles.insightTitle}>🍀 Lucky Elements</Text>
+                {profile.prokeralaInsights.luckyNumbers?.length > 0 && (
+                  <Text style={styles.insightText}>
+                    Numbers: {profile.prokeralaInsights.luckyNumbers.join(", ")}
+                  </Text>
+                )}
+                {profile.prokeralaInsights.luckyColors?.length > 0 && (
+                  <Text style={styles.insightText}>
+                    Colors: {profile.prokeralaInsights.luckyColors.join(", ")}
+                  </Text>
+                )}
+              </View>
+            )}
+          </View>
+        )}
+
+        {/* Hidden AI Insights */}
+        {profile.hiddenInsights && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>🎯 Hidden Insights</Text>
+            <View style={styles.hiddenInsightsCard}>
+              <Text style={styles.hiddenInsightsText}>
+                {profile.hiddenInsights}
+              </Text>
+            </View>
+          </View>
+        )}
+
         {profile.deadlySinWarning && (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>⚠️ Spiritual Guidance</Text>
             <View style={styles.warningCard}>
-              <Text style={styles.warningSubtitle}>Beware of {profile.deadlySinWarning.sin}</Text>
-              <Text style={styles.warningText}>{profile.deadlySinWarning.warning}</Text>
-              <Text style={styles.consequencesText}>{profile.deadlySinWarning.consequences}</Text>
+              <Text style={styles.warningSubtitle}>
+                Beware of {profile.deadlySinWarning.sin}
+              </Text>
+              <Text style={styles.warningText}>
+                {profile.deadlySinWarning.warning}
+              </Text>
+              <Text style={styles.consequencesText}>
+                {profile.deadlySinWarning.consequences}
+              </Text>
             </View>
           </View>
         )}
@@ -908,7 +1280,7 @@ ${profile.characterAnalysis?.substring(0, 150)}...
         {selectedNumber && (
           <SafeAreaView style={styles.modalContainer}>
             <LinearGradient
-              colors={['#667eea', '#764ba2']}
+              colors={["#667eea", "#764ba2"]}
               style={styles.modalHeader}
             >
               <View style={styles.modalHeaderContent}>
@@ -916,26 +1288,36 @@ ${profile.characterAnalysis?.substring(0, 150)}...
                   <Ionicons name="close" size={24} color="#FFFFFF" />
                 </TouchableOpacity>
                 <View style={styles.modalTitleContainer}>
-                  <Text style={styles.modalTitle}>{selectedNumber.type} {selectedNumber.number}</Text>
-                  <Text style={styles.modalSubtitle}>{selectedNumber.info?.title}</Text>
+                  <Text style={styles.modalTitle}>
+                    {selectedNumber.type} {selectedNumber.number}
+                  </Text>
+                  <Text style={styles.modalSubtitle}>
+                    {selectedNumber.info?.title}
+                  </Text>
                 </View>
-                <View style={{width: 24}} />
+                <View style={{ width: 24 }} />
               </View>
             </LinearGradient>
             <ScrollView style={styles.modalContent}>
-              <Text style={styles.modalDescription}>{selectedNumber.info?.description}</Text>
+              <Text style={styles.modalDescription}>
+                {selectedNumber.info?.description}
+              </Text>
               {selectedNumber.info?.strengths && (
                 <View style={styles.modalSection}>
                   <Text style={styles.modalSectionTitle}>Strengths</Text>
                   {selectedNumber.info.strengths.map((strength, index) => (
-                    <Text key={index} style={styles.modalListItem}>• {strength}</Text>
+                    <Text key={index} style={styles.modalListItem}>
+                      • {strength}
+                    </Text>
                   ))}
                 </View>
               )}
               {selectedNumber.info?.purpose && (
                 <View style={styles.modalSection}>
                   <Text style={styles.modalSectionTitle}>Purpose</Text>
-                  <Text style={styles.modalText}>{selectedNumber.info.purpose}</Text>
+                  <Text style={styles.modalText}>
+                    {selectedNumber.info.purpose}
+                  </Text>
                 </View>
               )}
             </ScrollView>
@@ -951,7 +1333,7 @@ ${profile.characterAnalysis?.substring(0, 150)}...
       >
         <SafeAreaView style={styles.aiModalContainer}>
           <LinearGradient
-            colors={['#667eea', '#764ba2']}
+            colors={["#667eea", "#764ba2"]}
             style={styles.aiModalHeader}
           >
             <View style={styles.aiModalHeaderContent}>
@@ -959,14 +1341,16 @@ ${profile.characterAnalysis?.substring(0, 150)}...
                 <Ionicons name="close" size={24} color="#FFFFFF" />
               </TouchableOpacity>
               <Text style={styles.aiModalTitle}>Ask Your Oracle</Text>
-              <View style={{width: 24}} />
+              <View style={{ width: 24 }} />
             </View>
-            <Text style={styles.aiModalSubtitle}>Get personalized insights about your numbers</Text>
+            <Text style={styles.aiModalSubtitle}>
+              Get personalized insights about your numbers
+            </Text>
           </LinearGradient>
 
-          <KeyboardAvoidingView 
+          <KeyboardAvoidingView
             style={styles.aiModalContent}
-            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+            behavior={Platform.OS === "ios" ? "padding" : "height"}
           >
             <ScrollView style={styles.aiChatArea}>
               {aiLoading ? (
@@ -976,16 +1360,24 @@ ${profile.characterAnalysis?.substring(0, 150)}...
                   message={aiProgressMessage}
                   showEducationalContent={true}
                   analysisType="numerology"
-                  aiProvider={currentAiProvider === AIProvider.OPENAI ? 'openai' : 'gemini'}
+                  aiProvider={
+                    currentAiProvider === AIProvider.OPENAI
+                      ? "openai"
+                      : "gemini"
+                  }
                 />
               ) : aiResponse ? (
-                <GlassCard intensity="light" tint="cosmic" style={styles.aiResponseCard}>
+                <GlassCard
+                  intensity="light"
+                  tint="cosmic"
+                  style={styles.aiResponseCard}
+                >
                   <View style={styles.aiResponseHeader}>
                     <Ionicons name="sparkles" size={20} color="#667eea" />
                     <Text style={styles.aiResponseTitle}>Oracle's Wisdom</Text>
                     <View style={styles.providerBadgeSmall}>
                       <Text style={styles.providerBadgeText}>
-                        {currentAiProvider === AIProvider.OPENAI ? '🤖' : '✨'}
+                        {currentAiProvider === AIProvider.OPENAI ? "🤖" : "✨"}
                       </Text>
                     </View>
                   </View>
@@ -993,9 +1385,14 @@ ${profile.characterAnalysis?.substring(0, 150)}...
                 </GlassCard>
               ) : (
                 <View style={styles.aiPlaceholder}>
-                  <Ionicons name="chatbubble-ellipses-outline" size={48} color="#8E8E93" />
+                  <Ionicons
+                    name="chatbubble-ellipses-outline"
+                    size={48}
+                    color="#8E8E93"
+                  />
                   <Text style={styles.aiPlaceholderText}>
-                    Ask me about your life path, relationships, career, or spiritual growth!
+                    Ask me about your life path, relationships, career, or
+                    spiritual growth!
                   </Text>
                 </View>
               )}
@@ -1012,7 +1409,10 @@ ${profile.characterAnalysis?.substring(0, 150)}...
                 maxLength={200}
               />
               <TouchableOpacity
-                style={[styles.aiSendButton, (!aiQuestion.trim() || aiLoading) && styles.disabledButton]}
+                style={[
+                  styles.aiSendButton,
+                  (!aiQuestion.trim() || aiLoading) && styles.disabledButton,
+                ]}
                 onPress={handleAIQuestion}
                 disabled={!aiQuestion.trim() || aiLoading}
               >
@@ -1026,7 +1426,7 @@ ${profile.characterAnalysis?.substring(0, 150)}...
           </KeyboardAvoidingView>
         </SafeAreaView>
       </Modal>
-      
+
       {AlertComponent}
     </SafeAreaView>
   );
@@ -1035,7 +1435,7 @@ ${profile.characterAnalysis?.substring(0, 150)}...
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#000000',
+    backgroundColor: "#000000",
   },
   keyboardAvoid: {
     flex: 1,
@@ -1047,25 +1447,25 @@ const styles = StyleSheet.create({
     paddingBottom: 100,
     flexGrow: 1,
   },
-  
+
   // Simple Header Styles
   header: {
-    alignItems: 'center',
+    alignItems: "center",
     paddingVertical: 40,
     paddingHorizontal: 20,
   },
   title: {
     fontSize: 32,
-    fontWeight: 'bold',
-    color: '#FFFFFF',
+    fontWeight: "bold",
+    color: "#FFFFFF",
     marginBottom: 8,
     marginTop: 16,
-    textAlign: 'center',
+    textAlign: "center",
   },
   description: {
     fontSize: 16,
-    color: '#8E8E93',
-    textAlign: 'center',
+    color: "#8E8E93",
+    textAlign: "center",
     lineHeight: 22,
   },
 
@@ -1075,8 +1475,8 @@ const styles = StyleSheet.create({
   },
   inputLabel: {
     fontSize: 20,
-    fontWeight: '600',
-    color: '#FFFFFF',
+    fontWeight: "600",
+    color: "#FFFFFF",
     marginBottom: 20,
   },
   inputContainer: {
@@ -1087,19 +1487,19 @@ const styles = StyleSheet.create({
     padding: 16,
   },
   enhanceButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
     gap: 8,
   },
   enhanceText: {
     color: DesignSystem.colors.accent.yellow,
     fontSize: 14,
-    fontWeight: '500',
+    fontWeight: "500",
   },
   calculateButton: {
     marginTop: 24,
-    backgroundColor: '#E91E63',
+    backgroundColor: "#E91E63",
   },
 
   // Results Header
@@ -1107,107 +1507,107 @@ const styles = StyleSheet.create({
     paddingTop: 50,
     paddingBottom: 30,
     paddingHorizontal: 20,
-    backgroundColor: 'transparent',
+    backgroundColor: "transparent",
   },
   resultsTopBar: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     marginBottom: 20,
   },
   modernBackButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#1C1C1E',
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#1C1C1E",
     paddingHorizontal: 16,
     paddingVertical: 10,
     borderRadius: 25,
     gap: 8,
   },
   backButtonText: {
-    color: 'white',
+    color: "white",
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   headerActions: {
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: 12,
   },
   modernActionButton: {
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: '#1C1C1E',
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: "#1C1C1E",
+    justifyContent: "center",
+    alignItems: "center",
   },
 
   // Usage Stats
   modernUsageStats: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: 'rgba(255, 215, 0, 0.2)',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    backgroundColor: "rgba(255, 215, 0, 0.2)",
     padding: 12,
     borderRadius: 16,
     marginBottom: 20,
   },
   urgentUsageStats: {
-    backgroundColor: 'rgba(255, 59, 48, 0.2)',
+    backgroundColor: "rgba(255, 59, 48, 0.2)",
   },
   usageStatsContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 8,
   },
   usageStatsText: {
-    color: '#FFD700',
+    color: "#FFD700",
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   urgentUsageText: {
-    color: '#FF3B30',
+    color: "#FF3B30",
   },
   premiumBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'rgba(255, 215, 0, 0.2)',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "rgba(255, 215, 0, 0.2)",
     padding: 12,
     borderRadius: 16,
     marginBottom: 20,
     gap: 8,
   },
   premiumText: {
-    color: '#FFD700',
+    color: "#FFD700",
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: "600",
   },
 
   // Modern Profile Section
   modernProfileSection: {
-    alignItems: 'center',
+    alignItems: "center",
   },
   modernAvatar: {
     width: 80,
     height: 80,
     borderRadius: 40,
-    backgroundColor: 'rgba(255, 255, 255, 0.3)',
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: "rgba(255, 255, 255, 0.3)",
+    justifyContent: "center",
+    alignItems: "center",
     marginBottom: 12,
     borderWidth: 3,
-    borderColor: 'rgba(255, 255, 255, 0.5)',
+    borderColor: "rgba(255, 255, 255, 0.5)",
   },
   avatarText: {
     fontSize: 32,
-    fontWeight: 'bold',
-    color: 'white',
+    fontWeight: "bold",
+    color: "white",
   },
   modernProfileName: {
     fontSize: 24,
-    fontWeight: 'bold',
-    color: 'white',
+    fontWeight: "bold",
+    color: "white",
     marginBottom: 8,
   },
   enhancedBadge: {
@@ -1220,19 +1620,19 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: 24,
-    fontWeight: 'bold',
-    color: '#FFFFFF',
+    fontWeight: "bold",
+    color: "#FFFFFF",
     marginBottom: 8,
   },
   sectionSubtitle: {
     fontSize: 16,
-    color: 'rgba(255, 255, 255, 0.7)',
+    color: "rgba(255, 255, 255, 0.7)",
     marginBottom: 20,
   },
   modernNumbersGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "space-between",
     gap: 12,
   },
   numberGridItem: {
@@ -1242,9 +1642,9 @@ const styles = StyleSheet.create({
   // Modern Card Styles
   modernCard: {
     borderRadius: 20,
-    overflow: 'hidden',
+    overflow: "hidden",
     elevation: 6,
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
@@ -1254,39 +1654,39 @@ const styles = StyleSheet.create({
     minHeight: 120,
   },
   modernCardHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
     marginBottom: 12,
   },
   modernCardIconContainer: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: 'rgba(255, 255, 255, 0.3)',
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: "rgba(255, 255, 255, 0.3)",
+    justifyContent: "center",
+    alignItems: "center",
   },
   modernCardNumber: {
-    backgroundColor: 'rgba(255, 255, 255, 0.3)',
+    backgroundColor: "rgba(255, 255, 255, 0.3)",
     borderRadius: 16,
     paddingHorizontal: 12,
     paddingVertical: 6,
   },
   modernCardNumberText: {
     fontSize: 20,
-    fontWeight: 'bold',
-    color: 'white',
+    fontWeight: "bold",
+    color: "white",
   },
   modernCardTitle: {
     fontSize: 18,
-    fontWeight: 'bold',
-    color: 'white',
+    fontWeight: "bold",
+    color: "white",
     marginBottom: 6,
   },
   modernCardDescription: {
     fontSize: 14,
-    color: 'rgba(255, 255, 255, 0.9)',
+    color: "rgba(255, 255, 255, 0.9)",
     lineHeight: 18,
   },
 
@@ -1297,9 +1697,9 @@ const styles = StyleSheet.create({
   aspectCard: {
     marginBottom: 16,
     borderRadius: 16,
-    overflow: 'hidden',
+    overflow: "hidden",
     elevation: 4,
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.2,
     shadowRadius: 6,
@@ -1308,30 +1708,30 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   aspectHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 12,
   },
   aspectIconContainer: {
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: 'rgba(255, 255, 255, 0.3)',
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: "rgba(255, 255, 255, 0.3)",
+    justifyContent: "center",
+    alignItems: "center",
   },
   aspectTitle: {
     flex: 1,
     fontSize: 18,
-    fontWeight: 'bold',
-    color: 'white',
+    fontWeight: "bold",
+    color: "white",
   },
   aspectContent: {
     marginTop: 16,
   },
   insightItem: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
+    flexDirection: "row",
+    alignItems: "flex-start",
     marginBottom: 12,
     gap: 12,
   },
@@ -1339,13 +1739,13 @@ const styles = StyleSheet.create({
     width: 6,
     height: 6,
     borderRadius: 3,
-    backgroundColor: 'rgba(255, 255, 255, 0.8)',
+    backgroundColor: "rgba(255, 255, 255, 0.8)",
     marginTop: 8,
   },
   insightText: {
     flex: 1,
     fontSize: 15,
-    color: 'rgba(255, 255, 255, 0.9)',
+    color: "rgba(255, 255, 255, 0.9)",
     lineHeight: 22,
   },
 
@@ -1355,22 +1755,22 @@ const styles = StyleSheet.create({
   },
   analysisCard: {
     padding: 24,
-    backgroundColor: '#1C1C1E',
+    backgroundColor: "#1C1C1E",
   },
   analysisHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     marginBottom: 16,
     gap: 12,
   },
   analysisTitle: {
     fontSize: 20,
-    fontWeight: 'bold',
-    color: '#667eea',
+    fontWeight: "bold",
+    color: "#667eea",
   },
   analysisText: {
     fontSize: 16,
-    color: '#FFFFFF',
+    color: "#FFFFFF",
     lineHeight: 24,
   },
 
@@ -1380,44 +1780,44 @@ const styles = StyleSheet.create({
   },
   warningCard: {
     padding: 24,
-    backgroundColor: '#1C1C1E',
+    backgroundColor: "#1C1C1E",
     borderLeftWidth: 4,
-    borderLeftColor: '#FF6B35',
+    borderLeftColor: "#FF6B35",
   },
   warningHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     marginBottom: 12,
     gap: 12,
   },
   warningTitle: {
     fontSize: 18,
-    fontWeight: 'bold',
-    color: '#FF6B35',
+    fontWeight: "bold",
+    color: "#FF6B35",
   },
   warningSubtitle: {
     fontSize: 16,
-    fontWeight: '600',
-    color: '#FFFFFF',
+    fontWeight: "600",
+    color: "#FFFFFF",
     marginBottom: 8,
   },
   warningText: {
     fontSize: 15,
-    color: 'rgba(255, 255, 255, 0.9)',
+    color: "rgba(255, 255, 255, 0.9)",
     lineHeight: 22,
     marginBottom: 12,
   },
   consequencesText: {
     fontSize: 14,
-    color: 'rgba(255, 255, 255, 0.7)',
+    color: "rgba(255, 255, 255, 0.7)",
     lineHeight: 20,
-    fontStyle: 'italic',
+    fontStyle: "italic",
   },
 
   // Modal Styles
   modalContainer: {
     flex: 1,
-    backgroundColor: '#000000',
+    backgroundColor: "#000000",
   },
   modalHeader: {
     paddingTop: 50,
@@ -1425,21 +1825,21 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
   },
   modalHeaderContent: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
   },
   modalTitleContainer: {
-    alignItems: 'center',
+    alignItems: "center",
   },
   modalTitle: {
     fontSize: 20,
-    fontWeight: 'bold',
-    color: 'white',
+    fontWeight: "bold",
+    color: "white",
   },
   modalSubtitle: {
     fontSize: 14,
-    color: 'rgba(255, 255, 255, 0.8)',
+    color: "rgba(255, 255, 255, 0.8)",
   },
   modalContent: {
     flex: 1,
@@ -1447,7 +1847,7 @@ const styles = StyleSheet.create({
   },
   modalDescription: {
     fontSize: 16,
-    color: '#FFFFFF',
+    color: "#FFFFFF",
     lineHeight: 24,
     marginBottom: 24,
   },
@@ -1456,25 +1856,25 @@ const styles = StyleSheet.create({
   },
   modalSectionTitle: {
     fontSize: 18,
-    fontWeight: 'bold',
-    color: '#667eea',
+    fontWeight: "bold",
+    color: "#667eea",
     marginBottom: 12,
   },
   modalListItem: {
     fontSize: 15,
-    color: 'rgba(255, 255, 255, 0.9)',
+    color: "rgba(255, 255, 255, 0.9)",
     marginBottom: 8,
   },
   modalText: {
     fontSize: 15,
-    color: 'rgba(255, 255, 255, 0.9)',
+    color: "rgba(255, 255, 255, 0.9)",
     lineHeight: 22,
   },
 
   // AI Modal Styles
   aiModalContainer: {
     flex: 1,
-    backgroundColor: '#000000',
+    backgroundColor: "#000000",
   },
   aiModalHeader: {
     paddingTop: 50,
@@ -1482,24 +1882,24 @@ const styles = StyleSheet.create({
     paddingBottom: 24,
   },
   aiModalHeaderContent: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     marginBottom: 8,
   },
   aiModalTitle: {
     fontSize: 20,
-    fontWeight: 'bold',
-    color: '#FFFFFF',
+    fontWeight: "bold",
+    color: "#FFFFFF",
   },
   aiModalSubtitle: {
     fontSize: 14,
-    color: 'rgba(255, 255, 255, 0.8)',
-    textAlign: 'center',
+    color: "rgba(255, 255, 255, 0.8)",
+    textAlign: "center",
   },
   aiModalContent: {
     flex: 1,
-    backgroundColor: '#000000',
+    backgroundColor: "#000000",
   },
   aiChatArea: {
     flex: 1,
@@ -1510,195 +1910,258 @@ const styles = StyleSheet.create({
     marginVertical: 20,
   },
   aiResponseHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     marginBottom: 12,
     gap: 8,
   },
   aiResponseTitle: {
     fontSize: 16,
-    fontWeight: '600',
-    color: '#667eea',
+    fontWeight: "600",
+    color: "#667eea",
     flex: 1,
   },
   providerBadgeSmall: {
-    backgroundColor: 'rgba(102, 126, 234, 0.2)',
+    backgroundColor: "rgba(102, 126, 234, 0.2)",
     borderRadius: 12,
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderWidth: 1,
-    borderColor: 'rgba(102, 126, 234, 0.3)',
+    borderColor: "rgba(102, 126, 234, 0.3)",
   },
   providerBadgeText: {
     fontSize: 12,
-    color: '#667eea',
+    color: "#667eea",
   },
   aiResponseText: {
     fontSize: 16,
-    color: '#FFFFFF',
+    color: "#FFFFFF",
     lineHeight: 24,
   },
   aiPlaceholder: {
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     paddingVertical: 60,
   },
   aiPlaceholderText: {
     fontSize: 16,
-    color: '#8E8E93',
-    textAlign: 'center',
+    color: "#8E8E93",
+    textAlign: "center",
     marginTop: 16,
     lineHeight: 22,
     paddingHorizontal: 20,
   },
   aiInputContainer: {
-    flexDirection: 'row',
+    flexDirection: "row",
     paddingHorizontal: 20,
     paddingVertical: 20,
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
-    alignItems: 'flex-end',
+    backgroundColor: "rgba(255, 255, 255, 0.05)",
+    alignItems: "flex-end",
     gap: 12,
   },
   aiInput: {
     flex: 1,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    backgroundColor: "rgba(255, 255, 255, 0.1)",
     borderRadius: 20,
     paddingHorizontal: 16,
     paddingVertical: 12,
     fontSize: 16,
-    color: '#FFFFFF',
+    color: "#FFFFFF",
     maxHeight: 100,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.2)',
+    borderColor: "rgba(255, 255, 255, 0.2)",
   },
   aiSendButton: {
-    backgroundColor: '#667eea',
+    backgroundColor: "#667eea",
     borderRadius: 20,
     padding: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   disabledButton: {
     opacity: 0.6,
   },
-  
+
   // Simple Layout Styles (matching love/trust tabs)
   profileHeader: {
-    backgroundColor: '#1C1C1E',
+    backgroundColor: "#1C1C1E",
     paddingHorizontal: 20,
     paddingVertical: 24,
     marginBottom: 20,
   },
   headerTop: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     marginBottom: 8,
   },
   profileTitle: {
     fontSize: 20,
-    fontWeight: 'bold',
-    color: '#FFFFFF',
+    fontWeight: "bold",
+    color: "#FFFFFF",
     flex: 1,
-    textAlign: 'center',
+    textAlign: "center",
   },
   profileSubtitle: {
     fontSize: 16,
-    color: '#8E8E93',
-    textAlign: 'center',
+    color: "#8E8E93",
+    textAlign: "center",
   },
   resetButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     padding: 8,
   },
   resetButtonText: {
-    color: '#E91E63',
+    color: "#E91E63",
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: "600",
     marginLeft: 4,
   },
   shareButton: {
     padding: 8,
   },
   section: {
-    backgroundColor: '#1C1C1E',
+    backgroundColor: "#1C1C1E",
     marginHorizontal: 20,
     marginBottom: 16,
     borderRadius: 12,
     padding: 20,
   },
   numbersGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "space-between",
     marginTop: 12,
   },
   numberCard: {
-    backgroundColor: '#2C2C2E',
+    backgroundColor: "#2C2C2E",
     borderRadius: 12,
     padding: 16,
-    width: '48%',
-    alignItems: 'center',
+    width: "48%",
+    alignItems: "center",
     marginBottom: 12,
   },
   numberValue: {
     fontSize: 24,
-    fontWeight: 'bold',
-    color: '#E91E63',
+    fontWeight: "bold",
+    color: "#E91E63",
     marginBottom: 4,
   },
   numberLabel: {
     fontSize: 12,
-    color: '#8E8E93',
-    textAlign: 'center',
+    color: "#8E8E93",
+    textAlign: "center",
   },
   sectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     marginBottom: 12,
   },
   aiChatButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#2C2C2E',
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#2C2C2E",
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 16,
     gap: 4,
   },
   aiChatButtonText: {
-    color: '#E91E63',
+    color: "#E91E63",
     fontSize: 12,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   aiEnhancedBadge: {
-    alignSelf: 'flex-start',
+    alignSelf: "flex-start",
   },
   warningCard: {
-    backgroundColor: '#2C2C2E',
+    backgroundColor: "#2C2C2E",
     borderRadius: 12,
     padding: 16,
     borderLeftWidth: 4,
-    borderLeftColor: '#FF6B35',
+    borderLeftColor: "#FF6B35",
   },
   warningSubtitle: {
     fontSize: 16,
-    fontWeight: '600',
-    color: '#FF6B35',
+    fontWeight: "600",
+    color: "#FF6B35",
     marginBottom: 8,
   },
   warningText: {
     fontSize: 15,
-    color: '#FFFFFF',
+    color: "#FFFFFF",
     lineHeight: 22,
     marginBottom: 8,
   },
   consequencesText: {
     fontSize: 14,
-    color: '#8E8E93',
+    color: "#8E8E93",
     lineHeight: 20,
-    fontStyle: 'italic',
+    fontStyle: "italic",
+  },
+
+  // ProKerala Insights Styles
+  insightCard: {
+    backgroundColor: "rgba(255, 255, 255, 0.1)",
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.2)",
+  },
+  insightTitle: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#FFFFFF",
+    marginBottom: 8,
+  },
+  insightText: {
+    fontSize: 14,
+    color: "#E5E5EA",
+    lineHeight: 20,
+  },
+  insightBullet: {
+    fontSize: 14,
+    color: "#E5E5EA",
+    lineHeight: 20,
+    marginBottom: 4,
+  },
+
+  // Hidden Insights Styles
+  hiddenInsightsCard: {
+    backgroundColor: "rgba(255, 215, 0, 0.1)",
+    borderRadius: 12,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: "rgba(255, 215, 0, 0.3)",
+  },
+  hiddenInsightsText: {
+    fontSize: 15,
+    color: "#FFFFFF",
+    lineHeight: 22,
+    fontStyle: "italic",
+  },
+
+  // Loading Indicators Styles
+  loadingIndicators: {
+    padding: 16,
+    marginHorizontal: 20,
+    marginBottom: 16,
+  },
+  loadingItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "rgba(255, 255, 255, 0.1)",
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 8,
+  },
+  loadingText: {
+    marginLeft: 12,
+    fontSize: 14,
+    color: "#E5E5EA",
+    fontWeight: "500",
   },
 });

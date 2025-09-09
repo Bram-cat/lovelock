@@ -60,7 +60,6 @@ export class SubscriptionService {
       
       // Check if user has unlimited access first
       if (this.hasUnlimitedAccess(userId)) {
-        console.log('✅ User has unlimited access (special account)');
         return {
           isPremium: true,
           subscriptionType: 'premium',
@@ -165,7 +164,6 @@ export class SubscriptionService {
       const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1).toISOString();
       const endOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0, 23, 59, 59).toISOString();
 
-      console.log('📊 Getting usage count for user:', userId, 'subscription:', subscriptionType);
 
       // For free users: get all-time usage. For premium/unlimited: get monthly usage
       let aiUsageQuery = supabase
@@ -211,7 +209,6 @@ export class SubscriptionService {
         lastResetDate: startOfMonth
       };
 
-      console.log('📈 Current usage:', usage);
       return usage;
     } catch (error) {
       console.error('💥 Error getting usage count:', error);
