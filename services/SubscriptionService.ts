@@ -208,39 +208,49 @@ export class SubscriptionService {
       ).toISOString();
 
       // For free users: get all-time usage. For premium/unlimited: get monthly usage
-      let aiUsageQuery = supabase
-        .from("ai_usage")
-        .select("id", { count: "exact", head: true })
-        .eq("user_id", userId);
+      // Note: ai_usage table might not exist, so we'll use feature tables as fallback
+      let aiUsageResult = { count: 0 };
 
-      if (subscriptionType !== "free") {
-        aiUsageQuery = aiUsageQuery
-          .gte("created_at", startOfMonth)
-          .lte("created_at", endOfMonth);
+      try {
+        let aiUsageQuery = supabase
+          .from("ai_usage")
+          .select("id", { count: "exact", head: true })
+          .eq("user_id", userId);
+
+        if (subscriptionType !== "free") {
+          aiUsageQuery = aiUsageQuery
+            .gte("created_at", startOfMonth)
+            .lte("created_at", endOfMonth);
+        } else {
+          aiUsageQuery = aiUsageQuery.gte("created_at", "1970-01-01");
+        }
+
+        aiUsageResult = await aiUsageQuery;
+      } catch (error) {
+        console.warn("ai_usage table not found, using feature tables for total count");
+        aiUsageResult = { count: 0 };
       }
 
-      const aiUsageResult = await aiUsageQuery;
-
-      // Get counts from each feature table for backward compatibility
+      // Get counts from each feature table using the correct schema
       const [numerologyResult, loveMatchResult, trustResult] =
         await Promise.all([
           supabase
             .from("numerology_readings")
             .select("id", { count: "exact", head: true })
             .eq("user_id", userId)
-            .gte("created_at", startOfMonth)
+            .gte("created_at", subscriptionType === "free" ? "1970-01-01" : startOfMonth)
             .lte("created_at", endOfMonth),
           supabase
             .from("love_matches")
             .select("id", { count: "exact", head: true })
             .eq("user_id", userId)
-            .gte("created_at", startOfMonth)
+            .gte("created_at", subscriptionType === "free" ? "1970-01-01" : startOfMonth)
             .lte("created_at", endOfMonth),
           supabase
             .from("trust_assessments")
             .select("id", { count: "exact", head: true })
             .eq("user_id", userId)
-            .gte("created_at", startOfMonth)
+            .gte("created_at", subscriptionType === "free" ? "1970-01-01" : startOfMonth)
             .lte("created_at", endOfMonth),
         ]);
 
@@ -285,23 +295,26 @@ export class SubscriptionService {
     try {
       console.log(`📝 Recording AI usage for ${feature} by user:`, userId);
 
-      // Record in AI usage table for tracking
-      const aiUsageResult = await supabase.from("ai_usage").insert({
-        user_id: userId,
-        feature_type: feature,
-        ai_provider: provider,
-        estimated_cost: estimatedCost,
-        prompt_tokens: promptTokens,
-        completion_tokens: completionTokens,
-        total_tokens: promptTokens + completionTokens,
-      });
+      // Try to record in AI usage table for tracking (if it exists)
+      try {
+        const aiUsageResult = await supabase.from("ai_usage").insert({
+          user_id: userId,
+          feature_type: feature,
+          ai_provider: provider,
+          estimated_cost: estimatedCost,
+          prompt_tokens: promptTokens,
+          completion_tokens: completionTokens,
+          total_tokens: promptTokens + completionTokens,
+        });
 
-      if (aiUsageResult?.error) {
-        console.error("❌ Error recording AI usage:", aiUsageResult.error);
-        throw aiUsageResult.error;
+        if (aiUsageResult?.error) {
+          console.warn("⚠️ AI usage table not found or error recording:", aiUsageResult.error);
+        } else {
+          console.log(`✅ AI usage recorded for ${feature}`);
+        }
+      } catch (error) {
+        console.warn("⚠️ AI usage table not accessible, skipping AI usage recording");
       }
-
-      console.log(`✅ AI usage recorded for ${feature}`);
     } catch (error) {
       console.error("💥 Error recording AI usage:", error);
       throw error;
@@ -928,9 +941,12 @@ export class SubscriptionService {
     userId: string
   ): Promise<UserSubscription | null> {
     const { data, error } = await supabase
-      .from("user_subscriptions")
+      .from("subscriptions")
       .select("*")
       .eq("user_id", userId)
+      .eq("status", "active")
+      .order("created_at", { ascending: false })
+      .limit(1)
       .single();
 
     if (error || !data) {
@@ -949,16 +965,28 @@ export class SubscriptionService {
       };
     }
 
+    // Map subscription_type to tier
+    let tier = "free";
+    if (data.is_unlimited) {
+      tier = "unlimited";
+    } else if (data.is_premium) {
+      tier = "premium";
+    } else if (data.subscription_type === "premium") {
+      tier = "premium";
+    } else if (data.subscription_type === "unlimited") {
+      tier = "unlimited";
+    }
+
     return {
       userId: data.user_id,
-      tier: data.tier,
+      tier,
       status: data.status,
-      currentPeriodStart: new Date(data.current_period_start),
-      currentPeriodEnd: new Date(data.current_period_end),
+      currentPeriodStart: new Date(data.starts_at),
+      currentPeriodEnd: new Date(data.ends_at || Date.now() + 30 * 24 * 60 * 60 * 1000),
       usage: {
-        numerology: data.usage_numerology || 0,
-        loveMatch: data.usage_love_match || 0,
-        trustAssessment: data.usage_trust_assessment || 0,
+        numerology: 0, // Usage is tracked in separate tables
+        loveMatch: 0,
+        trustAssessment: 0,
       },
       stripeCustomerId: data.stripe_customer_id,
       stripeSubscriptionId: data.stripe_subscription_id,
@@ -969,21 +997,10 @@ export class SubscriptionService {
     userId: string,
     feature: "numerology" | "loveMatch" | "trustAssessment"
   ): Promise<void> {
-    const columnMap = {
-      numerology: "usage_numerology",
-      loveMatch: "usage_love_match",
-      trustAssessment: "usage_trust_assessment",
-    };
-
-    const { error } = await supabase.rpc("increment_usage", {
-      user_id: userId,
-      column_name: columnMap[feature],
-    });
-
-    if (error) {
-      console.error("Error updating usage:", error);
-      throw error;
-    }
+    // Usage is now tracked in the individual feature tables
+    // (numerology_readings, love_matches, trust_assessments)
+    // No need for a separate usage table or RPC call
+    console.log(`Usage for ${feature} will be tracked automatically when records are created`);
   }
 
   static async createStripeCheckoutSession(

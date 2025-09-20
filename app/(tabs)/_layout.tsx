@@ -88,29 +88,19 @@ function TabsWithOnboarding() {
       <Tabs
         tabBar={({ state, descriptors, navigation }) => (
           <BlurView
-            intensity={80}
+            intensity={95}
             tint="dark"
             style={{
               position: "absolute",
               bottom: 0,
               left: 0,
               right: 0,
-              backgroundColor: "rgba(0, 0, 0, 0.9)",
-              borderTopLeftRadius: 28,
-              borderTopRightRadius: 28,
-              borderTopWidth: 1,
-              borderTopColor: "rgba(233, 30, 99, 0.3)",
-              paddingTop: 10,
+              backgroundColor: "rgba(0, 0, 0, 0.95)",
+              borderTopWidth: 0.5,
+              borderTopColor: "rgba(255, 255, 255, 0.1)",
+              paddingTop: 8,
               paddingBottom: 34,
-              paddingHorizontal: 12,
-              shadowColor: "#E91E63",
-              shadowOffset: {
-                width: 0,
-                height: -6,
-              },
-              shadowOpacity: 0.4,
-              shadowRadius: 12,
-              elevation: 15,
+              paddingHorizontal: 0,
             }}
           >
             <BottomTabBar
@@ -123,11 +113,11 @@ function TabsWithOnboarding() {
         )}
         screenOptions={{
           tabBarActiveTintColor: "#FFFFFF",
-          tabBarInactiveTintColor: "rgba(255, 255, 255, 0.6)",
+          tabBarInactiveTintColor: "rgba(255, 255, 255, 0.5)",
           tabBarStyle: {
             backgroundColor: "transparent",
             borderTopWidth: 0,
-            height: 85,
+            height: 80,
             paddingTop: 0,
             paddingBottom: 0,
             position: "absolute" as const,
@@ -144,21 +134,21 @@ function TabsWithOnboarding() {
             color: "#FFFFFF",
           },
           tabBarLabelStyle: {
-            fontSize: 10,
-            fontWeight: "600",
-            marginTop: 2,
-            letterSpacing: 0.5,
+            fontSize: 11,
+            fontWeight: "500",
+            marginTop: 4,
+            letterSpacing: 0.2,
           },
           tabBarIconStyle: {
-            marginTop: 4,
+            marginBottom: 0,
           },
           tabBarItemStyle: {
-            paddingVertical: 6,
-            borderRadius: 18,
-            marginHorizontal: 3,
+            paddingVertical: 8,
+            marginHorizontal: 0,
             position: 'relative',
-            height: 65,
+            height: 60,
             justifyContent: 'center',
+            alignItems: 'center',
           },
           tabBarBackground: () => null,
         }}
@@ -168,28 +158,28 @@ function TabsWithOnboarding() {
           options={{
             title: "Home",
             tabBarIcon: ({ color, focused }) => (
-              <React.Fragment>
+              <View style={{ alignItems: 'center', justifyContent: 'center' }}>
                 {focused && (
                   <View
                     style={{
                       position: 'absolute',
-                      top: -8,
-                      left: -16,
-                      right: -16,
-                      bottom: -8,
-                      borderRadius: 16,
-                      backgroundColor: 'rgba(233, 30, 99, 0.2)',
+                      top: -12,
+                      left: -20,
+                      right: -20,
+                      bottom: -12,
+                      borderRadius: 20,
+                      backgroundColor: 'rgba(147, 51, 234, 0.15)',
                       borderWidth: 1,
-                      borderColor: 'rgba(233, 30, 99, 0.4)',
+                      borderColor: 'rgba(147, 51, 234, 0.3)',
                     }}
                   />
                 )}
                 <Ionicons
                   name={focused ? "home" : "home-outline"}
-                  size={focused ? 24 : 22}
-                  color={focused ? "#E91E63" : "rgba(255, 255, 255, 0.6)"}
+                  size={focused ? 26 : 24}
+                  color={focused ? "#9333EA" : "rgba(255, 255, 255, 0.5)"}
                 />
-              </React.Fragment>
+              </View>
             ),
           }}
         />
@@ -198,28 +188,28 @@ function TabsWithOnboarding() {
           options={{
             title: "Numbers",
             tabBarIcon: ({ color, focused }) => (
-              <React.Fragment>
+              <View style={{ alignItems: 'center', justifyContent: 'center' }}>
                 {focused && (
                   <View
                     style={{
                       position: 'absolute',
-                      top: -8,
-                      left: -16,
-                      right: -16,
-                      bottom: -8,
-                      borderRadius: 16,
-                      backgroundColor: 'rgba(233, 30, 99, 0.2)',
+                      top: -12,
+                      left: -20,
+                      right: -20,
+                      bottom: -12,
+                      borderRadius: 20,
+                      backgroundColor: 'rgba(147, 51, 234, 0.15)',
                       borderWidth: 1,
-                      borderColor: 'rgba(233, 30, 99, 0.4)',
+                      borderColor: 'rgba(147, 51, 234, 0.3)',
                     }}
                   />
                 )}
                 <Ionicons
                   name={focused ? "calculator" : "calculator-outline"}
-                  size={focused ? 24 : 22}
-                  color={focused ? "#E91E63" : "rgba(255, 255, 255, 0.6)"}
+                  size={focused ? 26 : 24}
+                  color={focused ? "#9333EA" : "rgba(255, 255, 255, 0.5)"}
                 />
-              </React.Fragment>
+              </View>
             ),
           }}
         />
@@ -228,28 +218,28 @@ function TabsWithOnboarding() {
           options={{
             title: "Love",
             tabBarIcon: ({ color, focused }) => (
-              <React.Fragment>
+              <View style={{ alignItems: 'center', justifyContent: 'center' }}>
                 {focused && (
                   <View
                     style={{
                       position: 'absolute',
-                      top: -8,
-                      left: -16,
-                      right: -16,
-                      bottom: -8,
-                      borderRadius: 16,
-                      backgroundColor: 'rgba(233, 30, 99, 0.2)',
+                      top: -12,
+                      left: -20,
+                      right: -20,
+                      bottom: -12,
+                      borderRadius: 20,
+                      backgroundColor: 'rgba(147, 51, 234, 0.15)',
                       borderWidth: 1,
-                      borderColor: 'rgba(233, 30, 99, 0.4)',
+                      borderColor: 'rgba(147, 51, 234, 0.3)',
                     }}
                   />
                 )}
                 <Ionicons
                   name={focused ? "heart" : "heart-outline"}
-                  size={focused ? 24 : 22}
-                  color={focused ? "#E91E63" : "rgba(255, 255, 255, 0.6)"}
+                  size={focused ? 26 : 24}
+                  color={focused ? "#9333EA" : "rgba(255, 255, 255, 0.5)"}
                 />
-              </React.Fragment>
+              </View>
             ),
           }}
         />
@@ -258,28 +248,28 @@ function TabsWithOnboarding() {
           options={{
             title: "Trust",
             tabBarIcon: ({ color, focused }) => (
-              <React.Fragment>
+              <View style={{ alignItems: 'center', justifyContent: 'center' }}>
                 {focused && (
                   <View
                     style={{
                       position: 'absolute',
-                      top: -8,
-                      left: -16,
-                      right: -16,
-                      bottom: -8,
-                      borderRadius: 16,
-                      backgroundColor: 'rgba(233, 30, 99, 0.2)',
+                      top: -12,
+                      left: -20,
+                      right: -20,
+                      bottom: -12,
+                      borderRadius: 20,
+                      backgroundColor: 'rgba(147, 51, 234, 0.15)',
                       borderWidth: 1,
-                      borderColor: 'rgba(233, 30, 99, 0.4)',
+                      borderColor: 'rgba(147, 51, 234, 0.3)',
                     }}
                   />
                 )}
                 <Ionicons
                   name={focused ? "shield-checkmark" : "shield-outline"}
-                  size={focused ? 24 : 22}
-                  color={focused ? "#E91E63" : "rgba(255, 255, 255, 0.6)"}
+                  size={focused ? 26 : 24}
+                  color={focused ? "#9333EA" : "rgba(255, 255, 255, 0.5)"}
                 />
-              </React.Fragment>
+              </View>
             ),
           }}
         />
@@ -288,28 +278,28 @@ function TabsWithOnboarding() {
           options={{
             title: "Profile",
             tabBarIcon: ({ color, focused }) => (
-              <React.Fragment>
+              <View style={{ alignItems: 'center', justifyContent: 'center' }}>
                 {focused && (
                   <View
                     style={{
                       position: 'absolute',
-                      top: -8,
-                      left: -16,
-                      right: -16,
-                      bottom: -8,
-                      borderRadius: 16,
-                      backgroundColor: 'rgba(233, 30, 99, 0.2)',
+                      top: -12,
+                      left: -20,
+                      right: -20,
+                      bottom: -12,
+                      borderRadius: 20,
+                      backgroundColor: 'rgba(147, 51, 234, 0.15)',
                       borderWidth: 1,
-                      borderColor: 'rgba(233, 30, 99, 0.4)',
+                      borderColor: 'rgba(147, 51, 234, 0.3)',
                     }}
                   />
                 )}
                 <Ionicons
                   name={focused ? "person" : "person-outline"}
-                  size={focused ? 24 : 22}
-                  color={focused ? "#E91E63" : "rgba(255, 255, 255, 0.6)"}
+                  size={focused ? 26 : 24}
+                  color={focused ? "#9333EA" : "rgba(255, 255, 255, 0.5)"}
                 />
-              </React.Fragment>
+              </View>
             ),
           }}
         />
