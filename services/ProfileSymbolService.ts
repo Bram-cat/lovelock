@@ -1,5 +1,4 @@
 // Profile Symbol Service for automatic symbol calculation
-import { NumerologyCompatibilityDatabase } from './NumerologyCompatibilityDatabase';
 import { supabase } from '../lib/supabase-client';
 
 export interface UserSymbols {
@@ -14,6 +13,50 @@ export interface UserSymbols {
 
 export class ProfileSymbolService {
   
+  // Simple symbol calculation based on numerology numbers
+  private static calculateLifePathNumber(birthDate: string): number {
+    const parts = birthDate.split('-').map(Number);
+    if (parts.length !== 3) return 1;
+    
+    let sum = parts[0] + parts[1] + parts[2];
+    while (sum > 9 && sum !== 11 && sum !== 22 && sum !== 33) {
+      sum = sum.toString().split('').reduce((acc, digit) => acc + parseInt(digit), 0);
+    }
+    return sum;
+  }
+
+  private static calculateDestinyNumber(name: string): number {
+    const letterValues: { [key: string]: number } = {
+      A: 1, B: 2, C: 3, D: 4, E: 5, F: 6, G: 7, H: 8, I: 9,
+      J: 1, K: 2, L: 3, M: 4, N: 5, O: 6, P: 7, Q: 8, R: 9,
+      S: 1, T: 2, U: 3, V: 4, W: 5, X: 6, Y: 7, Z: 8
+    };
+
+    let sum = name.toUpperCase().split('').reduce((acc, letter) => {
+      return acc + (letterValues[letter] || 0);
+    }, 0);
+
+    while (sum > 9 && sum !== 11 && sum !== 22 && sum !== 33) {
+      sum = sum.toString().split('').reduce((acc, digit) => acc + parseInt(digit), 0);
+    }
+    return sum;
+  }
+
+  private static getSymbolsForNumber(number: number): { symbol: string; element: string; color: string; planet: string; meaning: string } {
+    const symbolMap: { [key: number]: any } = {
+      1: { symbol: '🌟', element: 'Fire', color: 'Red', planet: 'Sun', meaning: 'Leadership and independence' },
+      2: { symbol: '🌙', element: 'Water', color: 'Silver', planet: 'Moon', meaning: 'Partnership and harmony' },
+      3: { symbol: '⚡', element: 'Air', color: 'Yellow', planet: 'Jupiter', meaning: 'Creativity and expression' },
+      4: { symbol: '🌍', element: 'Earth', color: 'Green', planet: 'Saturn', meaning: 'Stability and hard work' },
+      5: { symbol: '🌪️', element: 'Air', color: 'Blue', planet: 'Mercury', meaning: 'Freedom and adventure' },
+      6: { symbol: '💖', element: 'Earth', color: 'Pink', planet: 'Venus', meaning: 'Love and nurturing' },
+      7: { symbol: '🔮', element: 'Water', color: 'Purple', planet: 'Neptune', meaning: 'Spirituality and wisdom' },
+      8: { symbol: '💎', element: 'Earth', color: 'Gold', planet: 'Saturn', meaning: 'Material success' },
+      9: { symbol: '🌈', element: 'Fire', color: 'White', planet: 'Mars', meaning: 'Universal love' }
+    };
+    return symbolMap[number] || symbolMap[1];
+  }
+
   // Calculate and save user symbols when birthday/name changes
   static async calculateAndSaveSymbols(
     userId: string,
@@ -29,18 +72,25 @@ export class ProfileSymbolService {
     try {
       console.log('🔮 Calculating numerology symbols for user:', userId);
       
-      // Calculate personal symbols using the comprehensive database
-      const personalSymbols = NumerologyCompatibilityDatabase.calculatePersonalSymbols(birthDate, fullName);
+      // Calculate numerology numbers
+      const lifePathNumber = this.calculateLifePathNumber(birthDate);
+      const destinyNumber = this.calculateDestinyNumber(fullName);
+      const personalityNumber = this.calculateDestinyNumber(fullName.replace(/[aeiou]/gi, ''));
+
+      // Get symbols for each number
+      const lifePathSymbols = this.getSymbolsForNumber(lifePathNumber);
+      const destinySymbols = this.getSymbolsForNumber(destinyNumber);
+      const personalitySymbols = this.getSymbolsForNumber(personalityNumber);
       
       // Create user symbols object
       const userSymbols: UserSymbols = {
-        lifePathSymbol: personalSymbols.lifePathSymbol.symbol,
-        destinySymbol: personalSymbols.destinySymbol.symbol,
-        personalitySymbol: personalSymbols.personalitySymbol.symbol,
-        element: personalSymbols.lifePathSymbol.element,
-        color: personalSymbols.lifePathSymbol.color,
-        planet: personalSymbols.lifePathSymbol.planet,
-        meaning: personalSymbols.lifePathSymbol.meaning
+        lifePathSymbol: lifePathSymbols.symbol,
+        destinySymbol: destinySymbols.symbol,
+        personalitySymbol: personalitySymbols.symbol,
+        element: lifePathSymbols.element,
+        color: lifePathSymbols.color,
+        planet: lifePathSymbols.planet,
+        meaning: lifePathSymbols.meaning
       };
 
       // Save to Supabase profile

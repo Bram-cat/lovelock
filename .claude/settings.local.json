@@ -128,7 +128,13 @@
       "Bash(git branch:*)",
       "Bash(git commit:*)",
       "Bash(git push:*)",
-      "Bash(git rm:*)"
+      "Bash(git rm:*)",
+      "Bash(git reset:*)",
+      "WebFetch(domain:api.prokerala.com)",
+      "WebFetch(domain:roxyapi.com)",
+      "Bash(npm start)",
+      "Bash(ls:*)",
+      "Bash(dir:*)"
     ],
     "deny": [],
     "ask": []

@@ -81,6 +81,24 @@ export interface NumerologyProfile {
     personality: CalculationStep[];
     personalYear: CalculationStep[];
   };
+  prokeralaInsights?: {
+    strengths: string[];
+    challenges: string[];
+    career: string;
+    relationship: string;
+    spiritual?: string;
+    luckyNumbers?: number[];
+    luckyColors?: string[];
+    lifePathDescription?: string;
+    personalYear?: number;
+  } | null;
+  aiInsights?: string;
+  hiddenInsights?: string;
+  deadlySinWarning?: {
+    sin: string;
+    warning: string;
+    consequences: string;
+  };
 }
 
 export interface PredictionCategory {

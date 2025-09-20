@@ -1,5 +1,5 @@
 // Life Insights Service for Multi-Aspect Analysis
-import { ProkeralaNumerologyService } from './ProkeralaNumerologyService';
+import { RoxyNumerologyService } from './ProkeralaNumerologyService';
 
 export interface LifeInsight {
   category: string;
@@ -11,14 +11,14 @@ export interface LifeInsight {
 }
 
 export interface EnhancedLifeInsight extends LifeInsight {
-  prokeralaEnhancement?: string;
+  roxyEnhancement?: string;
   dailyTip?: string;
   energyLevel?: number;
 }
 
 export class LifeInsightsService {
   
-  // Generate enhanced insights with Prokerala API integration
+  // Generate enhanced insights with Roxy API integration
   static async generateEnhancedLifeInsights(
     name: string, 
     birthDate: string, 
@@ -27,8 +27,11 @@ export class LifeInsightsService {
     destinyNumber: number
   ): Promise<EnhancedLifeInsight[]> {
     try {
-      // Get enhanced daily predictions from Prokerala API
-      const dailyPredictions = await ProkeralaNumerologyService.getDailyPredictions(name, birthDate);
+      // Get enhanced daily predictions from Roxy API
+      const nameParts = name.split(' ');
+      const firstName = nameParts[0] || '';
+      const lastName = nameParts.slice(1).join(' ') || '';
+      const dailyPredictions = await RoxyNumerologyService.getDailyPredictions(firstName, lastName, birthDate);
       
       return [
         await this.generateEnhancedCareerInsight(lifePathNumber, destinyNumber, dailyPredictions.career),
@@ -41,7 +44,7 @@ export class LifeInsightsService {
       // Fallback to regular insights
       return this.generateLifeInsights(lifePathNumber, personalityNumber, destinyNumber).map(insight => ({
         ...insight,
-        prokeralaEnhancement: 'Enhanced predictions temporarily unavailable'
+        roxyEnhancement: 'Enhanced predictions temporarily unavailable'
       }));
     }
   }

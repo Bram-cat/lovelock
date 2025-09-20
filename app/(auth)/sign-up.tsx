@@ -114,8 +114,7 @@ export default function SignUpScreen() {
       console.log('🔄 Preparing email verification...');
       try {
         await signUp.prepareEmailAddressVerification({ 
-          strategy: 'email_code',
-          redirectUrl: undefined // Ensure no redirect URL for better deliverability
+          strategy: 'email_code'
         });
       } catch (emailError) {
         console.log('🔄 Retrying email verification...');

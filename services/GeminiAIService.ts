@@ -69,7 +69,14 @@ export class GeminiAIService {
   }
 
   static getCurrentApiKey(): string {
-    return this.API_KEYS[this.currentApiKeyIndex];
+    if (this.API_KEYS.length === 0) {
+      throw new Error('No Gemini API keys configured. Please check your environment variables.');
+    }
+    const apiKey = this.API_KEYS[this.currentApiKeyIndex];
+    if (!apiKey) {
+      throw new Error('Invalid API key configuration');
+    }
+    return apiKey;
   }
 
   async generateContent(

@@ -65,6 +65,8 @@ export default function GlassCard({
   );
 }
 
+GlassCard.displayName = "GlassCard";
+
 const styles = StyleSheet.create({
   container: {
     borderRadius: DesignSystem.borderRadius.card,

@@ -1,6 +1,6 @@
-// Daily Insights Service using Prokerala API and Gemini AI
-import UniversalAIService from './UniversalAIService';
-import { ProkeralaNumerologyService } from './ProkeralaNumerologyService';
+// Daily Insights Service using Roxy API and Gemini AI
+import SimpleAIService from './SimpleAIService';
+import { RoxyNumerologyService } from './ProkeralaNumerologyService';
 import type { NumerologyProfile } from './NumerologyService';
 
 export interface DailyInsight {
@@ -26,57 +26,80 @@ export class DailyInsightsService {
     birthDate: string,
     date: Date = new Date(),
     birthTime?: string,
-    birthLocation?: string
+    birthLocation?: string,
+    useRoxyAPI: boolean = false
   ): Promise<DailyInsight> {
-    try {
-      console.log('🌅 Generating daily insights for', name);
-      
-      // Try Prokerala API first for professional insights
-      const prokeralaInsights = await ProkeralaNumerologyService.getDailyPredictions(
-        name,
-        birthDate,
-        date,
-        birthTime,
-        birthLocation
-      );
-      
-      if (prokeralaInsights) {
-        console.log('✨ Using Prokerala API for daily insights');
-        return {
-          date: date.toISOString().split('T')[0],
-          personalDayNumber: this.calculatePersonalDayNumber(birthDate, date),
-          energyLevel: prokeralaInsights.energyLevel,
-          overallTheme: this.getThemeForDay(this.calculatePersonalDayNumber(birthDate, date)),
-          love: prokeralaInsights.love,
-          career: prokeralaInsights.career,
-          health: prokeralaInsights.health,
-          spiritual: prokeralaInsights.spiritual,
-          luckyNumbers: prokeralaInsights.luckyNumbers,
-          luckyColors: prokeralaInsights.luckyColors,
-          advice: await this.generateDailyAdvice(name, birthDate, date),
-          affirmation: await this.generateDailyAffirmation(name, birthDate, date)
-        };
+    // Only use Roxy API if explicitly requested
+    if (useRoxyAPI) {
+      try {
+        // Try Roxy API only when user explicitly requests enhanced insights
+        const nameParts = name.split(' ');
+        const firstName = nameParts[0] || '';
+        const lastName = nameParts.slice(1).join(' ') || '';
+        const roxyInsights = await RoxyNumerologyService.getDailyPredictions(
+          firstName,
+          lastName,
+          birthDate,
+          date,
+          birthTime
+        );
+        
+        if (roxyInsights) {
+          return {
+            date: date.toISOString().split('T')[0],
+            personalDayNumber: this.calculatePersonalDayNumber(birthDate, date),
+            energyLevel: roxyInsights.energyLevel || 75,
+            overallTheme: String(this.getThemeForDay(this.calculatePersonalDayNumber(birthDate, date))),
+            love: String(roxyInsights.love || "Love energy flows freely today"),
+            career: String(roxyInsights.career || "Focus on your professional goals"),
+            health: String(roxyInsights.health || "Take care of your wellbeing"),
+            spiritual: String(roxyInsights.spiritual || "Connect with your inner wisdom"),
+            luckyNumbers: Array.isArray(roxyInsights.luckyNumbers) ? roxyInsights.luckyNumbers : [7, 14, 21],
+            luckyColors: Array.isArray(roxyInsights.luckyColors) ? roxyInsights.luckyColors : ["Purple", "Gold"],
+            advice: await this.generateDailyAdvice(name, birthDate, date),
+            affirmation: await this.generateDailyAffirmation(name, birthDate, date)
+          };
+        }
+      } catch (error) {
+        console.log('Roxy API unavailable for daily insights, using local calculation');
       }
-    } catch (error) {
-      console.error('Prokerala API error, using enhanced local calculation:', error);
     }
     
-    // Fallback to enhanced local calculation with AI
+    // Default to local calculation (no Roxy API calls)
     return this.generateEnhancedDailyInsights(name, birthDate, date);
   }
   
   // Calculate personal day number
   private static calculatePersonalDayNumber(birthDate: string, date: Date): number {
-    const [month, day, year] = birthDate.split('/').map(Number);
-    const lifePathSum = month + day + year;
-    const lifePathNumber = this.reduceToSingleDigit(lifePathSum);
-    
-    const currentMonth = date.getMonth() + 1;
-    const currentDay = date.getDate();
-    const currentYear = date.getFullYear();
-    
-    const personalDaySum = lifePathNumber + currentMonth + currentDay + currentYear;
-    return this.reduceToSingleDigit(personalDaySum);
+    try {
+      let month: number, day: number, year: number;
+      
+      // Handle different date formats: MM/DD/YYYY or YYYY-MM-DD
+      if (birthDate.includes('/')) {
+        [month, day, year] = birthDate.split('/').map(Number);
+      } else if (birthDate.includes('-')) {
+        [year, month, day] = birthDate.split('-').map(Number);
+      } else {
+        return 1; // Default fallback
+      }
+      
+      // Validate parsed numbers
+      if (isNaN(month) || isNaN(day) || isNaN(year) || month < 1 || month > 12 || day < 1 || day > 31) {
+        return 1; // Default fallback
+      }
+      
+      const lifePathSum = month + day + year;
+      const lifePathNumber = this.reduceToSingleDigit(lifePathSum);
+      
+      const currentMonth = date.getMonth() + 1;
+      const currentDay = date.getDate();
+      const currentYear = date.getFullYear();
+      
+      const personalDaySum = lifePathNumber + currentMonth + currentDay + currentYear;
+      return this.reduceToSingleDigit(personalDaySum);
+    } catch (error) {
+      return 1; // Default fallback
+    }
   }
   
   private static reduceToSingleDigit(num: number): number {
@@ -132,54 +155,61 @@ export class DailyInsightsService {
     }
   }
   
-  // Generate AI-powered daily advice
+  // Generate AI-powered daily advice using Roxy data for enhanced personalization
   private static async generateDailyAdvice(name: string, birthDate: string, date: Date): Promise<string> {
     const personalDayNumber = this.calculatePersonalDayNumber(birthDate, date);
-    const dayOfWeek = date.toLocaleDateString('en-US', { weekday: 'long' });
-    
-    const prompt = `Generate personalized daily advice for ${name} based on their numerology:
-    
-Personal Day Number: ${personalDayNumber}
-Date: ${date.toDateString()}
-Day of Week: ${dayOfWeek}
-
-Create a 2-3 sentence piece of advice that is:
-1. Encouraging and positive
-2. Actionable and practical
-3. Related to their personal day number energy
-4. Appropriate for ${dayOfWeek}
-
-Focus on what they should prioritize or be mindful of today. Keep it warm and supportive.`;
     
     try {
-      const result = await UniversalAIService.generateAdvancedPrompt(prompt);
-      return result.content.trim();
+      // Try to get Roxy data for enhanced personalization
+      const nameParts = name.split(' ');
+      const firstName = nameParts[0] || '';
+      const lastName = nameParts.slice(1).join(' ') || '';
+      const roxyData = await RoxyNumerologyService.getNumerologyReading(firstName, lastName, birthDate);
+      
+      if (roxyData) {
+        // Use enhanced AI insights with Roxy data
+        const insights = await SimpleAIService.generateEnhancedDailyInsights(
+          name, 
+          roxyData, 
+          personalDayNumber, 
+          date.toLocaleDateString()
+        );
+        
+        // Extract advice from the insights (take first 2 sentences)
+        const sentences = insights.split('.').slice(0, 2);
+        return sentences.join('.') + (sentences.length > 1 ? '.' : '');
+      }
     } catch (error) {
-      return this.getFallbackAdvice(personalDayNumber);
+      // ProKerala data unavailable, using fallback
     }
+    
+    return this.getFallbackAdvice(personalDayNumber);
   }
   
-  // Generate AI-powered daily affirmation
+  // Generate AI-powered daily affirmation using Roxy data
   private static async generateDailyAffirmation(name: string, birthDate: string, date: Date): Promise<string> {
     const personalDayNumber = this.calculatePersonalDayNumber(birthDate, date);
     
-    const prompt = `Create a powerful, personal affirmation for ${name} based on their personal day number ${personalDayNumber}.
-
-Make it:
-1. First person ("I am", "I have", "I create")
-2. Present tense and positive
-3. Empowering and uplifting
-4. One meaningful sentence
-5. Related to the energy of number ${personalDayNumber}
-
-Return only the affirmation, nothing else.`;
-    
     try {
-      const result = await UniversalAIService.generateAdvancedPrompt(prompt);
-      return result.content.trim().replace(/['"]/g, '');
+      // Try to get Roxy data for enhanced personalization
+      const nameParts = name.split(' ');
+      const firstName = nameParts[0] || '';
+      const lastName = nameParts.slice(1).join(' ') || '';
+      const roxyData = await RoxyNumerologyService.getNumerologyReading(firstName, lastName, birthDate);
+      
+      if (roxyData) {
+        // Use enhanced AI affirmation with Roxy data
+        return await SimpleAIService.generatePersonalizedAffirmation(
+          name, 
+          roxyData, 
+          personalDayNumber
+        );
+      }
     } catch (error) {
-      return this.getFallbackAffirmation(personalDayNumber);
+      // ProKerala data unavailable, using fallback
     }
+    
+    return this.getFallbackAffirmation(personalDayNumber);
   }
   
   // Base predictions for each personal day number

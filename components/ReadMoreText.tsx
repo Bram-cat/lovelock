@@ -37,6 +37,8 @@ export default function ReadMoreText({
   );
 }
 
+ReadMoreText.displayName = "ReadMoreText";
+
 const styles = StyleSheet.create({
   readMoreButton: {
     marginTop: 8,

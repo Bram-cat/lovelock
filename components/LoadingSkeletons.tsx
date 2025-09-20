@@ -1,8 +1,12 @@
-import React, { useEffect, useRef } from 'react';
-import { View, Animated, StyleSheet } from 'react-native';
+import React, { useEffect, useRef } from "react";
+import { Animated, StyleSheet, View } from "react-native";
 
 // Shimmer loading effect similar to shadcn
-export const ShimmerSkeleton = ({ width, height, borderRadius = 8 }: {
+export const ShimmerSkeleton = ({
+  width,
+  height,
+  borderRadius = 8,
+}: {
   width: number | string;
   height: number;
   borderRadius?: number;
@@ -38,9 +42,9 @@ export const ShimmerSkeleton = ({ width, height, borderRadius = 8 }: {
       style={[
         styles.skeleton,
         {
-          width,
-          height,
-          borderRadius,
+          [width]: width,
+          [height]: height,
+          [borderRadius]: borderRadius,
           opacity,
         },
       ]}
@@ -70,7 +74,7 @@ export const NumerologyLoadingSkeleton = () => (
           <ShimmerSkeleton width="40%" height={16} borderRadius={8} />
         </View>
       </View>
-      
+
       <View style={styles.numbersGridSkeleton}>
         {[...Array(4)].map((_, i) => (
           <View key={i} style={styles.numberItemSkeleton}>
@@ -117,7 +121,12 @@ export const LoveMatchLoadingSkeleton = () => (
           <View style={styles.partnerHeaderSkeleton}>
             <View style={styles.partnerNumbersSkeleton}>
               {[...Array(3)].map((_, j) => (
-                <ShimmerSkeleton key={j} width={24} height={24} borderRadius={12} />
+                <ShimmerSkeleton
+                  key={j}
+                  width={24}
+                  height={24}
+                  borderRadius={12}
+                />
               ))}
             </View>
             <ShimmerSkeleton width="25%" height={16} borderRadius={8} />
@@ -161,33 +170,33 @@ export const TrustAssessmentLoadingSkeleton = () => (
 
 const styles = StyleSheet.create({
   skeleton: {
-    backgroundColor: '#2C2C2E',
+    backgroundColor: "#2C2C2E",
   },
   container: {
     flex: 1,
-    backgroundColor: '#000000',
+    backgroundColor: "#000000",
     padding: 20,
     gap: 24,
   },
   headerSkeleton: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     paddingTop: 20,
   },
   actionsSkeleton: {
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: 12,
   },
   profileCardSkeleton: {
-    backgroundColor: '#1C1C1E',
+    backgroundColor: "#1C1C1E",
     borderRadius: 20,
     padding: 24,
     gap: 24,
   },
   profileHeaderSkeleton: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 16,
   },
   profileInfoSkeleton: {
@@ -195,16 +204,16 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   numbersGridSkeleton: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    justifyContent: "space-between",
   },
   numberItemSkeleton: {
-    alignItems: 'center',
+    alignItems: "center",
     gap: 8,
   },
   numbersRowSkeleton: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
+    flexDirection: "row",
+    justifyContent: "space-around",
     gap: 16,
   },
   sectionSkeleton: {
@@ -214,26 +223,26 @@ const styles = StyleSheet.create({
     gap: 16,
   },
   partnerCardSkeleton: {
-    backgroundColor: '#1C1C1E',
+    backgroundColor: "#1C1C1E",
     borderRadius: 16,
     padding: 20,
     gap: 12,
   },
   partnerHeaderSkeleton: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
   },
   partnerNumbersSkeleton: {
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: 8,
   },
   formSkeleton: {
     gap: 16,
   },
   relationshipTypesSkeleton: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
+    flexDirection: "row",
+    flexWrap: "wrap",
     gap: 12,
   },
 });

@@ -313,7 +313,15 @@ export default function NumerologyReadingScreen({
   // Generate daily insight and fetch horoscope on component mount
   React.useEffect(() => {
     const generateInsights = async () => {
-      console.log('🎯 Starting to generate insights for profile:', profile, 'name:', name);
+      // Track numerology usage
+      if (userId) {
+        UsageTrackingService.trackNumerologyUsage(userId, {
+          name,
+          lifePathNumber: profile?.lifePathNumber,
+          timestamp: new Date().toISOString()
+        });
+      }
+
       try {
         // Generate AI daily insight
         const dailyResult = await UniversalAIService.generateAdvancedPrompt(`Generate a daily insight for someone with Life Path ${profile.lifePathNumber}. Keep it brief and inspiring.`);

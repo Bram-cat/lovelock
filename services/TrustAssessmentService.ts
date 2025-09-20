@@ -21,6 +21,7 @@ export interface TrustAssessment {
   recommendations: string[];
   warningFlags: string[];
   strengthAreas: string[];
+  roxyInsights?: any;
 }
 
 export interface TrustIndicator {

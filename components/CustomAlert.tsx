@@ -1,21 +1,21 @@
-import React from 'react';
-import { 
-  Modal, 
-  View, 
-  Text, 
-  TouchableOpacity, 
-  StyleSheet, 
-  Dimensions 
-} from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons } from "@expo/vector-icons";
+import { LinearGradient } from "expo-linear-gradient";
+import React from "react";
+import {
+  Dimensions,
+  Modal,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
 
-const { width } = Dimensions.get('window');
+const { width } = Dimensions.get("window");
 
 export interface CustomAlertButton {
   text: string;
   onPress?: () => void;
-  style?: 'default' | 'cancel' | 'destructive' | 'primary';
+  style?: "default" | "cancel" | "destructive" | "primary";
 }
 
 interface CustomAlertProps {
@@ -26,86 +26,89 @@ interface CustomAlertProps {
   iconColor?: string;
   buttons?: CustomAlertButton[];
   onDismiss?: () => void;
-  type?: 'success' | 'error' | 'warning' | 'info';
+  type?: "success" | "error" | "warning" | "info";
 }
 
-export default function CustomAlert({ 
-  visible, 
-  title, 
+export default function CustomAlert({
+  visible,
+  title,
   message,
   icon,
   iconColor,
-  buttons = [{ text: 'OK', style: 'primary' }],
+  buttons = [{ text: "OK", style: "primary" }],
   onDismiss,
-  type = 'info'
+  type = "info",
 }: CustomAlertProps) {
   // Static theme colors for consistency
   const theme = {
-    surface: '#1C1C1E',
-    text: '#FFFFFF',
-    textSecondary: 'rgba(255, 255, 255, 0.8)',
-    primary: '#667eea',
-    secondary: '#764ba2'
+    surface: "#1C1C1E",
+    text: "#FFFFFF",
+    textSecondary: "rgba(255, 255, 255, 0.8)",
+    primary: "#667eea",
+    secondary: "#764ba2",
   };
 
   const getTypeConfig = () => {
     switch (type) {
-      case 'success':
+      case "success":
         return {
-          icon: icon || 'checkmark-circle',
-          iconColor: iconColor || '#4CAF50',
+          icon: icon || "checkmark-circle",
+          iconColor: iconColor || "#4CAF50",
         };
-      case 'error':
+      case "error":
         return {
-          icon: icon || 'close-circle',
-          iconColor: iconColor || '#F44336',
+          icon: icon || "close-circle",
+          iconColor: iconColor || "#F44336",
         };
-      case 'warning':
+      case "warning":
         return {
-          icon: icon || 'warning',
-          iconColor: iconColor || '#FF9800',
+          icon: icon || "warning",
+          iconColor: iconColor || "#FF9800",
         };
       default:
         return {
-          icon: icon || 'information-circle',
-          iconColor: iconColor || '#2196F3',
+          icon: icon || "information-circle",
+          iconColor: iconColor || "#2196F3",
         };
     }
   };
 
-  const getButtonStyle = (style?: string) => {
+  const getButtonStyle = (style?: string): { 
+    backgroundColor: string; 
+    colors: readonly [string, string, ...string[]] 
+  } => {
     switch (style) {
-      case 'destructive':
+      case "destructive":
         return {
-          backgroundColor: '#FF4444',
-          colors: ['#FF4444', '#CC3333']
+          backgroundColor: "#FF4444",
+          colors: ["#FF4444", "#CC3333"] as const,
         };
-      case 'cancel':
+      case "cancel":
         return {
-          backgroundColor: 'rgba(0,0,0,0.1)',
-          colors: ['rgba(0,0,0,0.1)', 'rgba(0,0,0,0.2)']
+          backgroundColor: "rgba(0,0,0,0.1)",
+          colors: ["rgba(0,0,0,0.1)", "rgba(0,0,0,0.2)"] as const,
         };
-      case 'primary':
+      case "primary":
         return {
-          backgroundColor: '#FF6B9D',
-          colors: ['#FF6B9D', '#C44569']
+          backgroundColor: "#FF6B9D",
+          colors: ["#FF6B9D", "#C44569"] as const,
         };
       default:
         return {
           backgroundColor: theme.primary,
-          colors: [theme.primary, theme.secondary || theme.primary]
+          colors: [theme.primary, theme.secondary || theme.primary] as const,
         };
     }
   };
 
   const getButtonTextColor = (style?: string) => {
     switch (style) {
-      case 'cancel':
+      case "cancel":
         return theme.text;
-      case 'primary':
-        return 'white';
+      case "primary":
+        return "white";
       default:
-        return 'white';
+        return "white";
     }
   };
 
@@ -119,7 +122,9 @@ export default function CustomAlert({
       onRequestClose={onDismiss}
     >
       <View style={styles.overlay}>
-        <View style={[styles.alertContainer, { backgroundColor: theme.surface }]}>
+        <View
+          style={[styles.alertContainer, { backgroundColor: theme.surface }]}
+        >
           {/* Header */}
           <View style={styles.header}>
             <Ionicons name={config.icon} size={32} color={config.iconColor} />
@@ -138,13 +143,13 @@ export default function CustomAlert({
             {buttons.map((button, index) => {
               const buttonStyle = getButtonStyle(button.style);
               const textColor = getButtonTextColor(button.style);
-              
+
               return (
                 <TouchableOpacity
                   key={index}
                   style={[
                     styles.button,
-                    buttons.length === 1 && styles.singleButton
+                    buttons.length === 1 && styles.singleButton,
                   ]}
                   onPress={() => {
                     button.onPress?.();
@@ -172,9 +177,9 @@ export default function CustomAlert({
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    justifyContent: "center",
+    alignItems: "center",
     padding: 20,
   },
   alertContainer: {
@@ -182,7 +187,7 @@ const styles = StyleSheet.create({
     maxWidth: 400,
     borderRadius: 20,
     padding: 24,
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOffset: {
       width: 0,
       height: 10,
@@ -192,32 +197,32 @@ const styles = StyleSheet.create({
     elevation: 15,
   },
   header: {
-    alignItems: 'center',
+    alignItems: "center",
     marginBottom: 16,
   },
   title: {
     fontSize: 20,
-    fontWeight: 'bold',
-    textAlign: 'center',
+    fontWeight: "bold",
+    textAlign: "center",
     marginTop: 8,
-    textShadowColor: 'rgba(0, 0, 0, 0.1)',
+    textShadowColor: "rgba(0, 0, 0, 0.1)",
     textShadowOffset: { width: 0, height: 1 },
     textShadowRadius: 2,
   },
   message: {
     fontSize: 16,
     lineHeight: 22,
-    textAlign: 'center',
+    textAlign: "center",
     marginBottom: 24,
   },
   buttonsContainer: {
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: 12,
   },
   button: {
     flex: 1,
     borderRadius: 12,
-    overflow: 'hidden',
+    overflow: "hidden",
   },
   singleButton: {
     flex: 1,
@@ -225,23 +230,29 @@ const styles = StyleSheet.create({
   buttonGradient: {
     paddingVertical: 12,
     paddingHorizontal: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   buttonText: {
     fontSize: 16,
-    fontWeight: '600',
-    textShadowColor: 'rgba(0, 0, 0, 0.2)',
+    fontWeight: "600",
+    textShadowColor: "rgba(0, 0, 0, 0.2)",
     textShadowOffset: { width: 0, height: 1 },
     textShadowRadius: 1,
   },
 });
 
-// Utility hook for easy usage  
-export const useCustomAlert = () => {
-  const [alertConfig, setAlertConfig] = React.useState<CustomAlertProps | null>(null);
+CustomAlert.displayName = "CustomAlert";
 
-  const showAlert = (config: Omit<CustomAlertProps, 'visible' | 'onDismiss'>) => {
+// Utility hook for easy usage
+export const useCustomAlert = () => {
+  const [alertConfig, setAlertConfig] = React.useState<CustomAlertProps | null>(
+    null
+  );
+
+  const showAlert = (
+    config: Omit<CustomAlertProps, "visible" | "onDismiss">
+  ) => {
     setAlertConfig({
       ...config,
       visible: true,

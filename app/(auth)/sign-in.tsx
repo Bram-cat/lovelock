@@ -28,8 +28,8 @@ export default function SignInScreen() {
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [currentStep, setCurrentStep] = useState<SignInStep>('identifier');
-  const [, setErrorMessage] = useState('');
-  const [, setCodeError] = useState('');
+  const [errorMessage, setErrorMessage] = useState('');
+  const [codeError, setCodeError] = useState('');
 
   // Redirect if user is already signed in
   useEffect(() => {
@@ -74,7 +74,7 @@ export default function SignInScreen() {
         // Check if email verification is needed
         console.log('🔄 First factor needed:', result.supportedFirstFactors);
         
-        const emailCodeFactor = result.supportedFirstFactors.find(
+        const emailCodeFactor = result.supportedFirstFactors?.find(
           (factor) => factor.strategy === 'email_code'
         );
 
@@ -205,7 +205,10 @@ export default function SignInScreen() {
                   placeholder="Enter verification code"
                   placeholderTextColor="#8E8E93"
                   value={code}
-                  onChangeText={setCode}
+                  onChangeText={(text) => {
+                    setCode(text);
+                    if (codeError) setCodeError('');
+                  }}
                   keyboardType="number-pad"
                   maxLength={6}
                   returnKeyType="done"
@@ -213,6 +216,14 @@ export default function SignInScreen() {
                   autoFocus
                 />
               </View>
+
+              {/* Error Message */}
+              {codeError && (
+                <View style={styles.errorContainer}>
+                  <Ionicons name="alert-circle" size={16} color="#EF4444" />
+                  <Text style={styles.errorText}>{codeError}</Text>
+                </View>
+              )}
 
               <TouchableOpacity
                 style={[styles.signInButton, (isLoading || code.length !== 6) && styles.buttonDisabled]}
@@ -264,7 +275,10 @@ export default function SignInScreen() {
                 placeholder="Email"
                 placeholderTextColor="#8E8E93"
                 value={emailAddress}
-                onChangeText={setEmailAddress}
+                onChangeText={(text) => {
+                  setEmailAddress(text);
+                  if (errorMessage) setErrorMessage('');
+                }}
                 keyboardType="email-address"
                 autoCapitalize="none"
                 autoComplete="email"
@@ -279,7 +293,10 @@ export default function SignInScreen() {
                 placeholder="Password"
                 placeholderTextColor="#8E8E93"
                 value={password}
-                onChangeText={setPassword}
+                onChangeText={(text) => {
+                  setPassword(text);
+                  if (errorMessage) setErrorMessage('');
+                }}
                 secureTextEntry={!showPassword}
                 autoComplete="current-password"
                 returnKeyType="done"
@@ -296,6 +313,14 @@ export default function SignInScreen() {
                 />
               </TouchableOpacity>
             </View>
+
+            {/* Error Message */}
+            {errorMessage && (
+              <View style={styles.errorContainer}>
+                <Ionicons name="alert-circle" size={16} color="#EF4444" />
+                <Text style={styles.errorText}>{errorMessage}</Text>
+              </View>
+            )}
 
             {/* Sign In Button */}
             <TouchableOpacity
@@ -453,5 +478,24 @@ const styles = StyleSheet.create({
   backButtonText: {
     color: '#007AFF',
     fontSize: 14,
+  },
+  // Shadcn-style error container
+  errorContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FEF2F2',
+    borderColor: '#FECACA',
+    borderWidth: 1,
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    marginBottom: 16,
+    gap: 8,
+  },
+  errorText: {
+    color: '#DC2626',
+    fontSize: 14,
+    fontWeight: '500',
+    flex: 1,
   },
 });

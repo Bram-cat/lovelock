@@ -1,49 +1,60 @@
-import React, { useState, useEffect, useRef } from "react";
-import {
-  View,
-  Text,
-  StyleSheet,
-  SafeAreaView,
-  ScrollView,
-  TouchableOpacity,
-  TextInput,
-  Alert,
-  Animated,
-  KeyboardAvoidingView,
-  Platform,
-} from "react-native";
 import { useUser } from "@clerk/clerk-expo";
 import { Ionicons } from "@expo/vector-icons";
+import React, { useEffect, useRef, useState } from "react";
 import {
-  LoveMatchService,
-  LoveMatchProfile,
-} from "../../services/LoveMatchService";
-import {
-  CelebrityMatchService,
-  CelebrityMatch,
-  IncompatibleNumbers,
-} from "../../services/CelebrityMatchService";
-import NumerologyService from "../../services/NumerologyService";
-import { ProkeralaNumerologyService } from "../../services/ProkeralaNumerologyService";
-import SimpleAIService from "../../services/SimpleAIService";
-import { StaticDataService } from "../../services/StaticDataService";
-import { useProfile } from "../../contexts/ProfileContext";
-import { DesignSystem } from "../../constants/DesignSystem";
-import { SubscriptionService } from "../../services/SubscriptionService";
+  Alert,
+  Animated,
+  RefreshControl,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
 import { useCustomAlert } from "../../components/CustomAlert";
-import { DatePicker, ShadcnButton, ShadcnInput } from "../../components/ui";
-import GlassCard from "../../components/ui/GlassCard";
-import Badge from "../../components/ui/Badge";
 import { LoveMatchLoadingSkeleton } from "../../components/LoadingSkeletons";
 import ReadMoreText from "../../components/ReadMoreText";
+import { DatePicker, ShadcnButton, ShadcnInput } from "../../components/ui";
+import { DesignSystem } from "../../constants/DesignSystem";
+import { useProfile } from "../../contexts/ProfileContext";
+import {
+  CelebrityMatch,
+  CelebrityMatchService,
+  IncompatibleNumbers,
+} from "../../services/CelebrityMatchService";
+import {
+  DeadlySinWarning,
+  LoveMatchProfile,
+  LoveMatchService,
+} from "../../services/LoveMatchService";
+import NumerologyService from "../../services/NumerologyService";
+import { RoxyNumerologyService } from "../../services/ProkeralaNumerologyService";
+import SimpleAIService from "../../services/SimpleAIService";
+import { StaticDataService } from "../../services/StaticDataService";
+import { SubscriptionService } from "../../services/SubscriptionService";
+import { useSubscription } from "../../hooks/useSubscription";
+import { UsageLimitModal } from "../../components/UsageLimitModal";
+import UsageTrackingService from "../../services/UsageTrackingService";
+
+// Type guard for DeadlySinWarning
+const isDeadlySinWarning = (obj: any): obj is DeadlySinWarning => {
+  return (
+    obj &&
+    typeof obj.sin === "string" &&
+    typeof obj.warning === "string" &&
+    typeof obj.consequences === "string"
+  );
+};
 
 export default function LoveMatchScreen() {
   const { user } = useUser();
   const { profileData } = useProfile();
+  const { subscription, canUse, openPricingPage } = useSubscription();
   const [profile, setProfile] = useState<LoveMatchProfile | null>(null);
   const [showInput, setShowInput] = useState(false);
   const [birthDate, setBirthDate] = useState("");
-  const [userName, setUserName] = useState("");
+  const [fullName, setFullName] = useState("");
   const [loading, setLoading] = useState(false);
   const [showingStaticData, setShowingStaticData] = useState(false);
   const [backgroundLoading, setBackgroundLoading] = useState(false);
@@ -52,6 +63,8 @@ export default function LoveMatchScreen() {
     insights: false,
     celebrities: false,
   });
+  const [showUsageLimitModal, setShowUsageLimitModal] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
 
   // Shimmer animation
   const shimmerAnimation = useRef(new Animated.Value(0)).current;
@@ -123,17 +136,17 @@ export default function LoveMatchScreen() {
 
   useEffect(() => {
     // Auto-show input if user has name but no profile yet
-    const fullName =
+    const profileFullName =
       profileData?.full_name ||
       user?.fullName ||
       `${user?.firstName || ""} ${user?.lastName || ""}`.trim();
-    if (fullName && fullName !== "" && !profile) {
+    if (profileFullName && profileFullName !== "" && !profile) {
       setShowInput(true);
     }
 
     // Global name synchronization
-    if (fullName && fullName !== userName) {
-      setUserName(fullName);
+    if (profileFullName && profileFullName !== fullName) {
+      setFullName(profileFullName);
     }
 
     // Auto-fill birth date from profile if available
@@ -166,7 +179,7 @@ export default function LoveMatchScreen() {
       }
       setBirthDate(formattedBirthDate);
     }
-  }, [user, profile, profileData, userName]);
+  }, [user, profile, profileData, fullName]);
 
   // Force update birthday when profile data changes
   useEffect(() => {
@@ -198,8 +211,29 @@ export default function LoveMatchScreen() {
     }
   }, [showInput]);
 
+  // Pull to refresh function
+  const onRefresh = async () => {
+    setRefreshing(true);
+    try {
+      // Reset the profile if exists
+      if (profile) {
+        setProfile(null);
+        setShowInput(true);
+      }
+      
+      // Simulate some loading time for smooth UX
+      await new Promise(resolve => setTimeout(resolve, 1000));
+    } catch (error) {
+      console.error("Failed to refresh:", error);
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
   const generateLoveMatch = async () => {
-    if (!userName.trim()) {
+    const fullUserName = fullName.trim();
+
+    if (!fullUserName) {
       Alert.alert("Error", "Please enter your full name");
       return;
     }
@@ -217,374 +251,231 @@ export default function LoveMatchScreen() {
       return;
     }
 
+    // Track love match usage
+    if (user?.id) {
+      UsageTrackingService.trackLoveMatchUsage(user.id, {
+        name: fullUserName,
+        birthDate: birthDate,
+        timestamp: new Date().toISOString(),
+      });
+    }
+
     // Check usage limits
     if (user?.id) {
-      const usageCheck = await SubscriptionService.canAccessFeature(
-        user.id,
-        "loveMatch"
-      );
-      if (!usageCheck.canUse) {
-        setLoading(false); // Reset loading state
-        showAlert({
-          title: "⚠️ Usage Limit Reached",
-          message: usageCheck.message || "You have reached your monthly limit.",
-          type: "warning",
-          buttons: [
-            { text: "Later", style: "cancel" },
-            {
-              text: "Upgrade to Premium ($4.99/month)",
-              style: "primary",
-              onPress: async () => {
-                try {
-                  const result =
-                    await SubscriptionService.purchasePremiumSubscription(
-                      user.id,
-                      user.primaryEmailAddress?.emailAddress || ""
-                    );
-                  if (result.success) {
-                    showAlert({
-                      title: "🎉 Welcome to Premium!",
-                      message:
-                        "Your subscription is now active. Enjoy unlimited access!",
-                      type: "success",
-                    });
-                    // Reload usage stats
-                    const stats = await SubscriptionService.getUsageStats(
-                      user.id
-                    );
-                    const resetDate = new Date(stats.loveMatch.resetsAt);
-                    const now = new Date();
-                    const daysUntilReset = Math.ceil(
-                      (resetDate.getTime() - now.getTime()) /
-                        (1000 * 60 * 60 * 24)
-                    );
-
-                    setUsageStats({
-                      loveMatchUsage: stats.loveMatch.totalUsed,
-                      loveMatchRemaining: stats.loveMatch.remaining,
-                      daysUntilReset: Math.max(0, daysUntilReset),
-                      isPremium: stats.isPremium,
-                    });
-                  } else {
-                    showAlert({
-                      title: "Payment Error",
-                      message:
-                        result.error ||
-                        "Unable to process payment. Please try again.",
-                      type: "error",
-                    });
-                  }
-                } catch (error) {
-                  console.error("Error purchasing premium:", error);
-                  showAlert({
-                    title: "Error",
-                    message: "Something went wrong. Please try again.",
-                    type: "error",
-                  });
-                }
-              },
-            },
-          ],
-        });
+      if (!canUse('loveMatch')) {
+        setLoading(false);
+        setShowUsageLimitModal(true);
         return;
       }
     }
 
     setLoading(true);
-    setShowingStaticData(false);
-    setBackgroundLoading(false);
-
-    // Set up timeout to show static data if API takes too long
-    const staticDataTimeout = setTimeout(() => {
-      if (loading) {
-        console.log("⚡ Loading timeout reached, showing static data first");
-        setShowingStaticData(true);
-        setLoading(false);
-        setBackgroundLoading(true);
-
-        // Get quick static profile
-        const quickProfile = NumerologyService.generateProfile(
-          userName,
-          birthDate
-        );
-        const staticData = StaticDataService.getStaticLoveProfile(
-          quickProfile.lifePathNumber,
-          userName
-        );
-
-        // Show basic love match profile immediately
-        const quickLoveMatch = LoveMatchService.generateBasicProfile(
-          userName,
-          birthDate,
-          quickProfile.lifePathNumber
-        );
-
-        setProfile({
-          ...quickLoveMatch,
-          deadlySinWarning: staticData.deadlySinWarning,
-          aiLoveInsights: staticData.aiLoveInsights,
-        });
-        setShowInput(false);
-      }
-    }, 5000); // 5 second timeout
 
     try {
-      // Clear timeout if we complete quickly
-      const clearTimeoutIfNeeded = () => {
-        if (staticDataTimeout) {
-          clearTimeout(staticDataTimeout);
-        }
-      };
-      console.log(
-        "💖 Love Match: Attempting to use Prokerala API for enhanced accuracy"
+      // STEP 1: Show basic love match immediately (< 100ms)
+      const quickProfile = NumerologyService.generateProfile(
+        fullUserName,
+        birthDate
       );
-
-      // Try to get enhanced numerology reading from Prokerala API first
-      let numerologyProfile;
-
-      try {
-        // Add timeout to Prokerala API call
-        const prokeralaPromise =
-          ProkeralaNumerologyService.getNumerologyReading(userName, birthDate);
-        const timeoutPromise = new Promise((_, reject) =>
-          setTimeout(() => reject(new Error("API timeout")), 3000)
-        );
-
-        const prokeralaReading = await Promise.race([
-          prokeralaPromise,
-          timeoutPromise,
-        ]);
-
-        if (prokeralaReading && typeof prokeralaReading === "object") {
-          console.log("✨ Love Match: Using enhanced Prokerala API data");
-          const profile = NumerologyService.generateProfile(
-            userName,
-            birthDate
-          );
-          numerologyProfile = {
-            lifePathNumber:
-              prokeralaReading.life_path_number || profile.lifePathNumber,
-            destinyNumber:
-              prokeralaReading.destiny_number || profile.destinyNumber,
-            soulUrgeNumber:
-              prokeralaReading.soul_urge_number || profile.soulUrgeNumber,
-            personalityNumber:
-              prokeralaReading.personality_number || profile.personalityNumber,
-            personalYearNumber: profile.personalYearNumber,
-          };
-        } else {
-          throw new Error("Invalid Prokerala API response");
-        }
-      } catch (error) {
-        console.log(
-          "⚠️ Love Match: Prokerala API failed, using local calculation:",
-          error.message
-        );
-        // Fallback to local calculation
-        numerologyProfile = NumerologyService.generateProfile(
-          userName,
-          birthDate
-        );
-      }
-
-      // Generate love match profile (local calculation - fast)
-      const loveMatchProfile = await LoveMatchService.generateLoveMatchProfile(
-        userName,
+      const basicLoveMatch = LoveMatchService.generateBasicProfile(
+        fullUserName,
         birthDate,
-        numerologyProfile.lifePathNumber,
-        numerologyProfile.destinyNumber,
-        numerologyProfile.soulUrgeNumber,
-        numerologyProfile.personalityNumber
+        quickProfile.lifePathNumber
       );
 
-      // Get static data immediately (under 1 second)
-      const staticData = StaticDataService.getStaticLoveProfile(
-        numerologyProfile.lifePathNumber,
-        userName
-      );
-
-      // Clear timeout since we completed successfully
-      clearTimeoutIfNeeded();
-
-      // Set profile with static data first - instant display
+      // Set basic profile first - instant display
       setProfile({
-        ...loveMatchProfile,
-        deadlySinWarning: staticData.deadlySinWarning,
-        aiLoveInsights: staticData.aiLoveInsights,
+        ...basicLoveMatch,
+        aiLoveInsights: "Analyzing your love compatibility...",
+        deadlySinWarning: undefined,
       });
       setShowInput(false);
-      setShowingStaticData(false);
-      setLoading(false);
+      setLoading(false); // Stop loading immediately
 
-      // Start background loading for complex data immediately
+      // STEP 2: Get enhanced Roxy API data in background
       setBackgroundLoading(true);
-      setAiLoadingStates({
-        deadlySin: true,
-        insights: true,
-        celebrities: true,
-      });
-
-      // Load complex data in background - immediate load without random delay
-      Promise.allSettled([
-        // AI enhancement for premium users only (faster loading)
-        ...(usageStats?.isPremium
-          ? [
-              Promise.race([
-                SimpleAIService.generateDeadlySinWarning(
-                  numerologyProfile
-                ),
-                new Promise((_, reject) =>
-                  setTimeout(() => reject(new Error("AI timeout")), 5000)
-                ),
-              ]),
-              Promise.race([
-                SimpleAIService.generateResponse(
-                  `Create a brief personalized love insight for ${userName} (Life Path ${numerologyProfile.lifePathNumber}). Keep under 100 words, no formatting.`, 'love'
-                ),
-                new Promise((_, reject) =>
-                  setTimeout(() => reject(new Error("AI timeout")), 5000)
-                ),
-              ]),
-            ]
-          : []),
-
-        // Celebrity matches (always load)
-        CelebrityMatchService.findCelebrityMatches(
-          numerologyProfile.lifePathNumber,
-          numerologyProfile.destinyNumber,
-          numerologyProfile.soulUrgeNumber,
-          userName,
-          2
-        ),
-
-        // All celebrity matches for show more
-        CelebrityMatchService.findCelebrityMatches(
-          numerologyProfile.lifePathNumber,
-          numerologyProfile.destinyNumber,
-          numerologyProfile.soulUrgeNumber,
-          userName,
-          10
-        ),
-      ])
-        .then((results) => {
-          console.log("🚀 Background data loaded");
-
-          let deadlySinResult,
-            insightsResult,
-            initialCelebritiesResult,
-            allCelebritiesResult;
-
-          if (usageStats?.isPremium) {
-            [
-              deadlySinResult,
-              insightsResult,
-              initialCelebritiesResult,
-              allCelebritiesResult,
-            ] = results;
-          } else {
-            [initialCelebritiesResult, allCelebritiesResult] = results;
-          }
-
-          // Update profile with AI enhancements if available
-          if (deadlySinResult?.status === "fulfilled") {
+      RoxyNumerologyService.getNumerologyReading(
+        fullUserName.split(" ")[0] || "",
+        fullUserName.split(" ").slice(1).join(" ") || "",
+        birthDate
+      )
+        .then((prokeralaData) => {
+          if (prokeralaData) {
+            // Update with professional data when available, including updated numerology numbers
             setProfile((prev) =>
               prev
                 ? {
                     ...prev,
-                    deadlySinWarning: deadlySinResult.value,
-                  }
-                : null
-            );
-            setAiLoadingStates((prev) => ({ ...prev, deadlySin: false }));
-          } else if (deadlySinResult?.status === "rejected") {
-            console.log("⚠️ Deadly sin warning failed, keeping static version");
-            setAiLoadingStates((prev) => ({ ...prev, deadlySin: false }));
-          }
-
-          if (insightsResult?.status === "fulfilled") {
-            // Extract content from UniversalAIService response
-            const content =
-              insightsResult.value?.content || insightsResult.value;
-            setProfile((prev) =>
-              prev
-                ? {
-                    ...prev,
+                    lifePathNumber:
+                      prokeralaData.life_path_number || prev.lifePathNumber,
+                    destinyNumber:
+                      prokeralaData.destiny_number || prev.destinyNumber,
+                    soulUrgeNumber:
+                      prokeralaData.soul_urge_number || prev.soulUrgeNumber,
                     aiLoveInsights:
-                      typeof content === "string"
-                        ? content.replace(/\*/g, "")
-                        : "",
+                      prokeralaData.relationship_guidance ||
+                      prev.aiLoveInsights,
+                    prokeralaInsights: {
+                      strengths: prokeralaData.strengths,
+                      challenges: prokeralaData.challenges,
+                      compatibility: prokeralaData.relationship_guidance,
+                      luckyNumbers: prokeralaData.lucky_numbers,
+                      luckyColors: prokeralaData.lucky_colors,
+                    },
                   }
                 : null
             );
-            setAiLoadingStates((prev) => ({ ...prev, insights: false }));
-          } else if (insightsResult?.status === "rejected") {
-            console.log("⚠️ AI insights failed, keeping static version");
-            setAiLoadingStates((prev) => ({ ...prev, insights: false }));
           }
-
-          // Update celebrity matches
-          if (initialCelebritiesResult?.status === "fulfilled") {
-            setCelebrityMatches(initialCelebritiesResult.value);
-            setAiLoadingStates((prev) => ({ ...prev, celebrities: false }));
-          }
-          if (allCelebritiesResult?.status === "fulfilled") {
-            setAllCelebrityMatches(allCelebritiesResult.value);
-          }
-
-          // Get incompatible numbers
-          const incompatibles = CelebrityMatchService.getIncompatibleNumbers(
-            numerologyProfile.lifePathNumber,
-            numerologyProfile.destinyNumber,
-            numerologyProfile.soulUrgeNumber
-          );
-          setIncompatibleNumbers(incompatibles);
-
-          setBackgroundLoading(false);
         })
         .catch((error) => {
-          console.error("Background loading error:", error);
+          // Fallback to static data
+          const staticData = StaticDataService.getStaticLoveProfile(
+            quickProfile.lifePathNumber,
+            fullUserName
+          );
+          setProfile((prev) =>
+            prev
+              ? {
+                  ...prev,
+                  aiLoveInsights: staticData.aiLoveInsights,
+                  deadlySinWarning: staticData.deadlySinWarning,
+                }
+              : null
+          );
+        })
+        .finally(() => {
           setBackgroundLoading(false);
         });
 
-      // Track usage by recording in database (in background)
-      if (user?.id) {
-        const fullName =
-          userName ||
-          profileData?.full_name ||
-          user?.fullName ||
-          `${user?.firstName || ""} ${user?.lastName || ""}`.trim();
-        Promise.all([
-          SubscriptionService.recordUsage(user.id, "loveMatch", {
-            user_name: fullName,
-            birth_date: birthDate,
-            life_path_number:
-              loveMatchProfile.userLifePath || numerologyProfile.lifePathNumber,
-            compatible_partners:
-              loveMatchProfile.compatiblePartners?.length || 0,
-            celebrity_matches: 0, // Will be updated when celebrities load
-          }),
-          SubscriptionService.getUsageStats(user.id),
-        ])
-          .then(([_, stats]) => {
-            const resetDate = new Date(stats.loveMatch.resetsAt);
-            const now = new Date();
-            const daysUntilReset = Math.ceil(
-              (resetDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)
-            );
+      // STEP 3: Minimal AI processing (only deadly sins warning)
+      setTimeout(async () => {
+        setAiLoadingStates({
+          deadlySin: true,
+          insights: false,
+          celebrities: true,
+        });
 
-            setUsageStats({
-              loveMatchUsage: stats.loveMatch.totalUsed,
-              loveMatchRemaining: stats.loveMatch.remaining,
-              daysUntilReset: Math.max(0, daysUntilReset),
-              isPremium: stats.isPremium,
-            });
+        // Load minimal AI and celebrity data in background
+        Promise.allSettled([
+          // Only deadly sins warning (always generate)
+          Promise.race([
+            SimpleAIService.generateDeadlySinWarning(quickProfile),
+            new Promise((_, reject) =>
+              setTimeout(() => reject(new Error("AI timeout")), 5000)
+            ),
+          ]),
+
+          // Celebrity matches (just 2 - male and female)
+          CelebrityMatchService.findCelebrityMatchesByGender(
+            quickProfile.lifePathNumber,
+            quickProfile.destinyNumber,
+            quickProfile.soulUrgeNumber,
+            fullUserName
+          ),
+        ])
+          .then((results) => {
+            console.log("🚀 Minimal background data loaded");
+
+            const [deadlySinResult, celebritiesResult] = results;
+
+            // Update profile with deadly sin warning
+            if (deadlySinResult?.status === "fulfilled") {
+              const warningData = deadlySinResult.value;
+              if (isDeadlySinWarning(warningData)) {
+                setProfile((prev) =>
+                  prev
+                    ? {
+                        ...prev,
+                        deadlySinWarning: warningData,
+                      }
+                    : null
+                );
+              } else {
+                console.error(
+                  "Invalid deadly sin warning structure:",
+                  warningData
+                );
+              }
+              setAiLoadingStates((prev) => ({ ...prev, deadlySin: false }));
+            } else {
+              console.log("⚠️ Deadly sin warning failed, using static version");
+              // Use static fallback for deadly sins warning
+              const staticWarning = StaticDataService.getStaticDeadlySinWarning(
+                quickProfile.lifePathNumber,
+                fullUserName
+              );
+              setProfile((prev) =>
+                prev
+                  ? {
+                      ...prev,
+                      deadlySinWarning: staticWarning,
+                    }
+                  : null
+              );
+              setAiLoadingStates((prev) => ({ ...prev, deadlySin: false }));
+            }
+
+            // Update celebrity matches (just 2)
+            if (celebritiesResult?.status === "fulfilled") {
+              setCelebrityMatches(celebritiesResult.value);
+              setAllCelebrityMatches(celebritiesResult.value);
+              setAiLoadingStates((prev) => ({ ...prev, celebrities: false }));
+            }
+
+            // Get incompatible numbers
+            const incompatibles = CelebrityMatchService.getIncompatibleNumbers(
+              quickProfile.lifePathNumber,
+              quickProfile.destinyNumber,
+              quickProfile.soulUrgeNumber
+            );
+            setIncompatibleNumbers(incompatibles);
+
+            setBackgroundLoading(false);
           })
           .catch((error) => {
-            console.error("Error tracking usage:", error);
+            console.error("Minimal background loading error:", error);
+            setBackgroundLoading(false);
           });
-      }
+
+        // Track usage by recording in database (in background)
+        if (user?.id) {
+          const fullName =
+            fullUserName ||
+            profileData?.full_name ||
+            user?.fullName ||
+            `${user?.firstName || ""} ${user?.lastName || ""}`.trim();
+          Promise.all([
+            SubscriptionService.recordUsage(user.id, "loveMatch", {
+              user_name: fullName,
+              birth_date: birthDate,
+              life_path_number:
+                basicLoveMatch.lifePathNumber || quickProfile.lifePathNumber,
+              compatible_partners:
+                basicLoveMatch.compatiblePartners?.length || 0,
+              celebrity_matches: 0, // Will be updated when celebrities load
+            }),
+            SubscriptionService.getUsageStats(user.id),
+          ])
+            .then(([_, stats]) => {
+              const resetDate = new Date(stats.loveMatch.resetsAt);
+              const now = new Date();
+              const daysUntilReset = Math.ceil(
+                (resetDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)
+              );
+
+              setUsageStats({
+                loveMatchUsage: stats.loveMatch.totalUsed,
+                loveMatchRemaining: stats.loveMatch.remaining,
+                daysUntilReset: Math.max(0, daysUntilReset),
+                isPremium: stats.isPremium,
+              });
+            })
+            .catch((error) => {
+              console.error("Error tracking usage:", error);
+            });
+        }
+      }, 1000); // End setTimeout
     } catch (error) {
-      clearTimeoutIfNeeded();
       setLoading(false);
       setShowingStaticData(false);
       setBackgroundLoading(false);
@@ -636,10 +527,10 @@ export default function LoveMatchScreen() {
 
             <View style={styles.inputContainer}>
               <ShadcnInput
-                label="Full Name"
+                label="Your Full Name"
                 placeholder="Enter your full name"
-                value={userName}
-                onChangeText={setUserName}
+                value={fullName}
+                onChangeText={setFullName}
                 autoCapitalize="words"
                 leftIcon="person"
                 required
@@ -707,6 +598,15 @@ export default function LoveMatchScreen() {
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor="#667eea"
+            colors={["#667eea", "#764ba2"]}
+            progressBackgroundColor="#1C1C1E"
+          />
+        }
       >
         {/* Header */}
         <View style={styles.profileHeader}>
@@ -798,7 +698,7 @@ export default function LoveMatchScreen() {
                   </Text>
                   <Text style={styles.aiLoadingSubtext}>
                     Did you know? Your Life Path {profile.lifePathNumber} tends
-                    to face specific relationship patterns. We're creating
+                    to face specific relationship patterns. We are creating
                     personalized insights based on thousands of numerological
                     profiles.
                   </Text>
@@ -998,7 +898,7 @@ export default function LoveMatchScreen() {
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>🌟 Celebrity Compatibility</Text>
             <Text style={styles.sectionSubtitle}>
-              Famous personalities who share your cosmic energy
+              One male and one female celebrity who match your cosmic energy
             </Text>
 
             {aiLoadingStates.celebrities && celebrityMatches.length === 0 && (
@@ -1009,9 +909,10 @@ export default function LoveMatchScreen() {
                   </Text>
                   <Text style={styles.aiLoadingSubtext}>
                     Did you know? Life Path {profile.lifePathNumber} shares
-                    cosmic energy with many famous personalities! We're scanning
-                    our database of over 500 celebrities to find your perfect
-                    matches based on numerological compatibility algorithms.
+                    cosmic energy with many famous personalities! We are
+                    scanning our database of over 500 celebrities to find your
+                    perfect matches based on numerological compatibility
+                    algorithms.
                   </Text>
                 </View>
                 <View style={styles.celebrityLoadingContainer}>
@@ -1029,72 +930,42 @@ export default function LoveMatchScreen() {
               </View>
             )}
 
-            {(showAllCelebrities ? allCelebrityMatches : celebrityMatches).map(
-              (celebrity, index) => (
-                <View key={index} style={styles.celebrityCard}>
-                  <View style={styles.celebrityHeader}>
-                    <View style={styles.celebrityInfo}>
-                      <Text style={styles.celebrityName}>{celebrity.name}</Text>
-                      <Text style={styles.celebrityProfession}>
-                        {celebrity.profession}
-                      </Text>
-                      <View style={styles.celebrityNumbers}>
-                        <View style={styles.celebrityNumber}>
-                          <Text style={styles.celebrityNumberValue}>
-                            {celebrity.lifePathNumber}
-                          </Text>
-                          <Text style={styles.celebrityNumberLabel}>
-                            Life Path
-                          </Text>
-                        </View>
-                        <Text style={styles.celebrityBirthDate}>
-                          {celebrity.birthDate}
+            {celebrityMatches.map((celebrity, index) => (
+              <View key={index} style={styles.celebrityCard}>
+                <View style={styles.celebrityHeader}>
+                  <View style={styles.celebrityInfo}>
+                    <Text style={styles.celebrityName}>{celebrity.name}</Text>
+                    <Text style={styles.celebrityProfession}>
+                      {celebrity.profession}
+                    </Text>
+                    <View style={styles.celebrityNumbers}>
+                      <View style={styles.celebrityNumber}>
+                        <Text style={styles.celebrityNumberValue}>
+                          {celebrity.lifePathNumber}
+                        </Text>
+                        <Text style={styles.celebrityNumberLabel}>
+                          Life Path
                         </Text>
                       </View>
-                    </View>
-                    <View style={styles.celebrityScore}>
-                      <Text style={styles.celebrityScoreValue}>
-                        {celebrity.compatibilityScore}%
+                      <Text style={styles.celebrityBirthDate}>
+                        {celebrity.birthDate}
                       </Text>
-                      <Text style={styles.celebrityScoreLabel}>Match</Text>
                     </View>
                   </View>
-                  <View style={styles.celebrityReason}>
-                    <Text style={styles.celebrityReasonText}>
-                      {celebrity.matchReason}
+                  <View style={styles.celebrityScore}>
+                    <Text style={styles.celebrityScoreValue}>
+                      {celebrity.compatibilityScore}%
                     </Text>
+                    <Text style={styles.celebrityScoreLabel}>Match</Text>
                   </View>
                 </View>
-              )
-            )}
-
-            {/* Show More Button at Bottom */}
-            {allCelebrityMatches.length > 2 && (
-              <TouchableOpacity
-                onPress={() => {
-                  console.log(
-                    "🔄 Show All Celebrities toggled:",
-                    !showAllCelebrities
-                  );
-                  console.log(
-                    "📊 Celebrity matches count:",
-                    celebrityMatches.length
-                  );
-                  console.log(
-                    "📊 All celebrity matches count:",
-                    allCelebrityMatches.length
-                  );
-                  setShowAllCelebrities(!showAllCelebrities);
-                }}
-                style={styles.showMoreButtonBottom}
-              >
-                <Text style={styles.showMoreText}>
-                  {showAllCelebrities
-                    ? "▲ Show Less"
-                    : `▼ Show ${allCelebrityMatches.length - celebrityMatches.length} More Celebrities`}
-                </Text>
-              </TouchableOpacity>
-            )}
+                <View style={styles.celebrityReason}>
+                  <Text style={styles.celebrityReasonText}>
+                    {celebrity.matchReason}
+                  </Text>
+                </View>
+              </View>
+            ))}
           </View>
         )}
 
@@ -1165,9 +1036,19 @@ export default function LoveMatchScreen() {
 
       {/* Custom Alert Component */}
       {AlertComponent}
+
+      {/* Usage Limit Modal */}
+      <UsageLimitModal
+        visible={showUsageLimitModal}
+        onClose={() => setShowUsageLimitModal(false)}
+        onUpgrade={openPricingPage}
+        feature="loveMatch"
+      />
     </SafeAreaView>
   );
 }
+
+LoveMatchScreen.displayName = "LoveMatchScreen";
 
 const styles = StyleSheet.create({
   container: {

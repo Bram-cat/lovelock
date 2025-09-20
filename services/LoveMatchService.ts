@@ -1,7 +1,6 @@
 // Love Match Service using Numerology and Astrology
 import { AstrologyService } from './AstrologyService';
-import { ProkeralaNumerologyService, NumerologyReading } from './ProkeralaNumerologyService';
-import { NumerologyCompatibilityDatabase } from './NumerologyCompatibilityDatabase';
+import { RoxyNumerologyService, NumerologyReading } from './ProkeralaNumerologyService';
 
 export interface CompatiblePartner {
   lifePathNumber: number;
@@ -36,6 +35,21 @@ export interface LoveMatchProfile {
   compatiblePartners: CompatiblePartner[];
   idealTraits: string[];
   relationshipStyle: string;
+  aiLoveInsights?: string;
+  prokeralaInsights?: {
+    strengths: string[];
+    challenges: string[];
+    compatibility: string;
+    luckyNumbers: number[];
+    luckyColors: string[];
+  };
+  deadlySinWarning?: DeadlySinWarning;
+}
+
+export interface DeadlySinWarning {
+  sin: string;
+  warning: string;
+  consequences: string;
 }
 
 export class LoveMatchService {
@@ -236,30 +250,33 @@ export class LoveMatchService {
     // Reset used couples for each new profile to allow fresh matches
     this.usedCouples = new Set();
     
-    // Try to get enhanced data from Prokerala API first
-    let prokeralaData: NumerologyReading | null = null;
+    // Try to get enhanced data from Roxy API first
+    let roxyData: NumerologyReading | null = null;
     try {
-      prokeralaData = await ProkeralaNumerologyService.getNumerologyReading(name, birthDate);
-      console.log('LoveMatch: Enhanced Prokerala data retrieved:', prokeralaData);
+      const nameParts = name.split(' ');
+      const firstName = nameParts[0] || '';
+      const lastName = nameParts.slice(1).join(' ') || '';
+      roxyData = await RoxyNumerologyService.getNumerologyReading(firstName, lastName, birthDate);
+      console.log('LoveMatch: Enhanced Roxy data retrieved:', roxyData);
     } catch (error) {
-      console.log('LoveMatch: Prokerala API not available, using provided/fallback numbers:', error);
+      console.log('LoveMatch: Roxy API not available, using provided/fallback numbers:', error);
     }
 
-    // Use Prokerala data if available, otherwise use provided numbers or calculate locally
-    const finalLifePathNumber = prokeralaData?.life_path_number || lifePathNumber || this.calculateLifePathFromDate(birthDate);
-    const finalDestinyNumber = prokeralaData?.destiny_number || destinyNumber || this.calculateLifePathFromDate(birthDate);
-    const finalSoulUrgeNumber = prokeralaData?.soul_urge_number || soulUrgeNumber || this.calculateLifePathFromDate(birthDate);
-    const finalPersonalityNumber = prokeralaData?.personality_number || personalityNumber || this.calculateLifePathFromDate(birthDate);
+    // Use Roxy data if available, otherwise use provided numbers or calculate locally
+    const finalLifePathNumber = roxyData?.life_path_number || lifePathNumber || this.calculateLifePathFromDate(birthDate);
+    const finalDestinyNumber = roxyData?.destiny_number || destinyNumber || this.calculateLifePathFromDate(birthDate);
+    const finalSoulUrgeNumber = roxyData?.soul_urge_number || soulUrgeNumber || this.calculateLifePathFromDate(birthDate);
+    const finalPersonalityNumber = roxyData?.personality_number || personalityNumber || this.calculateLifePathFromDate(birthDate);
     
     const zodiacSign = AstrologyService.getZodiacSign(birthDate);
     const compatiblePartners = this.findCompatiblePartners(finalLifePathNumber, finalDestinyNumber, finalSoulUrgeNumber);
     const idealTraits = this.getIdealTraits(finalLifePathNumber, finalSoulUrgeNumber);
     const relationshipStyle = this.getRelationshipStyle(finalLifePathNumber, finalSoulUrgeNumber);
 
-    // Enhanced relationship style with Prokerala insights
+    // Enhanced relationship style with Roxy insights
     let enhancedRelationshipStyle = relationshipStyle;
-    if (prokeralaData?.relationship_guidance) {
-      enhancedRelationshipStyle += `\n\nProfessional Insight: ${prokeralaData.relationship_guidance}`;
+    if (roxyData?.relationship_guidance) {
+      enhancedRelationshipStyle += `\n\nProfessional Insight: ${roxyData.relationship_guidance}`;
     }
 
     return {
@@ -389,8 +406,8 @@ export class LoveMatchService {
     lifePath1: number, destiny1: number, soulUrge1: number,
     lifePath2: number, destiny2: number, soulUrge2: number
   ): number {
-    // Use the new comprehensive database for realistic scoring
-    const baseScore = NumerologyCompatibilityDatabase.generateCompatibilityScore(lifePath1, lifePath2);
+    // Use simple compatibility scoring based on life path numbers
+    const baseScore = this.getLifePathCompatibilityScore(lifePath1, lifePath2);
     
     // Add minor adjustments for destiny and soul urge compatibility
     const destinyAdjustment = Math.abs(destiny1 - destiny2) <= 2 ? 3 : -2;

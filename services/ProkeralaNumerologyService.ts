@@ -18,78 +18,74 @@ export interface NumerologyReading {
   spiritual_guidance: string;
 }
 
-export interface ProkeralaResponse {
-  status: number;
-  message: string;
+export interface RoxyApiResponse {
+  success: boolean;
   data: {
-    numerology: NumerologyReading;
+    life_path_number?: number;
+    destiny_number?: number;
+    soul_urge_number?: number;
+    interpretations?: any;
   };
 }
 
-export class ProkeralaNumerologyService {
-  private static readonly CLIENT_ID = process.env.PROKERALA_CLIENT_ID || '46e136d4-4850-462d-93cb-28cef2ba7f43';
-  private static readonly CLIENT_SECRET = process.env.PROKERALA_CLIENT_SECRET || '0DMFYW8QNXC9MpKDTHTLybcoDMXiHLiPd6tNs0UP';
-  private static readonly BASE_URL = 'https://api.prokerala.com/v2/numerology';
-  
-  // Token caching to avoid generating new tokens for every request
-  private static cachedToken: string | null = null;
-  private static tokenExpiryTime: number = 0;
-  
-  // Rate limiting for Prokerala API - 25 requests per minute
-  private static prokeralaCallTimes: number[] = [];
-  private static readonly PROKERALA_MAX_REQUESTS_PER_MINUTE = 25;
-  private static readonly PROKERALA_RATE_WINDOW = 60000; // 1 minute window
-  private static readonly PROKERALA_MIN_DELAY = 2400; // ~2.4s minimum delay (25 calls per minute)
-  private static requestQueue: Array<{ resolve: Function; reject: Function; params: any }> = [];
-  private static isProcessingQueue = false;
-  
-  // Response caching for Prokerala
-  private static responseCache = new Map<string, { data: any; timestamp: number }>();
+export class RoxyNumerologyService {
+  private static readonly API_TOKEN = process.env.ROXY_TOKEN || "8846c0d9-1f59-45bb-8092-9b2650ad3d80";
+  private static readonly BASE_URL =
+    "https://roxyapi.com/api/v1/data/astro/numerology";
+
+  // Rate limiting for Roxy API - standard rate limiting
+  private static roxyCallTimes: number[] = [];
+  private static readonly ROXY_MAX_REQUESTS_PER_MINUTE = 60;
+  private static readonly ROXY_RATE_WINDOW = 60000; // 1 minute window
+
+  // Response caching for Roxy API
+  private static responseCache = new Map<
+    string,
+    { data: any; timestamp: number }
+  >();
   private static readonly CACHE_DURATION = 600000; // 10 minutes for numerology readings
-  
-  // Enhanced rate limiting for Prokerala API
-  private static async waitForProkeralaRateLimit(): Promise<void> {
+
+  // Rate limiting for Roxy API
+  private static async waitForRoxyRateLimit(): Promise<void> {
     const now = Date.now();
-    
+
     // Clean old calls outside the rate window
-    this.prokeralaCallTimes = this.prokeralaCallTimes.filter(
-      callTime => (now - callTime) < this.PROKERALA_RATE_WINDOW
+    this.roxyCallTimes = this.roxyCallTimes.filter(
+      (callTime) => now - callTime < this.ROXY_RATE_WINDOW
     );
-    
-    // If we've made 25 calls in the last minute, wait
-    if (this.prokeralaCallTimes.length >= this.PROKERALA_MAX_REQUESTS_PER_MINUTE) {
-      const oldestCall = Math.min(...this.prokeralaCallTimes);
-      const waitTime = this.PROKERALA_RATE_WINDOW - (now - oldestCall) + 100; // +100ms buffer
-      
+
+    // If we've made max calls in the last minute, wait
+    if (this.roxyCallTimes.length >= this.ROXY_MAX_REQUESTS_PER_MINUTE) {
+      const oldestCall = Math.min(...this.roxyCallTimes);
+      const waitTime = this.ROXY_RATE_WINDOW - (now - oldestCall) + 100; // +100ms buffer
+
       if (waitTime > 0) {
-        console.log(`🚦 Prokerala rate limit: Waiting ${Math.round(waitTime/1000)}s (${this.prokeralaCallTimes.length}/25 calls in window)`);
-        await new Promise(resolve => setTimeout(resolve, waitTime));
+        await new Promise((resolve) => setTimeout(resolve, waitTime));
       }
     }
-    
+
     // Record this call
-    this.prokeralaCallTimes.push(now);
+    this.roxyCallTimes.push(now);
   }
-  
+
   // Check cache for existing response
-  private static getCachedProkeralaResponse(cacheKey: string): any | null {
+  private static getCachedRoxyResponse(cacheKey: string): any | null {
     const cached = this.responseCache.get(cacheKey);
-    
-    if (cached && (Date.now() - cached.timestamp) < this.CACHE_DURATION) {
-      console.log('💾 Using cached Prokerala response');
+
+    if (cached && Date.now() - cached.timestamp < this.CACHE_DURATION) {
       return cached.data;
     }
-    
+
     return null;
   }
-  
+
   // Store response in cache
-  private static setCachedProkeralaResponse(cacheKey: string, data: any): void {
+  private static setCachedRoxyResponse(cacheKey: string, data: any): void {
     this.responseCache.set(cacheKey, {
       data,
-      timestamp: Date.now()
+      timestamp: Date.now(),
     });
-    
+
     // Clean old cache entries
     const now = Date.now();
     for (const [key, value] of this.responseCache.entries()) {
@@ -98,263 +94,229 @@ export class ProkeralaNumerologyService {
       }
     }
   }
-  
+
   // Generate cache key for requests
-  private static generateProkeralaCacheKey(name: string, birthDate: string): string {
-    return `prokerala_${name.toLowerCase().replace(/\s+/g, '_')}_${birthDate}`;
+  private static generateRoxyCacheKey(
+    firstName: string,
+    lastName: string,
+    birthDate: string
+  ): string {
+    return `roxy_${firstName.toLowerCase()}_${lastName.toLowerCase()}_${birthDate}`;
   }
-  
-  // Get access token for API calls using proper client credentials with caching
-  private static async getAccessToken(): Promise<string | null> {
-    try {
-      // Check if we have a valid cached token
-      const now = Date.now();
-      if (this.cachedToken && now < this.tokenExpiryTime) {
-        console.log('Using cached Prokerala access token');
-        return this.cachedToken;
-      }
 
-      console.log('Requesting new Prokerala access token');
-      const response = await fetch('https://api.prokerala.com/token', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-        },
-        body: `grant_type=client_credentials&client_id=${this.CLIENT_ID}&client_secret=${this.CLIENT_SECRET}`,
-      });
+  // Make API request to Roxy API with token authentication
+  private static async makeRoxyRequest(
+    endpoint: string,
+    params: any,
+    method: "GET" | "POST" = "GET"
+  ): Promise<any> {
+    await this.waitForRoxyRateLimit();
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('Token request error:', response.status, errorText);
-        throw new Error(`Token request failed: ${response.status}`);
-      }
-
-      const data = await response.json();
-      if (data.access_token) {
-        // Cache the token with expiry time (subtract 60 seconds for safety)
-        this.cachedToken = data.access_token;
-        this.tokenExpiryTime = Date.now() + ((data.expires_in || 3600) - 60) * 1000;
-        console.log('New Prokerala access token cached, expires in:', data.expires_in || 3600, 'seconds');
-        return data.access_token;
-      } else {
-        console.error('No access token in response:', data);
-        return null;
-      }
-    } catch (error) {
-      console.error('Error getting access token:', error);
-      return null;
+    const url = new URL(`${this.BASE_URL}/${endpoint}`);
+    if (RoxyNumerologyService.API_TOKEN) {
+      url.searchParams.append("token", RoxyNumerologyService.API_TOKEN);
+    } else {
+      throw new Error("Roxy API token not configured");
     }
+
+    let requestOptions: RequestInit = {
+      method,
+      headers: {
+        Accept: "application/json",
+        "Content-Type": "application/json",
+      },
+    };
+
+    if (method === "GET") {
+      // Add parameters to URL for GET requests
+      Object.keys(params).forEach((key) => {
+        if (params[key] !== undefined && params[key] !== null) {
+          url.searchParams.append(key, params[key]);
+        }
+      });
+    } else {
+      // Add parameters to body for POST requests
+      requestOptions.body = JSON.stringify(params);
+    }
+
+    const response = await fetch(url.toString(), requestOptions);
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error("Roxy API request error:", response.status, errorText);
+      throw new Error(`Roxy API request failed: ${response.status}`);
+    }
+
+    return await response.json();
   }
 
-  // Get comprehensive numerology reading with rate limiting
+  // Get comprehensive numerology reading using Roxy API (via birth chart)
   static async getNumerologyReading(
-    name: string, 
-    birthDate: string, 
-    birthTime?: string, 
-    birthLocation?: string
+    firstName: string,
+    lastName: string,
+    birthDate: string,
+    birthTime?: string
   ): Promise<NumerologyReading | null> {
-    const cacheKey = this.generateProkeralaCacheKey(name, birthDate);
-    
+    const cacheKey = this.generateRoxyCacheKey(firstName, lastName, birthDate);
+
     // Check cache first
-    const cachedResponse = this.getCachedProkeralaResponse(cacheKey);
+    const cachedResponse = this.getCachedRoxyResponse(cacheKey);
     if (cachedResponse) {
       return cachedResponse;
     }
-    
-    // Try API first, fallback to local calculation if needed
-    console.log('Attempting to fetch from Prokerala API for enhanced accuracy');
-    
+
+    console.log("Attempting to fetch from Roxy API for numerology reading");
+
     try {
-      // Wait for rate limit before making any API calls
-      await this.waitForProkeralaRateLimit();
-      
-      const token = await this.getAccessToken();
-      if (!token) {
-        console.log('No API token, using local calculation');
-        const fallback = this.getFallbackNumerology(name, birthDate);
-        this.setCachedProkeralaResponse(cacheKey, fallback);
-        return fallback;
+      // Convert MM/DD/YYYY to YYYY-MM-DD format if needed
+      let formattedBirthDate = birthDate;
+      if (birthDate.includes("/")) {
+        const [month, day, year] = birthDate.split("/");
+        formattedBirthDate = `${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`;
       }
 
-      // Parse birth date (MM/DD/YYYY)
-      const [month, day, year] = birthDate.split('/').map(Number);
-      
-      // Try multiple API endpoints for comprehensive data
-      const apiResults = await Promise.allSettled([
-        this.fetchNumerologyNumbers(token, name, year, month, day, birthTime, birthLocation),
-        this.getLifePathNumber(birthDate),
-        this.getDestinyNumber(name)
-      ]);
+      // Get numerology key figures from Roxy API
+      const params = {
+        first_name: firstName,
+        last_name: lastName,
+        birthdate: formattedBirthDate,
+      };
 
-      // Check if we got valid API data
-      const numerologyData = apiResults[0].status === 'fulfilled' ? apiResults[0].value : null;
-      const lifePathFromAPI = apiResults[1].status === 'fulfilled' ? apiResults[1].value : null;
-      const destinyFromAPI = apiResults[2].status === 'fulfilled' ? apiResults[2].value : null;
+      // Try to get numerology data from key-figures endpoint
+      const roxyData = await this.makeRoxyRequest(
+        "key-figures",
+        params,
+        "POST"
+      );
 
-      if (numerologyData || lifePathFromAPI || destinyFromAPI) {
-        console.log('Successfully fetched data from Prokerala API');
-        // Merge API data with our enhanced local calculations
-        const fallbackData = this.getFallbackNumerology(name, birthDate);
-        
-        const enhancedData = {
-          ...fallbackData,
-          // Use API data when available, fallback to local calculation otherwise
-          life_path_number: lifePathFromAPI || fallbackData.life_path_number,
-          destiny_number: destinyFromAPI || fallbackData.destiny_number,
-          // Enhance with API-specific insights if available
-          life_path_description: numerologyData?.life_path_description || fallbackData.life_path_description,
-          destiny_description: numerologyData?.destiny_description || fallbackData.destiny_description,
-          // Add API-enhanced predictions and insights
-          career_guidance: this.enhanceCareerGuidance(fallbackData.career_guidance, numerologyData),
-          relationship_guidance: this.enhanceRelationshipGuidance(fallbackData.relationship_guidance, numerologyData),
-          spiritual_guidance: this.enhanceSpiritualGuidance(fallbackData.spiritual_guidance, numerologyData),
-        };
-        
-        // Cache the enhanced data
-        this.setCachedProkeralaResponse(cacheKey, enhancedData);
-        return enhancedData;
+      if (roxyData) {
+        console.log("Successfully fetched from Roxy numerology API:", roxyData);
+        // Transform response to our format
+        const reading = this.transformRoxyDataToReading(
+          roxyData,
+          firstName,
+          lastName,
+          birthDate
+        );
+
+        // Cache the result
+        this.setCachedRoxyResponse(cacheKey, reading);
+        return reading;
       }
 
-      console.log('API data not available, using enhanced local calculation');
-      const fallbackData = this.getFallbackNumerology(name, birthDate);
-      
-      // Cache the fallback data
-      this.setCachedProkeralaResponse(cacheKey, fallbackData);
+      // Fallback if API fails
+      const fallbackData = this.getFallbackNumerology(
+        firstName + " " + lastName,
+        birthDate
+      );
+      this.setCachedRoxyResponse(cacheKey, fallbackData);
       return fallbackData;
-
     } catch (error) {
-      console.error('Error fetching from Prokerala API:', error);
-      
-      // Handle rate limiting specifically
-      if (error.message?.includes('429') || error.message?.includes('rate limit')) {
-        console.log('🔄 Prokerala rate limited - using cached or fallback data');
-      }
-      
-      console.log('Falling back to local numerology calculation');
-      const fallbackData = this.getFallbackNumerology(name, birthDate);
-      
-      // Cache the fallback data
-      this.setCachedProkeralaResponse(cacheKey, fallbackData);
+      console.error("Error fetching from Roxy API:", error);
+
+      const fallbackData = this.getFallbackNumerology(
+        firstName + " " + lastName,
+        birthDate
+      );
+      this.setCachedRoxyResponse(cacheKey, fallbackData);
       return fallbackData;
     }
   }
 
-  // New method to fetch numerology numbers from API
-  private static async fetchNumerologyNumbers(
-    token: string, 
-    name: string, 
-    year: number, 
-    month: number, 
-    day: number,
-    birthTime?: string,
-    birthLocation?: string
-  ): Promise<any> {
-    const response = await fetch(`${this.BASE_URL}/numerology-report`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        name: name,
-        birth_date: `${year}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`,
-        birth_time: birthTime ? `${birthTime}:00` : '12:00:00',
-        birth_location: birthLocation || 'New York, USA',
-        coordinates: this.getCoordinatesForLocation(birthLocation) || {
-          latitude: 40.7128,
-          longitude: -74.0060
-        }
-      }),
-    });
+  // Transform Roxy API numerology data to our NumerologyReading interface
+  private static transformRoxyDataToReading(
+    roxyData: any,
+    firstName: string,
+    lastName: string,
+    birthDate: string
+  ): NumerologyReading {
+    const fullName = `${firstName} ${lastName}`;
 
-    if (response.ok) {
-      const data = await response.json();
-      return data.status === 200 ? data.data : null;
-    }
-    
-    throw new Error(`API request failed: ${response.status}`);
+    // Extract numbers from Roxy numerology API response with fallbacks
+    const lifePathNumber =
+      roxyData.life_path_number || this.calculateLifePathNumber(birthDate);
+    const destinyNumber =
+      roxyData.destiny_number ||
+      roxyData.expression_number ||
+      this.calculateDestinyNumber(fullName);
+    const soulUrgeNumber =
+      roxyData.soul_urge_number ||
+      roxyData.hearts_desire_number ||
+      this.calculateSoulUrgeNumber(fullName);
+    const personalityNumber =
+      roxyData.personality_number || this.calculatePersonalityNumber(fullName);
+
+    return {
+      life_path_number: lifePathNumber,
+      destiny_number: destinyNumber,
+      soul_urge_number: soulUrgeNumber,
+      personality_number: personalityNumber,
+      birth_day_number:
+        roxyData.birth_day_number || this.calculateBirthDayNumber(birthDate),
+      expression_number: roxyData.expression_number || destinyNumber,
+      life_path_description: this.getLifePathDescription(lifePathNumber),
+      destiny_description: this.getDestinyDescription(destinyNumber),
+      soul_urge_description: this.getSoulUrgeDescription(soulUrgeNumber),
+      personality_description:
+        this.getPersonalityDescription(personalityNumber),
+      lucky_numbers: this.generateLuckyNumbers(lifePathNumber),
+      lucky_colors: this.getLuckyColors(lifePathNumber),
+      strengths: this.getStrengths(lifePathNumber),
+      challenges: this.getChallenges(lifePathNumber),
+      career_guidance: this.getCareerGuidance(lifePathNumber, firstName),
+      relationship_guidance: this.getRelationshipGuidance(
+        lifePathNumber,
+        firstName
+      ),
+      spiritual_guidance: this.getSpiritualGuidance(lifePathNumber, firstName),
+    };
   }
 
-  // Get life path number calculation
+  // Get life path number (fallback to local calculation)
   static async getLifePathNumber(birthDate: string): Promise<number> {
-    try {
-      const token = await this.getAccessToken();
-      if (!token) {
-        return this.calculateLifePathNumber(birthDate);
-      }
-
-      const [month, day, year] = birthDate.split('/').map(Number);
-      
-      const response = await fetch(`${this.BASE_URL}/life-path-number`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          birth_date: `${year}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`,
-        }),
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        return data.data?.life_path_number || this.calculateLifePathNumber(birthDate);
-      }
-
-      return this.calculateLifePathNumber(birthDate);
-    } catch (error) {
-      console.error('Error fetching life path number:', error);
-      return this.calculateLifePathNumber(birthDate);
-    }
+    // Since Roxy API doesn't have direct numerology endpoints, use local calculation
+    return this.calculateLifePathNumber(birthDate);
   }
 
-  // Get destiny number from name
-  static async getDestinyNumber(name: string): Promise<number> {
-    try {
-      const token = await this.getAccessToken();
-      if (!token) {
-        return this.calculateDestinyNumber(name);
-      }
-
-      const response = await fetch(`${this.BASE_URL}/destiny-number`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          name: name,
-        }),
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        return data.data?.destiny_number || this.calculateDestinyNumber(name);
-      }
-
-      return this.calculateDestinyNumber(name);
-    } catch (error) {
-      console.error('Error fetching destiny number:', error);
-      return this.calculateDestinyNumber(name);
-    }
+  // Get destiny number (fallback to local calculation)
+  static async getDestinyNumber(
+    firstName: string,
+    lastName: string
+  ): Promise<number> {
+    // Since Roxy API doesn't have direct numerology endpoints, use local calculation
+    return this.calculateDestinyNumber(`${firstName} ${lastName}`);
   }
 
   // Enhance API data with additional insights
-  private static enhanceNumerologyData(data: NumerologyReading, name: string): NumerologyReading {
+  private static enhanceNumerologyData(
+    data: NumerologyReading,
+    name: string
+  ): NumerologyReading {
     return {
       ...data,
-      lucky_numbers: data.lucky_numbers || this.generateLuckyNumbers(data.life_path_number),
-      lucky_colors: data.lucky_colors || this.getLuckyColors(data.life_path_number),
+      lucky_numbers:
+        data.lucky_numbers || this.generateLuckyNumbers(data.life_path_number),
+      lucky_colors:
+        data.lucky_colors || this.getLuckyColors(data.life_path_number),
       strengths: data.strengths || this.getStrengths(data.life_path_number),
       challenges: data.challenges || this.getChallenges(data.life_path_number),
-      career_guidance: data.career_guidance || this.getCareerGuidance(data.life_path_number, name),
-      relationship_guidance: data.relationship_guidance || this.getRelationshipGuidance(data.life_path_number, name),
-      spiritual_guidance: data.spiritual_guidance || this.getSpiritualGuidance(data.life_path_number, name),
+      career_guidance:
+        data.career_guidance ||
+        this.getCareerGuidance(data.life_path_number, name),
+      relationship_guidance:
+        data.relationship_guidance ||
+        this.getRelationshipGuidance(data.life_path_number, name),
+      spiritual_guidance:
+        data.spiritual_guidance ||
+        this.getSpiritualGuidance(data.life_path_number, name),
     };
   }
 
   // Fallback numerology calculation when API fails
-  private static getFallbackNumerology(name: string, birthDate: string): NumerologyReading {
+  private static getFallbackNumerology(
+    name: string,
+    birthDate: string
+  ): NumerologyReading {
     const lifePathNumber = this.calculateLifePathNumber(birthDate);
     const destinyNumber = this.calculateDestinyNumber(name);
     const soulUrgeNumber = this.calculateSoulUrgeNumber(name);
@@ -371,7 +333,8 @@ export class ProkeralaNumerologyService {
       life_path_description: this.getLifePathDescription(lifePathNumber),
       destiny_description: this.getDestinyDescription(destinyNumber),
       soul_urge_description: this.getSoulUrgeDescription(soulUrgeNumber),
-      personality_description: this.getPersonalityDescription(personalityNumber),
+      personality_description:
+        this.getPersonalityDescription(personalityNumber),
       lucky_numbers: this.generateLuckyNumbers(lifePathNumber),
       lucky_colors: this.getLuckyColors(lifePathNumber),
       strengths: this.getStrengths(lifePathNumber),
@@ -384,29 +347,71 @@ export class ProkeralaNumerologyService {
 
   // Manual calculation methods as fallbacks
   private static calculateLifePathNumber(birthDate: string): number {
-    const [month, day, year] = birthDate.split('/').map(Number);
-    let sum = month + day + year;
-    
-    while (sum > 9 && sum !== 11 && sum !== 22 && sum !== 33) {
-      sum = sum.toString().split('').reduce((acc, digit) => acc + parseInt(digit), 0);
+    // Handle different date formats
+    let month: number, day: number, year: number;
+    if (birthDate.includes("/")) {
+      [month, day, year] = birthDate.split("/").map(Number);
+    } else if (birthDate.includes("-")) {
+      [year, month, day] = birthDate.split("-").map(Number);
+    } else {
+      // Default fallback
+      return 1;
     }
-    
+
+    let sum = month + day + year;
+
+    while (sum > 9 && sum !== 11 && sum !== 22 && sum !== 33) {
+      sum = sum
+        .toString()
+        .split("")
+        .reduce((acc, digit) => acc + parseInt(digit), 0);
+    }
+
     return sum;
   }
 
   private static calculateDestinyNumber(name: string): number {
     const letterValues: { [key: string]: number } = {
-      'A': 1, 'B': 2, 'C': 3, 'D': 4, 'E': 5, 'F': 6, 'G': 7, 'H': 8, 'I': 9,
-      'J': 1, 'K': 2, 'L': 3, 'M': 4, 'N': 5, 'O': 6, 'P': 7, 'Q': 8, 'R': 9,
-      'S': 1, 'T': 2, 'U': 3, 'V': 4, 'W': 5, 'X': 6, 'Y': 7, 'Z': 8
+      A: 1,
+      B: 2,
+      C: 3,
+      D: 4,
+      E: 5,
+      F: 6,
+      G: 7,
+      H: 8,
+      I: 9,
+      J: 1,
+      K: 2,
+      L: 3,
+      M: 4,
+      N: 5,
+      O: 6,
+      P: 7,
+      Q: 8,
+      R: 9,
+      S: 1,
+      T: 2,
+      U: 3,
+      V: 4,
+      W: 5,
+      X: 6,
+      Y: 7,
+      Z: 8,
     };
 
-    let sum = name.toUpperCase().split('').reduce((acc, letter) => {
-      return acc + (letterValues[letter] || 0);
-    }, 0);
+    let sum = name
+      .toUpperCase()
+      .split("")
+      .reduce((acc, letter) => {
+        return acc + (letterValues[letter] || 0);
+      }, 0);
 
     while (sum > 9 && sum !== 11 && sum !== 22 && sum !== 33) {
-      sum = sum.toString().split('').reduce((acc, digit) => acc + parseInt(digit), 0);
+      sum = sum
+        .toString()
+        .split("")
+        .reduce((acc, digit) => acc + parseInt(digit), 0);
     }
 
     return sum;
@@ -414,15 +419,26 @@ export class ProkeralaNumerologyService {
 
   private static calculateSoulUrgeNumber(name: string): number {
     const vowelValues: { [key: string]: number } = {
-      'A': 1, 'E': 5, 'I': 9, 'O': 6, 'U': 3, 'Y': 7
+      A: 1,
+      E: 5,
+      I: 9,
+      O: 6,
+      U: 3,
+      Y: 7,
     };
 
-    let sum = name.toUpperCase().split('').reduce((acc, letter) => {
-      return acc + (vowelValues[letter] || 0);
-    }, 0);
+    let sum = name
+      .toUpperCase()
+      .split("")
+      .reduce((acc, letter) => {
+        return acc + (vowelValues[letter] || 0);
+      }, 0);
 
     while (sum > 9 && sum !== 11 && sum !== 22 && sum !== 33) {
-      sum = sum.toString().split('').reduce((acc, digit) => acc + parseInt(digit), 0);
+      sum = sum
+        .toString()
+        .split("")
+        .reduce((acc, digit) => acc + parseInt(digit), 0);
     }
 
     return sum;
@@ -430,28 +446,63 @@ export class ProkeralaNumerologyService {
 
   private static calculatePersonalityNumber(name: string): number {
     const consonantValues: { [key: string]: number } = {
-      'B': 2, 'C': 3, 'D': 4, 'F': 6, 'G': 7, 'H': 8, 'J': 1, 'K': 2, 'L': 3,
-      'M': 4, 'N': 5, 'P': 7, 'Q': 8, 'R': 9, 'S': 1, 'T': 2, 'V': 4, 'W': 5,
-      'X': 6, 'Z': 8
+      B: 2,
+      C: 3,
+      D: 4,
+      F: 6,
+      G: 7,
+      H: 8,
+      J: 1,
+      K: 2,
+      L: 3,
+      M: 4,
+      N: 5,
+      P: 7,
+      Q: 8,
+      R: 9,
+      S: 1,
+      T: 2,
+      V: 4,
+      W: 5,
+      X: 6,
+      Z: 8,
     };
 
-    let sum = name.toUpperCase().split('').reduce((acc, letter) => {
-      return acc + (consonantValues[letter] || 0);
-    }, 0);
+    let sum = name
+      .toUpperCase()
+      .split("")
+      .reduce((acc, letter) => {
+        return acc + (consonantValues[letter] || 0);
+      }, 0);
 
     while (sum > 9 && sum !== 11 && sum !== 22 && sum !== 33) {
-      sum = sum.toString().split('').reduce((acc, digit) => acc + parseInt(digit), 0);
+      sum = sum
+        .toString()
+        .split("")
+        .reduce((acc, digit) => acc + parseInt(digit), 0);
     }
 
     return sum;
   }
 
   private static calculateBirthDayNumber(birthDate: string): number {
-    const [, day] = birthDate.split('/').map(Number);
+    // Handle different date formats
+    let day: number;
+    if (birthDate.includes("/")) {
+      [, day] = birthDate.split("/").map(Number);
+    } else if (birthDate.includes("-")) {
+      [, , day] = birthDate.split("-").map(Number);
+    } else {
+      return 1; // Default fallback
+    }
+
     let sum = day;
 
     while (sum > 9 && sum !== 11 && sum !== 22 && sum !== 33) {
-      sum = sum.toString().split('').reduce((acc, digit) => acc + parseInt(digit), 0);
+      sum = sum
+        .toString()
+        .split("")
+        .reduce((acc, digit) => acc + parseInt(digit), 0);
     }
 
     return sum;
@@ -471,7 +522,7 @@ export class ProkeralaNumerologyService {
       9: "You are a humanitarian with universal compassion. Your path involves serving humanity and completing important cycles in life.",
       11: "You are a master teacher and spiritual messenger. Your path involves inspiring others and bringing higher consciousness to the world.",
       22: "You are a master builder with the ability to manifest dreams into reality. Your path involves creating lasting positive change on a large scale.",
-      33: "You are a master healer and teacher of love. Your path involves unconditional service and helping humanity evolve spiritually."
+      33: "You are a master healer and teacher of love. Your path involves unconditional service and helping humanity evolve spiritually.",
     };
 
     return descriptions[number] || descriptions[1];
@@ -487,7 +538,7 @@ export class ProkeralaNumerologyService {
       6: "Your destiny is to nurture and heal. You're meant to care for family, community, and help create loving, harmonious environments.",
       7: "Your destiny is to seek truth and develop wisdom. You're meant to study, research, and share deeper spiritual and intellectual insights.",
       8: "Your destiny is to achieve material success and use power wisely. You're meant to organize resources and create abundance responsibly.",
-      9: "Your destiny is to serve humanity with compassion. You're meant to be generous, forgiving, and help complete important humanitarian missions."
+      9: "Your destiny is to serve humanity with compassion. You're meant to be generous, forgiving, and help complete important humanitarian missions.",
     };
 
     return descriptions[number] || descriptions[1];
@@ -503,7 +554,7 @@ export class ProkeralaNumerologyService {
       6: "Your soul craves love and family. You deeply desire to nurture others and create a beautiful, harmonious home environment.",
       7: "Your soul craves knowledge and spiritual truth. You deeply desire to understand life's mysteries and develop inner wisdom.",
       8: "Your soul craves achievement and recognition. You deeply desire material success and the respect that comes with accomplishment.",
-      9: "Your soul craves universal service. You deeply desire to help humanity and make the world a better place for all."
+      9: "Your soul craves universal service. You deeply desire to help humanity and make the world a better place for all.",
     };
 
     return descriptions[number] || descriptions[1];
@@ -519,7 +570,7 @@ export class ProkeralaNumerologyService {
       6: "Others see you as caring, responsible, and naturally nurturing. You project warmth and the ability to heal and comfort others.",
       7: "Others see you as mysterious, intellectual, and naturally spiritual. You project depth and the ability to understand complex matters.",
       8: "Others see you as successful, powerful, and naturally business-minded. You project competence and the ability to manage resources.",
-      9: "Others see you as compassionate, wise, and naturally generous. You project humanitarian ideals and universal understanding."
+      9: "Others see you as compassionate, wise, and naturally generous. You project humanitarian ideals and universal understanding.",
     };
 
     return descriptions[number] || descriptions[1];
@@ -547,7 +598,7 @@ export class ProkeralaNumerologyService {
       6: ["Pink", "Blue", "White"],
       7: ["Purple", "Violet", "Indigo"],
       8: ["Black", "Navy", "Dark Green"],
-      9: ["Gold", "Red", "Orange"]
+      9: ["Gold", "Red", "Orange"],
     };
     return colorMap[lifePathNumber] || colorMap[1];
   }
@@ -562,7 +613,7 @@ export class ProkeralaNumerologyService {
       6: ["Nurturing", "Responsibility", "Healing", "Compassion"],
       7: ["Analysis", "Spirituality", "Intuition", "Wisdom"],
       8: ["Business acumen", "Material success", "Organization", "Power"],
-      9: ["Humanitarianism", "Compassion", "Generosity", "Universal love"]
+      9: ["Humanitarianism", "Compassion", "Generosity", "Universal love"],
     };
     return strengthMap[lifePathNumber] || strengthMap[1];
   }
@@ -571,18 +622,26 @@ export class ProkeralaNumerologyService {
     const challengeMap: { [key: number]: string[] } = {
       1: ["Impatience", "Selfishness", "Stubbornness", "Loneliness"],
       2: ["Oversensitivity", "Indecision", "Dependence", "Shyness"],
-      3: ["Scattered energy", "Superficiality", "Criticism sensitivity", "Exaggeration"],
+      3: [
+        "Scattered energy",
+        "Superficiality",
+        "Criticism sensitivity",
+        "Exaggeration",
+      ],
       4: ["Rigidity", "Narrow-mindedness", "Overwork", "Stubbornness"],
       5: ["Restlessness", "Irresponsibility", "Impatience", "Inconsistency"],
       6: ["Perfectionism", "Worry", "Interference", "Self-righteousness"],
       7: ["Isolation", "Skepticism", "Coldness", "Perfectionism"],
       8: ["Materialism", "Workaholism", "Impatience", "Intolerance"],
-      9: ["Emotional extremes", "Impracticality", "Moodiness", "Martyrdom"]
+      9: ["Emotional extremes", "Impracticality", "Moodiness", "Martyrdom"],
     };
     return challengeMap[lifePathNumber] || challengeMap[1];
   }
 
-  private static getCareerGuidance(lifePathNumber: number, name: string): string {
+  private static getCareerGuidance(
+    lifePathNumber: number,
+    name: string
+  ): string {
     const guidanceMap: { [key: number]: string } = {
       1: `${name}, your leadership abilities make you perfect for entrepreneurship, management, or pioneering new fields. Take charge of projects and don't be afraid to innovate.`,
       2: `${name}, your diplomatic nature suits careers in counseling, mediation, teamwork, or partnership roles. You excel when collaborating with others.`,
@@ -592,12 +651,15 @@ export class ProkeralaNumerologyService {
       6: `${name}, your nurturing nature is perfect for healthcare, education, social work, or any career focused on helping and healing others.`,
       7: `${name}, your analytical mind suits research, spirituality, psychology, or any field requiring deep thinking and investigation.`,
       8: `${name}, your business acumen is perfect for finance, real estate, corporate leadership, or any field involving material success and organization.`,
-      9: `${name}, your humanitarian spirit suits careers in charity work, counseling, arts, or any field that serves the greater good of humanity.`
+      9: `${name}, your humanitarian spirit suits careers in charity work, counseling, arts, or any field that serves the greater good of humanity.`,
     };
     return guidanceMap[lifePathNumber] || guidanceMap[1];
   }
 
-  private static getRelationshipGuidance(lifePathNumber: number, name: string): string {
+  private static getRelationshipGuidance(
+    lifePathNumber: number,
+    name: string
+  ): string {
     const guidanceMap: { [key: number]: string } = {
       1: `${name}, in relationships, remember to balance your independence with partnership. Your strong personality attracts others, but make room for their leadership too.`,
       2: `${name}, you naturally create harmony in relationships. Your sensitivity is a gift, but don't lose yourself trying to please everyone. Set healthy boundaries.`,
@@ -607,12 +669,15 @@ export class ProkeralaNumerologyService {
       6: `${name}, you're naturally nurturing in relationships. Remember to receive care as well as give it, and don't try to fix everyone around you.`,
       7: `${name}, you need deep, meaningful connections. Take time to open up emotionally and don't let your analytical nature prevent intimate bonding.`,
       8: `${name}, balance your ambitious nature with quality time for relationships. Success means nothing without people to share it with.`,
-      9: `${name}, your compassionate nature attracts many people. Remember to focus your love and not spread yourself too thin emotionally.`
+      9: `${name}, your compassionate nature attracts many people. Remember to focus your love and not spread yourself too thin emotionally.`,
     };
     return guidanceMap[lifePathNumber] || guidanceMap[1];
   }
 
-  private static getSpiritualGuidance(lifePathNumber: number, name: string): string {
+  private static getSpiritualGuidance(
+    lifePathNumber: number,
+    name: string
+  ): string {
     const guidanceMap: { [key: number]: string } = {
       1: `${name}, your spiritual path involves learning to lead with wisdom and using your pioneering spirit to help others find their own paths.`,
       2: `${name}, your spiritual path involves bringing peace and healing to the world through your natural ability to unite and harmonize.`,
@@ -622,43 +687,20 @@ export class ProkeralaNumerologyService {
       6: `${name}, your spiritual path involves unconditional love and service, healing others through your compassionate heart and nurturing spirit.`,
       7: `${name}, your spiritual path involves seeking and sharing spiritual wisdom, helping others understand deeper truths about existence.`,
       8: `${name}, your spiritual path involves learning to use material success and power as tools for spiritual service and positive change.`,
-      9: `${name}, your spiritual path involves humanitarian service and helping humanity evolve through love, compassion, and universal understanding.`
+      9: `${name}, your spiritual path involves humanitarian service and helping humanity evolve through love, compassion, and universal understanding.`,
     };
     return guidanceMap[lifePathNumber] || guidanceMap[1];
   }
 
   // Enhancement methods to combine API data with local insights
-  private static enhanceCareerGuidance(localGuidance: string, apiData?: any): string {
-    if (!apiData?.career_suggestions) {
-      return localGuidance;
-    }
-    
-    return `${localGuidance}\n\nAdditional insights: ${apiData.career_suggestions.join(', ')} would be particularly beneficial for your numerological profile.`;
-  }
 
-  private static enhanceRelationshipGuidance(localGuidance: string, apiData?: any): string {
-    if (!apiData?.compatibility_insights) {
-      return localGuidance;
-    }
-    
-    return `${localGuidance}\n\nAPI Enhancement: ${apiData.compatibility_insights}`;
-  }
-
-  private static enhanceSpiritualGuidance(localGuidance: string, apiData?: any): string {
-    if (!apiData?.spiritual_insights) {
-      return localGuidance;
-    }
-    
-    return `${localGuidance}\n\nSpiritual Enhancement: ${apiData.spiritual_insights}`;
-  }
-
-  // Get daily predictions with API enhancement
+  // Get daily predictions with Roxy API enhancement
   static async getDailyPredictions(
-    name: string, 
-    birthDate: string, 
-    date?: Date, 
-    birthTime?: string, 
-    birthLocation?: string
+    firstName: string,
+    lastName: string,
+    birthDate: string,
+    date?: Date,
+    birthTime?: string
   ): Promise<{
     love: string;
     career: string;
@@ -669,191 +711,320 @@ export class ProkeralaNumerologyService {
     energyLevel: number;
   }> {
     const targetDate = date || new Date();
-    const numerologyReading = await this.getNumerologyReading(name, birthDate, birthTime, birthLocation);
-    
+    const numerologyReading = await this.getNumerologyReading(
+      firstName,
+      lastName,
+      birthDate,
+      birthTime
+    );
+
     if (!numerologyReading) {
-      throw new Error('Unable to generate numerology reading');
+      throw new Error("Unable to generate numerology reading");
     }
 
-    try {
-      // Try to get daily predictions from API
-      const token = await this.getAccessToken();
-      if (token) {
-        const dailyData = await this.fetchDailyPredictions(token, name, birthDate, targetDate);
-        if (dailyData) {
-          return dailyData;
-        }
-      }
-    } catch (error) {
-      console.log('API daily predictions not available, using enhanced local predictions');
-    }
-
-    // Fallback to enhanced local predictions
+    // Generate enhanced local predictions (Roxy doesn't have daily predictions endpoint)
     return this.generateEnhancedDailyPredictions(numerologyReading, targetDate);
   }
 
-  // Helper method to get coordinates for common locations
-  private static getCoordinatesForLocation(location?: string): { latitude: number; longitude: number } | null {
-    if (!location) return null;
-    
-    const locationMap: { [key: string]: { latitude: number; longitude: number } } = {
-      'new york': { latitude: 40.7128, longitude: -74.0060 },
-      'new york, usa': { latitude: 40.7128, longitude: -74.0060 },
-      'london': { latitude: 51.5074, longitude: -0.1278 },
-      'london, uk': { latitude: 51.5074, longitude: -0.1278 },
-      'paris': { latitude: 48.8566, longitude: 2.3522 },
-      'paris, france': { latitude: 48.8566, longitude: 2.3522 },
-      'tokyo': { latitude: 35.6762, longitude: 139.6503 },
-      'tokyo, japan': { latitude: 35.6762, longitude: 139.6503 },
-      'sydney': { latitude: -33.8688, longitude: 151.2093 },
-      'sydney, australia': { latitude: -33.8688, longitude: 151.2093 },
-      'mumbai': { latitude: 19.0760, longitude: 72.8777 },
-      'mumbai, india': { latitude: 19.0760, longitude: 72.8777 },
-      'delhi': { latitude: 28.7041, longitude: 77.1025 },
-      'delhi, india': { latitude: 28.7041, longitude: 77.1025 },
-      'los angeles': { latitude: 34.0522, longitude: -118.2437 },
-      'los angeles, usa': { latitude: 34.0522, longitude: -118.2437 },
-      'chicago': { latitude: 41.8781, longitude: -87.6298 },
-      'chicago, usa': { latitude: 41.8781, longitude: -87.6298 },
-      'toronto': { latitude: 43.6532, longitude: -79.3832 },
-      'toronto, canada': { latitude: 43.6532, longitude: -79.3832 },
-    };
-    
-    const normalizedLocation = location.toLowerCase().trim();
-    return locationMap[normalizedLocation] || null;
-  }
+  // Get compatibility analysis from Roxy API
+  static async getCompatibilityAnalysis(
+    person1FirstName: string,
+    person1LastName: string,
+    person1BirthDate: string,
+    person2FirstName: string,
+    person2LastName: string,
+    person2BirthDate: string
+  ): Promise<{ compatibility_score: number; analysis: string }> {
+    try {
+      const params = {
+        person1_first_name: person1FirstName,
+        person1_last_name: person1LastName,
+        person1_birthdate: person1BirthDate,
+        person2_first_name: person2FirstName,
+        person2_last_name: person2LastName,
+        person2_birthdate: person2BirthDate,
+      };
 
-  private static async fetchDailyPredictions(token: string, name: string, birthDate: string, date: Date): Promise<any> {
-    const [month, day, year] = birthDate.split('/').map(Number);
-    
-    const response = await fetch(`${this.BASE_URL}/daily-prediction`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        name: name,
-        birth_date: `${year}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`,
-        prediction_date: date.toISOString().split('T')[0],
-      }),
-    });
+      const roxyData = await this.makeRoxyRequest(
+        "compatibility-analysis",
+        params
+      );
 
-    if (response.ok) {
-      const data = await response.json();
-      if (data.status === 200 && data.data) {
+      if (roxyData?.success && roxyData?.data) {
         return {
-          love: data.data.love_prediction || 'Love energy is flowing favorably today.',
-          career: data.data.career_prediction || 'Professional opportunities are aligned.',
-          health: data.data.health_prediction || 'Your vitality is strong today.',
-          spiritual: data.data.spiritual_prediction || 'Spiritual growth is highlighted.',
-          luckyNumbers: data.data.lucky_numbers || [1, 7, 21],
-          luckyColors: data.data.lucky_colors || ['Blue', 'Gold'],
-          energyLevel: data.data.energy_level || 75
+          compatibility_score: roxyData.data.compatibility_score || 75,
+          analysis:
+            roxyData.data.analysis ||
+            "Your numerological compatibility shows strong potential for harmony.",
         };
       }
-    }
 
-    throw new Error('API daily predictions failed');
+      // Fallback compatibility calculation
+      return this.calculateLocalCompatibility(
+        person1FirstName + " " + person1LastName,
+        person1BirthDate,
+        person2FirstName + " " + person2LastName,
+        person2BirthDate
+      );
+    } catch (error) {
+      console.error("Error fetching compatibility from Roxy API:", error);
+      return this.calculateLocalCompatibility(
+        person1FirstName + " " + person1LastName,
+        person1BirthDate,
+        person2FirstName + " " + person2LastName,
+        person2BirthDate
+      );
+    }
   }
 
-  private static generateEnhancedDailyPredictions(reading: NumerologyReading, date: Date): any {
-    const dayOfYear = Math.floor((date.getTime() - new Date(date.getFullYear(), 0, 0).getTime()) / (1000 * 60 * 60 * 24));
-    const personalDayNumber = (reading.life_path_number + dayOfYear) % 9 + 1;
-    
-    const predictions = {
+  // Local fallback compatibility calculation
+  private static calculateLocalCompatibility(
+    name1: string,
+    birthDate1: string,
+    name2: string,
+    birthDate2: string
+  ): { compatibility_score: number; analysis: string } {
+    const lifePathNum1 = this.calculateLifePathNumber(birthDate1);
+    const lifePathNum2 = this.calculateLifePathNumber(birthDate2);
+    const destinyNum1 = this.calculateDestinyNumber(name1);
+    const destinyNum2 = this.calculateDestinyNumber(name2);
+
+    // Simple compatibility scoring based on numerological harmony
+    const lifePathCompatibility = this.getNumberCompatibility(
+      lifePathNum1,
+      lifePathNum2
+    );
+    const destinyCompatibility = this.getNumberCompatibility(
+      destinyNum1,
+      destinyNum2
+    );
+
+    const overallScore = Math.round(
+      (lifePathCompatibility + destinyCompatibility) / 2
+    );
+
+    return {
+      compatibility_score: overallScore,
+      analysis: `Your Life Path numbers (${lifePathNum1} and ${lifePathNum2}) and Destiny numbers (${destinyNum1} and ${destinyNum2}) create a ${overallScore > 80 ? "highly compatible" : overallScore > 60 ? "moderately compatible" : "challenging but growth-oriented"} relationship dynamic.`,
+    };
+  }
+
+  // Number compatibility helper
+  private static getNumberCompatibility(num1: number, num2: number): number {
+    const compatibilityMatrix: { [key: string]: number } = {
+      "1-1": 85,
+      "1-2": 70,
+      "1-3": 95,
+      "1-4": 60,
+      "1-5": 80,
+      "1-6": 75,
+      "1-7": 65,
+      "1-8": 90,
+      "1-9": 70,
+      "2-2": 90,
+      "2-3": 85,
+      "2-4": 95,
+      "2-5": 60,
+      "2-6": 100,
+      "2-7": 85,
+      "2-8": 70,
+      "2-9": 80,
+      "3-3": 80,
+      "3-4": 65,
+      "3-5": 90,
+      "3-6": 85,
+      "3-7": 75,
+      "3-8": 70,
+      "3-9": 95,
+      "4-4": 85,
+      "4-5": 55,
+      "4-6": 90,
+      "4-7": 80,
+      "4-8": 95,
+      "4-9": 65,
+      "5-5": 75,
+      "5-6": 60,
+      "5-7": 70,
+      "5-8": 65,
+      "5-9": 85,
+      "6-6": 95,
+      "6-7": 75,
+      "6-8": 80,
+      "6-9": 90,
+      "7-7": 90,
+      "7-8": 75,
+      "7-9": 85,
+      "8-8": 85,
+      "8-9": 70,
+      "9-9": 95,
+    };
+
+    const key1 = `${Math.min(num1, num2)}-${Math.max(num1, num2)}`;
+    const key2 = `${Math.max(num1, num2)}-${Math.min(num1, num2)}`;
+
+    return compatibilityMatrix[key1] || compatibilityMatrix[key2] || 70;
+  }
+
+  private static generateEnhancedDailyPredictions(
+    reading: NumerologyReading,
+    date: Date
+  ): {
+    love: string;
+    career: string;
+    health: string;
+    spiritual: string;
+    luckyNumbers: number[];
+    luckyColors: string[];
+    energyLevel: number;
+  } {
+    const dayOfYear = Math.floor(
+      (date.getTime() - new Date(date.getFullYear(), 0, 0).getTime()) /
+        (1000 * 60 * 60 * 24)
+    );
+    const personalDayNumber =
+      ((reading.life_path_number + dayOfYear - 1) % 9) + 1;
+
+    type DailyPrediction = {
+      love: string;
+      career: string;
+      health: string;
+      spiritual: string;
+    };
+
+    const predictions: { [key: number]: DailyPrediction } = {
       1: {
-        love: 'New romantic opportunities or fresh energy in existing relationships. Your confidence attracts others.',
-        career: 'Leadership opportunities emerge. Take initiative on important projects.',
-        health: 'High energy levels. Perfect day for starting new fitness routines.',
-        spiritual: 'Focus on self-discovery and personal growth. Meditate on your goals.'
+        love: "New romantic opportunities or fresh energy in existing relationships. Your confidence attracts others.",
+        career:
+          "Leadership opportunities emerge. Take initiative on important projects.",
+        health:
+          "High energy levels. Perfect day for starting new fitness routines.",
+        spiritual:
+          "Focus on self-discovery and personal growth. Meditate on your goals.",
       },
       2: {
-        love: 'Harmony and cooperation dominate your relationships. Deep emotional connections.',
-        career: 'Teamwork and partnerships bring success. Collaborate rather than compete.',
-        health: 'Balance is key. Gentle exercises like yoga or walking are beneficial.',
-        spiritual: 'Focus on compassion and helping others. Your intuition is heightened.'
+        love: "Harmony and cooperation dominate your relationships. Deep emotional connections.",
+        career:
+          "Teamwork and partnerships bring success. Collaborate rather than compete.",
+        health:
+          "Balance is key. Gentle exercises like yoga or walking are beneficial.",
+        spiritual:
+          "Focus on compassion and helping others. Your intuition is heightened.",
       },
       3: {
-        love: 'Playful, joyful energy in love. Express your feelings creatively.',
-        career: 'Your communication skills shine. Present ideas or network actively.',
-        health: 'Creative activities boost your wellbeing. Dance or art therapy helps.',
-        spiritual: 'Express gratitude and share your joy with others. Laughter heals.'
+        love: "Playful, joyful energy in love. Express your feelings creatively.",
+        career:
+          "Your communication skills shine. Present ideas or network actively.",
+        health:
+          "Creative activities boost your wellbeing. Dance or art therapy helps.",
+        spiritual:
+          "Express gratitude and share your joy with others. Laughter heals.",
       },
       4: {
-        love: 'Stability and commitment are highlighted. Build lasting foundations.',
-        career: 'Hard work and persistence pay off. Focus on practical, achievable goals.',
-        health: 'Structured routines benefit you. Maintain consistent healthy habits.',
-        spiritual: 'Ground yourself in nature. Practice patience and perseverance.'
+        love: "Stability and commitment are highlighted. Build lasting foundations.",
+        career:
+          "Hard work and persistence pay off. Focus on practical, achievable goals.",
+        health:
+          "Structured routines benefit you. Maintain consistent healthy habits.",
+        spiritual:
+          "Ground yourself in nature. Practice patience and perseverance.",
       },
       5: {
-        love: 'Adventure and excitement in romance. Try something new with your partner.',
-        career: 'Change and variety are favored. Embrace new opportunities or methods.',
-        health: 'Dynamic activities energize you. Mix up your routine for best results.',
-        spiritual: 'Embrace freedom and explore new spiritual practices or philosophies.'
+        love: "Adventure and excitement in romance. Try something new with your partner.",
+        career:
+          "Change and variety are favored. Embrace new opportunities or methods.",
+        health:
+          "Dynamic activities energize you. Mix up your routine for best results.",
+        spiritual:
+          "Embrace freedom and explore new spiritual practices or philosophies.",
       },
       6: {
-        love: 'Family and nurturing take priority. Deep, caring connections flourish.',
-        career: 'Service-oriented work brings fulfillment. Help others achieve their goals.',
-        health: 'Caring for others nourishes your soul. Maintain emotional balance.',
-        spiritual: 'Practice unconditional love and compassion. Heal old wounds.'
+        love: "Family and nurturing take priority. Deep, caring connections flourish.",
+        career:
+          "Service-oriented work brings fulfillment. Help others achieve their goals.",
+        health:
+          "Caring for others nourishes your soul. Maintain emotional balance.",
+        spiritual:
+          "Practice unconditional love and compassion. Heal old wounds.",
       },
       7: {
-        love: 'Deep, spiritual connections are possible. Look beyond surface attractions.',
-        career: 'Research and analysis lead to breakthrough insights. Trust your intuition.',
-        health: 'Quiet reflection and meditation restore your energy. Avoid crowds.',
-        spiritual: 'Seek inner wisdom through meditation. Mystical experiences are possible.'
+        love: "Deep, spiritual connections are possible. Look beyond surface attractions.",
+        career:
+          "Research and analysis lead to breakthrough insights. Trust your intuition.",
+        health:
+          "Quiet reflection and meditation restore your energy. Avoid crowds.",
+        spiritual:
+          "Seek inner wisdom through meditation. Mystical experiences are possible.",
       },
       8: {
-        love: 'Practical approach to relationships. Shared goals strengthen bonds.',
-        career: 'Business success and financial opportunities abound. Think big.',
-        health: 'Ambitious health goals can be achieved. Invest in your wellbeing.',
-        spiritual: 'Balance material and spiritual pursuits. Success includes service.'
+        love: "Practical approach to relationships. Shared goals strengthen bonds.",
+        career:
+          "Business success and financial opportunities abound. Think big.",
+        health:
+          "Ambitious health goals can be achieved. Invest in your wellbeing.",
+        spiritual:
+          "Balance material and spiritual pursuits. Success includes service.",
       },
       9: {
-        love: 'Universal love and compassion guide your relationships. Forgiveness heals.',
-        career: 'Complete important projects. Your wisdom and experience are valued.',
-        health: 'Holistic approaches to health work well. Consider mind-body connections.',
-        spiritual: 'Share your wisdom with others. Focus on humanitarian causes.'
-      }
+        love: "Universal love and compassion guide your relationships. Forgiveness heals.",
+        career:
+          "Complete important projects. Your wisdom and experience are valued.",
+        health:
+          "Holistic approaches to health work well. Consider mind-body connections.",
+        spiritual:
+          "Share your wisdom with others. Focus on humanitarian causes.",
+      },
     };
 
-    const dayPrediction = predictions[personalDayNumber] || predictions[1];
-    
+    const prediction = predictions[personalDayNumber];
+
+    if (!prediction) {
+      // Fallback for safety, though personalDayNumber should always be 1-9
+      return {
+        love: "A day of unexpected turns. Be open to new experiences.",
+        career: "Stay adaptable at work. New opportunities may arise.",
+        health: "Listen to your body's needs today.",
+        spiritual: "A good day for introspection and quiet contemplation.",
+        luckyNumbers: this.generateLuckyNumbers(reading.life_path_number),
+        luckyColors: this.getLuckyColors(reading.life_path_number),
+        energyLevel: 65,
+      };
+    }
+
     return {
-      love: dayPrediction.love,
-      career: dayPrediction.career,
-      health: dayPrediction.health,
-      spiritual: dayPrediction.spiritual,
+      love: prediction.love,
+      career: prediction.career,
+      health: prediction.health,
+      spiritual: prediction.spiritual,
       luckyNumbers: reading.lucky_numbers.slice(0, 3),
       luckyColors: reading.lucky_colors.slice(0, 2),
-      energyLevel: 60 + (personalDayNumber * 5) + Math.floor(Math.random() * 20)
+      energyLevel: 60 + personalDayNumber * 5 + Math.floor(Math.random() * 20),
     };
   }
-  
+
   // Status monitoring for rate limiting
   static getServiceStatus(): {
     rateLimitStatus: string;
     callsInLastMinute: number;
     maxCallsPerMinute: number;
     cacheSize: number;
-    tokenCached: boolean;
-    tokenExpiry: string | null;
+    apiTokenConfigured: boolean;
   } {
     const now = Date.now();
-    
+
     // Clean old calls for current status
-    this.prokeralaCallTimes = this.prokeralaCallTimes.filter(
-      callTime => (now - callTime) < this.PROKERALA_RATE_WINDOW
+    this.roxyCallTimes = this.roxyCallTimes.filter(
+      (callTime) => now - callTime < this.ROXY_RATE_WINDOW
     );
-    
+
     return {
-      rateLimitStatus: this.prokeralaCallTimes.length >= this.PROKERALA_MAX_REQUESTS_PER_MINUTE ? 'RATE_LIMITED' : 'OK',
-      callsInLastMinute: this.prokeralaCallTimes.length,
-      maxCallsPerMinute: this.PROKERALA_MAX_REQUESTS_PER_MINUTE,
+      rateLimitStatus:
+        this.roxyCallTimes.length >= this.ROXY_MAX_REQUESTS_PER_MINUTE
+          ? "RATE_LIMITED"
+          : "OK",
+      callsInLastMinute: this.roxyCallTimes.length,
+      maxCallsPerMinute: this.ROXY_MAX_REQUESTS_PER_MINUTE,
       cacheSize: this.responseCache.size,
-      tokenCached: !!this.cachedToken,
-      tokenExpiry: this.tokenExpiryTime > 0 ? new Date(this.tokenExpiryTime).toISOString() : null
+      apiTokenConfigured: !!this.API_TOKEN,
     };
   }
 }

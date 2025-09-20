@@ -124,10 +124,14 @@ export default function LoadingHeart({
   });
 
   // Create floating particles animation
-  const particleAnims = Array.from(
-    { length: 8 },
-    () => useRef(new Animated.Value(0)).current
-  );
+  const particleAnims = useRef<Animated.Value[]>([]);
+
+  // Initialize particle animations
+  if (particleAnims.current.length === 0) {
+    particleAnims.current = Array(8)
+      .fill(0)
+      .map(() => new Animated.Value(0));
+  }
 
   useEffect(() => {
     const createParticleAnimation = (anim: Animated.Value, delay: number) => {
@@ -149,7 +153,7 @@ export default function LoadingHeart({
       );
     };
 
-    const particleAnimations = particleAnims.map((anim, index) =>
+    const particleAnimations = particleAnims.current.map((anim, index) =>
       createParticleAnimation(anim, index * (duration / 4))
     );
 
@@ -163,7 +167,7 @@ export default function LoadingHeart({
   return (
     <View style={styles.container}>
       {/* Floating particles */}
-      {particleAnims.map((anim, index) => {
+      {particleAnims.current.map((anim, index) => {
         const angle = index * 45 * (Math.PI / 180); // 45 degrees apart
         const radius = size * 0.8;
         const translateX = anim.interpolate({
