@@ -2,6 +2,7 @@ import { useUser } from '@clerk/clerk-expo';
 import { useMemo, useCallback, useState, useEffect } from 'react';
 import { Platform, Linking } from 'react-native';
 import StripeService, { SubscriptionTier } from '../services/StripeServices';
+import { SubscriptionService } from '../services/SubscriptionService';
 
 export interface UserSubscription {
   hasFreePlan: boolean;
@@ -26,66 +27,90 @@ export interface UserSubscription {
 export function useSubscription() {
   const { user, isLoaded } = useUser();
   const [usageStats, setUsageStats] = useState<any>(null);
+  const [supabaseSubscription, setSupabaseSubscription] = useState<any>(null);
   const [loading, setLoading] = useState(false);
 
-  // Fetch usage stats when user is loaded
+  // Fetch subscription and usage stats when user is loaded
   useEffect(() => {
-    async function fetchUsageStats() {
+    async function fetchSubscriptionData() {
       if (!user?.id) return;
 
       setLoading(true);
       try {
-        const stats = await StripeService.getUsageStats(user.id);
+        // Fetch from both StripeService (for usage) and SubscriptionService (for subscription status)
+        const [stats, subscription] = await Promise.all([
+          StripeService.getUsageStats(user.id),
+          SubscriptionService.getSubscriptionStatus(user.id)
+        ]);
+
         setUsageStats(stats);
+        setSupabaseSubscription(subscription);
+
+        console.log("🔍 useSubscription: Fetched subscription data:", {
+          stats,
+          subscription,
+          isPremium: subscription?.isPremium
+        });
       } catch (error) {
-        console.error('Error fetching usage stats:', error);
+        console.error('Error fetching subscription data:', error);
       } finally {
         setLoading(false);
       }
     }
 
     if (isLoaded && user) {
-      fetchUsageStats();
+      fetchSubscriptionData();
     }
   }, [user, isLoaded]);
 
-  // Use Clerk's official has() method for subscription checking combined with StripeService
+  // Use Supabase subscription data instead of Clerk billing
   const subscription = useMemo((): UserSubscription | null => {
     if (!isLoaded || !user) return null;
 
     try {
-      // Check plans using Clerk's has() method (matching your Clerk dashboard plan keys)
-      const hasFreePlan = user.has?.({ plan: 'free_user' }) ?? true; // Default to free (matches your Clerk dashboard)
-      const hasPremiumPlan = user.has?.({ plan: 'pro' }) ?? false; // Matches your Clerk dashboard
-      const hasUnlimitedPlan = user.has?.({ plan: 'unlimited' }) ?? false; // Matches your Clerk dashboard
+      // Use Supabase subscription status as the source of truth
+      const isPremium = supabaseSubscription?.isPremium || false;
+      const subscriptionType = supabaseSubscription?.subscriptionType || 'free';
+
+      // Determine plan status based on Supabase data
+      const hasFreePlan = subscriptionType === 'free';
+      const hasPremiumPlan = subscriptionType === 'premium' || isPremium;
+      const hasUnlimitedPlan = subscriptionType === 'unlimited';
 
       // Determine tier
       let tier: SubscriptionTier['id'] = 'free';
       if (hasUnlimitedPlan) tier = 'unlimited';
       else if (hasPremiumPlan) tier = 'premium';
 
+      console.log("🔍 useSubscription: Subscription status determined:", {
+        isPremium,
+        subscriptionType,
+        tier,
+        hasFreePlan,
+        hasPremiumPlan,
+        hasUnlimitedPlan
+      });
+
       // Get tier limits from StripeService
       const tierInfo = StripeService.getSubscriptionTier(tier);
 
-      // Check features using Clerk's has() method (matching your Clerk dashboard feature keys)
-      const hasNumerologyAccess = user.has?.({ feature: 'numerology_access' }) ?? hasFreePlan;
-      const hasLoveMatchAccess = user.has?.({ feature: 'love_match_access' }) ?? hasFreePlan;
-      const hasTrustAssessmentAccess = user.has?.({ feature: 'trust_assessment_access' }) ?? hasFreePlan;
+      // Premium and unlimited users have access to all features
+      const hasFullAccess = hasPremiumPlan || hasUnlimitedPlan;
 
       return {
         hasFreePlan,
         hasPremiumPlan,
         hasUnlimitedPlan,
-        hasNumerologyAccess,
-        hasLoveMatchAccess,
-        hasTrustAssessmentAccess,
+        hasNumerologyAccess: true, // All users have access, limits are enforced differently
+        hasLoveMatchAccess: true,
+        hasTrustAssessmentAccess: true,
         tier,
         limits: tierInfo.limits,
         usage: usageStats?.usage || { numerology: 0, loveMatch: 0, trustAssessment: 0 },
       };
     } catch (error) {
-      console.error('Error fetching user subscription:', error);
-      // Fallback to free plan access when Clerk billing fails
+      console.error('Error processing subscription data:', error);
+      // Fallback to free plan access
       const freeTier = StripeService.getSubscriptionTier('free');
       return {
         hasFreePlan: true,
@@ -99,7 +124,7 @@ export function useSubscription() {
         usage: { numerology: 0, loveMatch: 0, trustAssessment: 0 },
       };
     }
-  }, [user, isLoaded, usageStats]);
+  }, [user, isLoaded, usageStats, supabaseSubscription]);
 
   // Get current tier name
   const getCurrentTier = useCallback(() => {
@@ -176,6 +201,7 @@ export function useSubscription() {
     subscription,
     getCurrentTier,
     canUse,
+    canAccessFeature: canUse, // Alias for backwards compatibility
     getRemaining,
     openPricingPage,
     isLoaded,
