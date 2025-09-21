@@ -211,6 +211,45 @@ export default function ProfileScreen() {
           </View>
         </View>
 
+        {/* Payment Management */}
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Payment Management</Text>
+          </View>
+
+          <TouchableOpacity
+            style={styles.option}
+            onPress={handleUpgrade}
+          >
+            <View style={styles.optionLeft}>
+              <Ionicons name="card-outline" size={24} color="#9333EA" />
+              <View style={styles.optionTextContainer}>
+                <Text style={styles.optionText}>Subscription</Text>
+                <Text style={styles.optionSubtext}>
+                  {subscription?.hasPremiumPlan ? "Manage your premium subscription" : "Upgrade to premium features"}
+                </Text>
+              </View>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color="#8E8E93" />
+          </TouchableOpacity>
+
+          {subscription?.hasPremiumPlan && (
+            <TouchableOpacity
+              style={styles.option}
+              onPress={handleUpgrade}
+            >
+              <View style={styles.optionLeft}>
+                <Ionicons name="receipt-outline" size={24} color="#34c759" />
+                <View style={styles.optionTextContainer}>
+                  <Text style={styles.optionText}>Billing History</Text>
+                  <Text style={styles.optionSubtext}>View your payment history</Text>
+                </View>
+              </View>
+              <Ionicons name="chevron-forward" size={20} color="#8E8E93" />
+            </TouchableOpacity>
+          )}
+        </View>
+
         {/* Settings */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>

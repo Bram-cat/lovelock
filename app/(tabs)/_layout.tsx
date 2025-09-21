@@ -4,7 +4,7 @@ import { BottomTabBar } from "@react-navigation/bottom-tabs";
 import { BlurView } from "expo-blur";
 import { Redirect, Tabs } from "expo-router";
 import React, { useEffect, useState } from "react";
-import { View } from "react-native";
+import { View, TouchableOpacity, Text } from "react-native";
 import OnboardingScreen from "../../components/OnboardingScreen";
 import { DesignSystem } from "../../constants/DesignSystem";
 import {
@@ -87,34 +87,92 @@ function TabsWithOnboarding() {
       />
       <Tabs
         tabBar={({ state, descriptors, navigation }) => (
-          <BlurView
-            intensity={100}
-            tint="dark"
+          <View
             style={{
               position: "absolute",
               bottom: 0,
               left: 0,
               right: 0,
-              backgroundColor: "rgba(0, 0, 0, 0.98)",
+              backgroundColor: "#000000",
               borderTopWidth: 1,
-              borderTopColor: "rgba(147, 51, 234, 0.2)",
-              paddingTop: 12,
+              borderTopColor: "rgba(255, 255, 255, 0.1)",
+              paddingTop: 8,
               paddingBottom: 34,
-              paddingHorizontal: 8,
-              shadowColor: "#9333EA",
-              shadowOffset: { width: 0, height: -4 },
-              shadowOpacity: 0.1,
-              shadowRadius: 12,
-              elevation: 8,
+              paddingHorizontal: 0,
+              height: 80,
             }}
           >
-            <BottomTabBar
-              state={state}
-              descriptors={descriptors}
-              navigation={navigation}
-              insets={{ top: 0, right: 0, bottom: 0, left: 0 }}
-            />
-          </BlurView>
+            <View style={{
+              flexDirection: 'row',
+              justifyContent: 'space-around',
+              alignItems: 'center',
+              height: 50,
+            }}>
+              {state.routes.map((route, index) => {
+                const { options } = descriptors[route.key];
+                const label = options.tabBarLabel !== undefined
+                  ? options.tabBarLabel
+                  : options.title !== undefined
+                  ? options.title
+                  : route.name;
+
+                const isFocused = state.index === index;
+
+                const onPress = () => {
+                  const event = navigation.emit({
+                    type: 'tabPress',
+                    target: route.key,
+                    canPreventDefault: true,
+                  });
+
+                  if (!isFocused && !event.defaultPrevented) {
+                    navigation.navigate(route.name);
+                  }
+                };
+
+                return (
+                  <TouchableOpacity
+                    key={route.key}
+                    onPress={onPress}
+                    style={{
+                      flex: 1,
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      paddingVertical: 6,
+                      position: 'relative',
+                    }}
+                  >
+                    {isFocused && (
+                      <View style={{
+                        position: 'absolute',
+                        top: -2,
+                        left: 12,
+                        right: 12,
+                        height: 3,
+                        backgroundColor: '#9333EA',
+                        borderRadius: 2,
+                      }} />
+                    )}
+                    <View style={{ alignItems: 'center' }}>
+                      {options.tabBarIcon && options.tabBarIcon({
+                        focused: isFocused,
+                        color: isFocused ? '#9333EA' : 'rgba(255, 255, 255, 0.6)',
+                        size: 24,
+                      })}
+                      <Text style={{
+                        color: isFocused ? '#9333EA' : 'rgba(255, 255, 255, 0.6)',
+                        fontSize: 11,
+                        fontWeight: '500',
+                        marginTop: 4,
+                      }}>
+                        {label}
+                      </Text>
+                    </View>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          </View>
         )}
         screenOptions={{
           tabBarActiveTintColor: "#9333EA",
@@ -171,33 +229,11 @@ function TabsWithOnboarding() {
           options={{
             title: "Home",
             tabBarIcon: ({ color, focused }) => (
-              <View style={{ alignItems: 'center', justifyContent: 'center' }}>
-                {focused && (
-                  <View
-                    style={{
-                      position: 'absolute',
-                      top: -8,
-                      left: -16,
-                      right: -16,
-                      bottom: -8,
-                      borderRadius: 18,
-                      backgroundColor: 'rgba(147, 51, 234, 0.15)',
-                      borderWidth: 1,
-                      borderColor: 'rgba(147, 51, 234, 0.3)',
-                      shadowColor: '#9333EA',
-                      shadowOffset: { width: 0, height: 2 },
-                      shadowOpacity: 0.2,
-                      shadowRadius: 6,
-                      elevation: 4,
-                    }}
-                  />
-                )}
-                <Ionicons
-                  name={focused ? "home" : "home-outline"}
-                  size={focused ? 26 : 24}
-                  color={focused ? "#9333EA" : "rgba(255, 255, 255, 0.5)"}
-                />
-              </View>
+              <Ionicons
+                name={focused ? "home" : "home-outline"}
+                size={24}
+                color={color}
+              />
             ),
           }}
         />
@@ -206,33 +242,11 @@ function TabsWithOnboarding() {
           options={{
             title: "Numbers",
             tabBarIcon: ({ color, focused }) => (
-              <View style={{ alignItems: 'center', justifyContent: 'center' }}>
-                {focused && (
-                  <View
-                    style={{
-                      position: 'absolute',
-                      top: -8,
-                      left: -16,
-                      right: -16,
-                      bottom: -8,
-                      borderRadius: 18,
-                      backgroundColor: 'rgba(147, 51, 234, 0.15)',
-                      borderWidth: 1,
-                      borderColor: 'rgba(147, 51, 234, 0.3)',
-                      shadowColor: '#9333EA',
-                      shadowOffset: { width: 0, height: 2 },
-                      shadowOpacity: 0.2,
-                      shadowRadius: 6,
-                      elevation: 4,
-                    }}
-                  />
-                )}
-                <Ionicons
-                  name={focused ? "calculator" : "calculator-outline"}
-                  size={focused ? 26 : 24}
-                  color={focused ? "#9333EA" : "rgba(255, 255, 255, 0.5)"}
-                />
-              </View>
+              <Ionicons
+                name={focused ? "calculator" : "calculator-outline"}
+                size={24}
+                color={color}
+              />
             ),
           }}
         />
@@ -241,33 +255,11 @@ function TabsWithOnboarding() {
           options={{
             title: "Love",
             tabBarIcon: ({ color, focused }) => (
-              <View style={{ alignItems: 'center', justifyContent: 'center' }}>
-                {focused && (
-                  <View
-                    style={{
-                      position: 'absolute',
-                      top: -8,
-                      left: -16,
-                      right: -16,
-                      bottom: -8,
-                      borderRadius: 18,
-                      backgroundColor: 'rgba(147, 51, 234, 0.15)',
-                      borderWidth: 1,
-                      borderColor: 'rgba(147, 51, 234, 0.3)',
-                      shadowColor: '#9333EA',
-                      shadowOffset: { width: 0, height: 2 },
-                      shadowOpacity: 0.2,
-                      shadowRadius: 6,
-                      elevation: 4,
-                    }}
-                  />
-                )}
-                <Ionicons
-                  name={focused ? "heart" : "heart-outline"}
-                  size={focused ? 26 : 24}
-                  color={focused ? "#9333EA" : "rgba(255, 255, 255, 0.5)"}
-                />
-              </View>
+              <Ionicons
+                name={focused ? "heart" : "heart-outline"}
+                size={24}
+                color={color}
+              />
             ),
           }}
         />
@@ -276,33 +268,11 @@ function TabsWithOnboarding() {
           options={{
             title: "Trust",
             tabBarIcon: ({ color, focused }) => (
-              <View style={{ alignItems: 'center', justifyContent: 'center' }}>
-                {focused && (
-                  <View
-                    style={{
-                      position: 'absolute',
-                      top: -8,
-                      left: -16,
-                      right: -16,
-                      bottom: -8,
-                      borderRadius: 18,
-                      backgroundColor: 'rgba(147, 51, 234, 0.15)',
-                      borderWidth: 1,
-                      borderColor: 'rgba(147, 51, 234, 0.3)',
-                      shadowColor: '#9333EA',
-                      shadowOffset: { width: 0, height: 2 },
-                      shadowOpacity: 0.2,
-                      shadowRadius: 6,
-                      elevation: 4,
-                    }}
-                  />
-                )}
-                <Ionicons
-                  name={focused ? "shield-checkmark" : "shield-outline"}
-                  size={focused ? 26 : 24}
-                  color={focused ? "#9333EA" : "rgba(255, 255, 255, 0.5)"}
-                />
-              </View>
+              <Ionicons
+                name={focused ? "shield-checkmark" : "shield-outline"}
+                size={24}
+                color={color}
+              />
             ),
           }}
         />
@@ -311,33 +281,11 @@ function TabsWithOnboarding() {
           options={{
             title: "Profile",
             tabBarIcon: ({ color, focused }) => (
-              <View style={{ alignItems: 'center', justifyContent: 'center' }}>
-                {focused && (
-                  <View
-                    style={{
-                      position: 'absolute',
-                      top: -8,
-                      left: -16,
-                      right: -16,
-                      bottom: -8,
-                      borderRadius: 18,
-                      backgroundColor: 'rgba(147, 51, 234, 0.15)',
-                      borderWidth: 1,
-                      borderColor: 'rgba(147, 51, 234, 0.3)',
-                      shadowColor: '#9333EA',
-                      shadowOffset: { width: 0, height: 2 },
-                      shadowOpacity: 0.2,
-                      shadowRadius: 6,
-                      elevation: 4,
-                    }}
-                  />
-                )}
-                <Ionicons
-                  name={focused ? "person" : "person-outline"}
-                  size={focused ? 26 : 24}
-                  color={focused ? "#9333EA" : "rgba(255, 255, 255, 0.5)"}
-                />
-              </View>
+              <Ionicons
+                name={focused ? "person" : "person-outline"}
+                size={24}
+                color={color}
+              />
             ),
           }}
         />
