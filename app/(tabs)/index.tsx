@@ -58,7 +58,6 @@ export default function HomeScreen() {
   const scrollY = useRef(new Animated.Value(0)).current;
   const [currentQuote, setCurrentQuote] = useState(0);
   const [homeLoading, setHomeLoading] = useState(true);
-  const [usageStats, setUsageStats] = useState<any>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [showSubscriptionModal, setShowSubscriptionModal] = useState(false);
   const { showAlert, AlertComponent } = useCustomAlert();
@@ -138,12 +137,8 @@ export default function HomeScreen() {
         try {
           const subscriptionStatus =
             await SubscriptionService.getSubscriptionStatus(user.id);
-          console.log(
-            "Payment status refreshed:",
-            subscriptionStatus.isPremium ? "Premium" : "Free"
-          );
         } catch (error) {
-          console.log("Payment check failed on refresh:", error);
+          // Payment check failed silently
         }
       }
 
@@ -162,39 +157,10 @@ export default function HomeScreen() {
       setHomeLoading(false);
     }, 2000);
 
-    // Load today's affirmation - COMMENTED OUT FOR DEBUGGING
-    // setTodaysAffirmation(DailyAffirmationService.getTodaysAffirmation());
-
-    // Removed automatic loadDailyInsights() call - should only load when user requests it
 
     return () => clearTimeout(loadingTimer);
   }, [profileData]);
 
-  // Load usage statistics function - COMMENTED OUT FOR PAYMENT DEBUGGING
-  // const loadUsageStats = async () => {
-  //   if (user?.id) {
-  //     const stats = await SubscriptionService.getUsageStats(user.id);
-  //     if (stats) {
-  //       const daysUntilReset = Math.ceil(
-  //         (new Date(stats.numerology.resetsAt).getTime() -
-  //           new Date().getTime()) /
-  //           (1000 * 60 * 60 * 24)
-  //       );
-  //       setUsageStats({
-  //         numerologyRemaining: stats.numerology.remaining,
-  //         loveMatchRemaining: stats.loveMatch.remaining,
-  //         trustAssessmentRemaining: stats.trustAssessment.remaining,
-  //         daysUntilReset: Math.max(0, daysUntilReset),
-  //         isPremium: stats.isPremium,
-  //       });
-  //     }
-  //   }
-  // };
-
-  // Load usage statistics for premium card - COMMENTED OUT FOR PAYMENT DEBUGGING
-  // useEffect(() => {
-  //   loadUsageStats();
-  // }, [user?.id]);
 
   useEffect(() => {
     // Animated heart beating effect
@@ -329,90 +295,6 @@ export default function HomeScreen() {
     extrapolate: "clamp",
   });
 
-  // PAYMENT-RELATED FUNCTION COMMENTED OUT FOR DEBUGGING
-  // const handlePremiumUpgrade = async () => {
-  //   if (!user?.id) {
-  //     showAlert({
-  //       title: "Authentication Required",
-  //       message: "Please sign in to upgrade to Premium.",
-  //       type: "warning",
-  //     });
-  //     return;
-  //   }
-
-  //   try {
-  //     console.log("💳 Initiating premium upgrade for user:", user.id);
-  //     const result = await SubscriptionService.purchasePremiumSubscription(
-  //       user.id,
-  //       user.primaryEmailAddress?.emailAddress || ""
-  //     );
-
-  //     if (result.success) {
-  //       showAlert({
-  //         title: "🎉 Welcome to Premium!",
-  //         message:
-  //           "Your premium subscription is now active! Enjoy unlimited access to all features.",
-  //         type: "success",
-  //         buttons: [
-  //           {
-  //             text: "Explore Features",
-  //             style: "primary",
-  //             onPress: () => {
-  //               // Refresh usage stats
-  //               // loadUsageStats();
-  //             },
-  //           },
-  //         ],
-  //       });
-  //     } else {
-  //       showAlert({
-  //         title: "Payment Error",
-  //         message:
-  //           result.error || "Unable to process payment. Please try again.",
-  //         type: "error",
-  //         buttons: [
-  //           {
-  //             text: "Try Again",
-  //             style: "primary",
-  //             onPress: handlePremiumUpgrade,
-  //           },
-  //           { text: "Cancel", style: "cancel" },
-  //         ],
-  //       });
-  //     }
-  //   } catch (error) {
-  //     console.error("💥 Premium upgrade error:", error);
-  //     showAlert({
-  //       title: "Upgrade Failed",
-  //       message:
-  //         "Something went wrong during the upgrade. Please check your connection and try again.",
-  //       type: "error",
-  //       buttons: [
-  //         { text: "Retry", style: "primary", onPress: handlePremiumUpgrade },
-  //         { text: "Cancel", style: "cancel" },
-  //       ],
-  //     });
-  //   }
-  // };
-
-  // PAYMENT-RELATED FUNCTION COMMENTED OUT FOR DEBUGGING
-  // const handlePremiumFeatureRedirect = (featureName: string) => {
-  //   showAlert({
-  //     title: "🌟 Premium Feature",
-  //     message: `${featureName} is exclusively available for Premium members!\n\n🚀 Unlock Premium Benefits:\n\n✨ Unlimited daily insights\n🤖 Advanced AI analysis\n📊 Detailed compatibility reports\n🔮 Exclusive numerology features\n💰 Just $4.99/month`,
-  //     type: "info",
-  //     icon: "diamond",
-  //     iconColor: "#FFD700",
-  //     buttons: [
-  //       { text: "Maybe Later", style: "cancel" },
-  //       {
-  //         text: "Upgrade Now ($4.99/month)",
-  //         style: "primary",
-  //         onPress: handlePremiumUpgrade,
-  //       },
-  //     ],
-  //   });
-  // };
 
   const generateAIInsights = async () => {
     if (!profileData?.full_name || !profileData?.birth_date) {
@@ -627,12 +509,12 @@ Use "you" language. Be specific. Stay positive. Include emojis.`;
             <Animated.Text
               style={[
                 styles.nameText,
-                usageStats?.isPremium && styles.premiumNameText,
+                subscription?.hasPremiumPlan && styles.premiumNameText,
                 { transform: [{ scale: pulseAnimation }] },
               ]}
             >
               {userName}
-              {usageStats?.isPremium && (
+              {subscription?.hasPremiumPlan && (
                 <Text style={styles.premiumIcon}> ✨</Text>
               )}
             </Animated.Text>
@@ -646,22 +528,16 @@ Use "you" language. Be specific. Stay positive. Include emojis.`;
         {/* New Professional Bento Grid */}
         <NewBentoGrid
           navigateToTab={navigateToTab}
-          canAccessFeature={canUse}
+          canAccessFeature={(feature: string) => canUse(feature as any)}
           setShowSubscriptionModal={setShowSubscriptionModal}
           setShowDailyVibe={setShowDailyVibe}
           setShowAIInsights={setShowAIInsights}
           showAlert={showAlert}
-          hasProfile={hasProfile}
+          hasProfile={!!hasProfile}
+          hasPremium={subscription?.hasPremiumPlan || false}
         />
 
 
-        {/* Premium Subscription Card - COMMENTED OUT FOR DEBUGGING */}
-        {/* {!usageStats?.isPremium && (
-          <PremiumSubscriptionCard
-            onUpgradePress={handlePremiumUpgrade}
-            usageStats={usageStats}
-          />
-        )} */}
 
         {/* Profile Status */}
         <View style={styles.profileStatus}>
@@ -747,35 +623,37 @@ Use "you" language. Be specific. Stay positive. Include emojis.`;
           </TouchableOpacity>
         </View>
 
-        {/* Subscription Status */}
-        <View style={styles.subscriptionSection}>
-          <TouchableOpacity
-            style={styles.subscriptionCard}
-            onPress={() => setShowSubscriptionModal(true)}
-            activeOpacity={0.8}
-          >
-            <LinearGradient
-              colors={["#FFD700", "#FFA500"]}
-              style={styles.subscriptionGradient}
+        {/* Subscription Status - Only show for non-premium users */}
+        {subscription && !subscription.hasPremiumPlan && (
+          <View style={styles.subscriptionSection}>
+            <TouchableOpacity
+              style={styles.subscriptionCard}
+              onPress={() => setShowSubscriptionModal(true)}
+              activeOpacity={0.8}
             >
-              <View style={styles.subscriptionContent}>
-                <Ionicons name="diamond" size={32} color="#000000" />
-                <View style={styles.subscriptionText}>
-                  <Text style={styles.subscriptionTitle}>
-                    Upgrade to Premium
-                  </Text>
-                  <Text style={styles.subscriptionSubtitle}>
-                    Unlock unlimited readings & advanced insights
-                  </Text>
+              <LinearGradient
+                colors={["#FFD700", "#FFA500"]}
+                style={styles.subscriptionGradient}
+              >
+                <View style={styles.subscriptionContent}>
+                  <Ionicons name="diamond" size={32} color="#000000" />
+                  <View style={styles.subscriptionText}>
+                    <Text style={styles.subscriptionTitle}>
+                      Upgrade to Premium
+                    </Text>
+                    <Text style={styles.subscriptionSubtitle}>
+                      Unlock unlimited readings & advanced insights
+                    </Text>
+                  </View>
+                  <View style={styles.subscriptionPricing}>
+                    <Text style={styles.subscriptionPrice}>$4.99</Text>
+                    <Text style={styles.subscriptionPeriod}>/month</Text>
+                  </View>
                 </View>
-                <View style={styles.subscriptionPricing}>
-                  <Text style={styles.subscriptionPrice}>$4.99</Text>
-                  <Text style={styles.subscriptionPeriod}>/month</Text>
-                </View>
-              </View>
-            </LinearGradient>
-          </TouchableOpacity>
-        </View>
+              </LinearGradient>
+            </TouchableOpacity>
+          </View>
+        )}
 
         {/* Daily Inspiration */}
         <View style={styles.inspirationSection}>
@@ -1149,7 +1027,7 @@ Use "you" language. Be specific. Stay positive. Include emojis.`;
         userEmail={user?.primaryEmailAddress?.emailAddress || ""}
         onSubscriptionChange={(subscription) => {
           // Handle subscription change - reload usage stats, etc.
-          console.log("Subscription updated:", subscription);
+          // Subscription updated
         }}
       />
 

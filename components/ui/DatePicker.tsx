@@ -90,7 +90,7 @@ export default function DatePicker({
       )}
 
       {/* Selected Date Display */}
-      {value && (
+      {value && value instanceof Date && !isNaN(value.getTime()) && (
         <View style={styles.selectedDateContainer}>
           <Text style={styles.selectedDateLabel}>Selected Date:</Text>
           <Text style={styles.selectedDate}>

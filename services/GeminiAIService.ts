@@ -9,14 +9,8 @@ const PRIMARY_GEMINI_API_KEY =
 const BACKUP_GEMINI_API_KEY =
   process.env.BACKUP_GOOGLE_AI_API_KEY;
 
-console.log(
-  "🔑 Primary Gemini API Key loaded:",
-  PRIMARY_GEMINI_API_KEY ? `${PRIMARY_GEMINI_API_KEY.substring(0, 10)}...` : "NOT FOUND"
-);
-console.log(
-  "🔑 Backup Gemini API Key loaded:",
-  BACKUP_GEMINI_API_KEY ? `${BACKUP_GEMINI_API_KEY.substring(0, 10)}...` : "NOT FOUND"
-);
+// Primary Gemini API Key loaded
+// Backup Gemini API Key loaded
 const GEMINI_API_URL =
   "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent";
 

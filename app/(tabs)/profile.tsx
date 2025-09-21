@@ -122,14 +122,8 @@ export default function ProfileScreen() {
     showConfirm(
       "Sign Out",
       "Are you sure you want to sign out?",
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Sign Out",
-          style: "destructive",
-          onPress: () => signOut(),
-        },
-      ]
+      () => signOut(),
+      () => {} // onCancel - do nothing
     );
   };
 
@@ -159,12 +153,11 @@ export default function ProfileScreen() {
           </View>
         </View>
 
-        {/* Subscription Status */}
-        {subscription && (
+        {/* Subscription Status - Only show for non-premium users */}
+        {subscription && !subscription.hasPremiumPlan && (
           <View style={styles.section}>
             <PremiumSubscriptionCard
-              subscription={subscription}
-              onUpgrade={handleUpgrade}
+              onUpgradePress={handleUpgrade}
             />
           </View>
         )}
@@ -314,8 +307,15 @@ export default function ProfileScreen() {
             <View style={styles.inputGroup}>
               <Text style={styles.inputLabel}>Birth Date</Text>
               <DatePicker
-                value={editForm.birth_date}
-                onDateChange={(date) => setEditForm({ ...editForm, birth_date: date })}
+                value={editForm.birth_date ? new Date(editForm.birth_date) : undefined}
+                onSelect={(date) => {
+                  if (date) {
+                    const formattedDate = `${(date.getMonth() + 1).toString().padStart(2, '0')}/${date.getDate().toString().padStart(2, '0')}/${date.getFullYear()}`;
+                    setEditForm({ ...editForm, birth_date: formattedDate });
+                  } else {
+                    setEditForm({ ...editForm, birth_date: '' });
+                  }
+                }}
                 placeholder="MM/DD/YYYY"
               />
             </View>

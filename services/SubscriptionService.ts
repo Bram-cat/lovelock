@@ -81,7 +81,6 @@ export class SubscriptionService {
     userId: string
   ): Promise<SubscriptionStatus> {
     try {
-      console.log("🔍 Getting subscription status for user:", userId);
 
       // Check if user has unlimited access first
       if (this.hasUnlimitedAccess(userId)) {
@@ -110,18 +109,15 @@ export class SubscriptionService {
       }
 
       if (!data) {
-        console.log("📋 No active subscription found, defaulting to free");
         return { isPremium: false, subscriptionType: "free", tier: "free" };
       }
 
       // Check if subscription is still valid
       if (data.ends_at && new Date(data.ends_at) < new Date()) {
-        console.log("⏰ Subscription expired, updating to inactive");
         await this.expireSubscription(userId, data.id);
         return { isPremium: false, subscriptionType: "free", tier: "free" };
       }
 
-      console.log("✅ Active premium subscription found");
       return {
         isPremium: data.subscription_type === "premium",
         subscriptionType: data.subscription_type,
@@ -175,9 +171,6 @@ export class SubscriptionService {
         throw error;
       }
 
-      console.log(
-        `✅ Subscription created: ${subscriptionType} for user ${userId}`
-      );
     } catch (error) {
       console.error("💥 Error creating subscription:", error);
       throw error;
@@ -293,7 +286,6 @@ export class SubscriptionService {
     completionTokens: number = 0
   ): Promise<void> {
     try {
-      console.log(`📝 Recording AI usage for ${feature} by user:`, userId);
 
       // Try to record in AI usage table for tracking (if it exists)
       try {
@@ -310,7 +302,6 @@ export class SubscriptionService {
         if (aiUsageResult?.error) {
           console.warn("⚠️ AI usage table not found or error recording:", aiUsageResult.error);
         } else {
-          console.log(`✅ AI usage recorded for ${feature}`);
         }
       } catch (error) {
         console.warn("⚠️ AI usage table not accessible, skipping AI usage recording");
@@ -330,7 +321,6 @@ export class SubscriptionService {
     data: any
   ): Promise<void> {
     try {
-      console.log(`📝 Recording ${feature} usage for user:`, userId);
 
       let insertResult;
 
@@ -368,7 +358,6 @@ export class SubscriptionService {
         throw insertResult.error;
       }
 
-      console.log(`✅ ${feature} usage recorded successfully`);
     } catch (error) {
       console.error(`💥 Error recording ${feature} usage:`, error);
       throw error;
@@ -579,7 +568,6 @@ export class SubscriptionService {
     subscriptionId?: string
   ): Promise<void> {
     try {
-      console.log("🎯 Activating premium subscription for user:", userId);
 
       // Calculate expiry date (30 days from now)
       const expiryDate = new Date();
@@ -592,7 +580,6 @@ export class SubscriptionService {
         expiryDate.toISOString()
       );
 
-      console.log("✅ Premium subscription activated until:", expiryDate);
     } catch (error) {
       console.error("💥 Error activating premium subscription:", error);
       throw error;
@@ -627,7 +614,6 @@ export class SubscriptionService {
         return false;
       }
 
-      console.log("✅ Subscription cancelled, downgraded to free tier");
       return true;
     } catch (error) {
       console.error("💥 Error cancelling subscription:", error);
@@ -651,7 +637,6 @@ export class SubscriptionService {
       if (error) {
         console.error("❌ Error expiring subscription:", error);
       } else {
-        console.log("✅ Subscription expired successfully");
       }
     } catch (error) {
       console.error("💥 Error in expireSubscription:", error);
@@ -1000,7 +985,6 @@ export class SubscriptionService {
     // Usage is now tracked in the individual feature tables
     // (numerology_readings, love_matches, trust_assessments)
     // No need for a separate usage table or RPC call
-    console.log(`Usage for ${feature} will be tracked automatically when records are created`);
   }
 
   static async createStripeCheckoutSession(

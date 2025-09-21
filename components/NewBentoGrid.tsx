@@ -11,6 +11,7 @@ interface NewBentoGridProps {
   setShowAIInsights: (show: boolean) => void;
   showAlert: (config: any) => void;
   hasProfile: boolean;
+  hasPremium?: boolean;
 }
 
 export default function NewBentoGrid({
@@ -21,6 +22,7 @@ export default function NewBentoGrid({
   setShowAIInsights,
   showAlert,
   hasProfile,
+  hasPremium = false,
 }: NewBentoGridProps) {
   return (
     <View style={styles.newBentoContainer}>
@@ -107,7 +109,7 @@ export default function NewBentoGrid({
           <TouchableOpacity
             style={styles.premiumCard}
             onPress={() => {
-              if (!canAccessFeature("numerology")) {
+              if (!hasPremium && !canAccessFeature("numerology" as any)) {
                 showAlert({
                   title: "🌟 Premium Feature",
                   message: "Daily Vibe insights are available for Premium members!\n\nUpgrade to unlock personalized daily cosmic guidance.",
@@ -130,7 +132,7 @@ export default function NewBentoGrid({
               <View style={styles.premiumContent}>
                 <Ionicons name="sunny" size={20} color="#FFFFFF" />
                 <Text style={styles.premiumText}>Daily Vibe</Text>
-                {!canAccessFeature("numerology") && (
+                {!hasPremium && !canAccessFeature("numerology" as any) && (
                   <Ionicons name="lock-closed" size={14} color="#FFFFFF" />
                 )}
               </View>
@@ -140,7 +142,7 @@ export default function NewBentoGrid({
           <TouchableOpacity
             style={styles.premiumCard}
             onPress={() => {
-              if (!canAccessFeature("numerology")) {
+              if (!hasPremium && !canAccessFeature("numerology" as any)) {
                 showAlert({
                   title: "🤖 Premium AI Feature",
                   message: "AI Insights provide deep personalized analysis for Premium members!\n\nUnlock advanced AI-powered cosmic understanding.",
@@ -163,7 +165,7 @@ export default function NewBentoGrid({
               <View style={styles.premiumContent}>
                 <Ionicons name="sparkles" size={20} color="#FFFFFF" />
                 <Text style={styles.premiumText}>AI Insights</Text>
-                {!canAccessFeature("numerology") && (
+                {!hasPremium && !canAccessFeature("numerology" as any) && (
                   <Ionicons name="lock-closed" size={14} color="#FFFFFF" />
                 )}
               </View>

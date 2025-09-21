@@ -46,11 +46,6 @@ export function useSubscription() {
         setUsageStats(stats);
         setSupabaseSubscription(subscription);
 
-        console.log("🔍 useSubscription: Fetched subscription data:", {
-          stats,
-          subscription,
-          isPremium: subscription?.isPremium
-        });
       } catch (error) {
         console.error('Error fetching subscription data:', error);
       } finally {
@@ -82,14 +77,6 @@ export function useSubscription() {
       if (hasUnlimitedPlan) tier = 'unlimited';
       else if (hasPremiumPlan) tier = 'premium';
 
-      console.log("🔍 useSubscription: Subscription status determined:", {
-        isPremium,
-        subscriptionType,
-        tier,
-        hasFreePlan,
-        hasPremiumPlan,
-        hasUnlimitedPlan
-      });
 
       // Get tier limits from StripeService
       const tierInfo = StripeService.getSubscriptionTier(tier);
