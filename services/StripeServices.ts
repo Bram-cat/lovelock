@@ -1,4 +1,5 @@
 import { Linking } from 'react-native';
+import { supabase } from '../lib/supabase-client';
 
 export interface SubscriptionTier {
   id: 'free' | 'premium' | 'unlimited';
@@ -193,56 +194,121 @@ export class StripeService {
   }
 
   /**
-   * Get user's current subscription
+   * Get user's current subscription from Supabase
    */
   static async getUserSubscription(userId: string): Promise<UserSubscription | null> {
     try {
-      const response = await fetch(`${this.BACKEND_URL}/stripe/subscription/${userId}`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
+      console.log("🔍 StripeService: Getting subscription for user:", userId);
 
-      const data = await response.json();
+      const { data, error } = await supabase
+        .from("subscriptions")
+        .select("*")
+        .eq("user_id", userId)
+        .eq("status", "active")
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .single();
 
-      if (data.success && data.subscription) {
-        return {
-          ...data.subscription,
-          currentPeriodStart: new Date(data.subscription.currentPeriodStart),
-          currentPeriodEnd: new Date(data.subscription.currentPeriodEnd),
-        };
+      if (error && error.code !== "PGRST116") {
+        console.error("❌ StripeService: Error getting subscription:", error);
+        return null;
       }
 
-      return null;
+      if (!data) {
+        console.log("📋 StripeService: No active subscription found, defaulting to free");
+        return null;
+      }
+
+      // Check if subscription is still valid
+      if (data.ends_at && new Date(data.ends_at) < new Date()) {
+        console.log("⏰ StripeService: Subscription expired");
+        return null;
+      }
+
+      // Map subscription_type to tier
+      let tier: SubscriptionTier['id'] = "free";
+      if (data.is_unlimited) {
+        tier = "unlimited";
+      } else if (data.is_premium) {
+        tier = "premium";
+      } else if (data.subscription_type === "premium") {
+        tier = "premium";
+      } else if (data.subscription_type === "unlimited") {
+        tier = "unlimited";
+      }
+
+      // Get usage counts from individual tables
+      const today = new Date();
+      const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1).toISOString();
+      const endOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0, 23, 59, 59).toISOString();
+
+      const [numerologyResult, loveMatchResult, trustResult] = await Promise.all([
+        supabase
+          .from("numerology_readings")
+          .select("id", { count: "exact", head: true })
+          .eq("user_id", userId)
+          .gte("created_at", startOfMonth)
+          .lte("created_at", endOfMonth),
+        supabase
+          .from("love_matches")
+          .select("id", { count: "exact", head: true })
+          .eq("user_id", userId)
+          .gte("created_at", startOfMonth)
+          .lte("created_at", endOfMonth),
+        supabase
+          .from("trust_assessments")
+          .select("id", { count: "exact", head: true })
+          .eq("user_id", userId)
+          .gte("created_at", startOfMonth)
+          .lte("created_at", endOfMonth),
+      ]);
+
+      console.log("✅ StripeService: Active subscription found:", tier);
+      return {
+        userId: data.user_id,
+        tier,
+        status: data.status as any,
+        currentPeriodStart: new Date(data.starts_at),
+        currentPeriodEnd: new Date(data.ends_at || Date.now() + 30 * 24 * 60 * 60 * 1000),
+        usage: {
+          numerology: numerologyResult.count || 0,
+          loveMatch: loveMatchResult.count || 0,
+          trustAssessment: trustResult.count || 0,
+        },
+        stripeCustomerId: data.stripe_customer_id,
+        stripeSubscriptionId: data.stripe_subscription_id,
+      };
     } catch (error) {
-      console.error('Error fetching user subscription:', error);
+      console.error("💥 StripeService: Unexpected error getting subscription:", error);
       return null;
     }
   }
 
   /**
-   * Cancel user's subscription
+   * Cancel user's subscription in Supabase
    */
   static async cancelSubscription(userId: string): Promise<{ success: boolean; error?: string }> {
     try {
-      const response = await fetch(`${this.BACKEND_URL}/stripe/cancel-subscription`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          userId,
-        }),
-      });
+      console.log("🔄 StripeService: Cancelling subscription for user:", userId);
 
-      const data = await response.json();
-      return data;
+      const { error } = await supabase
+        .from("subscriptions")
+        .update({ status: "cancelled" })
+        .eq("user_id", userId)
+        .eq("status", "active");
+
+      if (error) {
+        console.error("❌ StripeService: Error cancelling subscription:", error);
+        return { success: false, error: error.message };
+      }
+
+      console.log("✅ StripeService: Subscription cancelled successfully");
+      return { success: true };
     } catch (error) {
-      console.error('Error canceling subscription:', error);
-      return { 
-        success: false, 
-        error: error instanceof Error ? error.message : 'Unknown error' 
+      console.error('💥 StripeService: Error canceling subscription:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error'
       };
     }
   }
@@ -305,7 +371,7 @@ export class StripeService {
   }
 
   /**
-   * Record feature usage
+   * Record feature usage in Supabase
    */
   static async recordUsage(
     userId: string,
@@ -313,26 +379,48 @@ export class StripeService {
     metadata?: Record<string, any>
   ): Promise<{ success: boolean; error?: string }> {
     try {
-      const response = await fetch(`${this.BACKEND_URL}/stripe/record-usage`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          userId,
-          feature,
-          metadata,
-          timestamp: new Date().toISOString(),
-        }),
-      });
+      console.log(`📝 StripeService: Recording ${feature} usage for user:`, userId);
 
-      const data = await response.json();
-      return data;
+      // Record usage in the appropriate feature table
+      let insertResult;
+      switch (feature) {
+        case "numerology":
+          insertResult = await supabase.from("numerology_readings").insert({
+            user_id: userId,
+            reading_type: metadata?.reading_type || "general",
+            reading_data: metadata || {},
+          });
+          break;
+        case "loveMatch":
+          insertResult = await supabase.from("love_matches").insert({
+            user_id: userId,
+            partner_name: metadata?.partner_name || "Unknown",
+            partner_birth_date: metadata?.partner_birth_date,
+            compatibility_score: metadata?.compatibility_score || 0,
+            match_details: metadata || {},
+          });
+          break;
+        case "trustAssessment":
+          insertResult = await supabase.from("trust_assessments").insert({
+            user_id: userId,
+            assessment_data: metadata || {},
+            trust_score: metadata?.trust_score || 0,
+          });
+          break;
+      }
+
+      if (insertResult?.error) {
+        console.error(`❌ StripeService: Error recording ${feature} usage:`, insertResult.error);
+        return { success: false, error: insertResult.error.message };
+      }
+
+      console.log(`✅ StripeService: ${feature} usage recorded successfully`);
+      return { success: true };
     } catch (error) {
-      console.error('Error recording usage:', error);
-      return { 
-        success: false, 
-        error: error instanceof Error ? error.message : 'Unknown error' 
+      console.error('💥 StripeService: Error recording usage:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error'
       };
     }
   }
@@ -394,35 +482,28 @@ export class StripeService {
    */
   static async restorePurchases(userId: string): Promise<{ success: boolean; subscription?: UserSubscription; error?: string }> {
     try {
-      const response = await fetch(`${this.BACKEND_URL}/stripe/restore-purchases`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          userId,
-        }),
-      });
+      console.log("🔄 StripeService: Restoring purchases for user:", userId);
 
-      const data = await response.json();
-      
-      if (data.success && data.subscription) {
+      const subscription = await this.getUserSubscription(userId);
+
+      if (subscription) {
+        console.log("✅ StripeService: Active subscription found during restore");
         return {
           success: true,
-          subscription: {
-            ...data.subscription,
-            currentPeriodStart: new Date(data.subscription.currentPeriodStart),
-            currentPeriodEnd: new Date(data.subscription.currentPeriodEnd),
-          },
+          subscription,
         };
       }
 
-      return data;
+      console.log("📋 StripeService: No active subscription found to restore");
+      return {
+        success: true,
+        subscription: undefined,
+      };
     } catch (error) {
-      console.error('Error restoring purchases:', error);
-      return { 
-        success: false, 
-        error: error instanceof Error ? error.message : 'Unknown error' 
+      console.error('💥 StripeService: Error restoring purchases:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error'
       };
     }
   }
