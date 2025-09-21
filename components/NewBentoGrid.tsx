@@ -109,10 +109,10 @@ export default function NewBentoGrid({
           <TouchableOpacity
             style={styles.premiumCard}
             onPress={() => {
-              if (!hasPremium && !canAccessFeature("numerology" as any)) {
+              if (!hasPremium) {
                 showAlert({
                   title: "🌟 Premium Feature",
-                  message: "Daily Vibe insights are available for Premium members!\n\nUpgrade to unlock personalized daily cosmic guidance.",
+                  message: "Daily Vibe insights are exclusively available for Premium and Unlimited members!\n\nUpgrade to unlock personalized daily cosmic guidance.",
                   type: "info",
                   buttons: [
                     { text: "Maybe Later", style: "cancel" },
@@ -132,7 +132,7 @@ export default function NewBentoGrid({
               <View style={styles.premiumContent}>
                 <Ionicons name="sunny" size={20} color="#FFFFFF" />
                 <Text style={styles.premiumText}>Daily Vibe</Text>
-                {!hasPremium && !canAccessFeature("numerology" as any) && (
+                {!hasPremium && (
                   <Ionicons name="lock-closed" size={14} color="#FFFFFF" />
                 )}
               </View>
@@ -142,10 +142,10 @@ export default function NewBentoGrid({
           <TouchableOpacity
             style={styles.premiumCard}
             onPress={() => {
-              if (!hasPremium && !canAccessFeature("numerology" as any)) {
+              if (!hasPremium) {
                 showAlert({
                   title: "🤖 Premium AI Feature",
-                  message: "AI Insights provide deep personalized analysis for Premium members!\n\nUnlock advanced AI-powered cosmic understanding.",
+                  message: "AI Insights provide deep personalized analysis exclusively for Premium and Unlimited members!\n\nUnlock advanced AI-powered cosmic understanding.",
                   type: "info",
                   buttons: [
                     { text: "Maybe Later", style: "cancel" },
@@ -165,7 +165,7 @@ export default function NewBentoGrid({
               <View style={styles.premiumContent}>
                 <Ionicons name="sparkles" size={20} color="#FFFFFF" />
                 <Text style={styles.premiumText}>AI Insights</Text>
-                {!hasPremium && !canAccessFeature("numerology" as any) && (
+                {!hasPremium && (
                   <Ionicons name="lock-closed" size={14} color="#FFFFFF" />
                 )}
               </View>

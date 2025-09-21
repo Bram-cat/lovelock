@@ -10,6 +10,7 @@ import {
   Modal,
   KeyboardAvoidingView,
   Platform,
+  Linking,
 } from "react-native";
 import { useUser, useAuth } from "@clerk/clerk-expo";
 import { Ionicons } from "@expo/vector-icons";
@@ -153,6 +154,74 @@ export default function ProfileScreen() {
     });
   };
 
+  const handleBillingHistory = async () => {
+    try {
+      const websiteUrl = 'https://lovelock.it.com';
+      const accountUrl = `${websiteUrl}/account?userId=${encodeURIComponent(user?.id || '')}&email=${encodeURIComponent(user?.emailAddresses[0]?.emailAddress || '')}&source=mobile&section=billing`;
+
+      const canOpen = await Linking.canOpenURL(accountUrl);
+      if (canOpen) {
+        await Linking.openURL(accountUrl);
+      } else {
+        throw new Error('Cannot open website URL');
+      }
+    } catch (error) {
+      showError("Redirect Failed", "Unable to open billing page. Please check your internet connection and try again.");
+    }
+  };
+
+  const handlePrivacyPolicy = async () => {
+    try {
+      const websiteUrl = 'https://lovelock.it.com';
+      const privacyUrl = `${websiteUrl}/privacy?source=mobile`;
+
+      const canOpen = await Linking.canOpenURL(privacyUrl);
+      if (canOpen) {
+        await Linking.openURL(privacyUrl);
+      } else {
+        throw new Error('Cannot open website URL');
+      }
+    } catch (error) {
+      showError("Redirect Failed", "Unable to open privacy policy page. Please check your internet connection and try again.");
+    }
+  };
+
+  const handleHelpFAQ = async () => {
+    try {
+      const websiteUrl = 'https://lovelock.it.com';
+      const helpUrl = `${websiteUrl}/dashboard?userId=${encodeURIComponent(user?.id || '')}&email=${encodeURIComponent(user?.emailAddresses[0]?.emailAddress || '')}&source=mobile&section=help`;
+
+      const canOpen = await Linking.canOpenURL(helpUrl);
+      if (canOpen) {
+        await Linking.openURL(helpUrl);
+      } else {
+        throw new Error('Cannot open website URL');
+      }
+    } catch (error) {
+      showError("Redirect Failed", "Unable to open help page. Please check your internet connection and try again.");
+    }
+  };
+
+  const handleRateApp = async () => {
+    try {
+      // For iOS App Store
+      const iosAppStoreUrl = 'https://apps.apple.com/app/lovelock/id[YOUR_APP_ID]';
+      // For Google Play Store
+      const androidPlayStoreUrl = 'https://play.google.com/store/apps/details?id=com.lovelock.app';
+
+      const storeUrl = Platform.OS === 'ios' ? iosAppStoreUrl : androidPlayStoreUrl;
+
+      const canOpen = await Linking.canOpenURL(storeUrl);
+      if (canOpen) {
+        await Linking.openURL(storeUrl);
+      } else {
+        throw new Error('Cannot open app store URL');
+      }
+    } catch (error) {
+      showError("Redirect Failed", "Unable to open app store. Please search for 'Lovelock' in your app store.");
+    }
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
@@ -236,7 +305,7 @@ export default function ProfileScreen() {
           {subscription?.hasPremiumPlan && (
             <TouchableOpacity
               style={styles.option}
-              onPress={handleUpgrade}
+              onPress={handleBillingHistory}
             >
               <View style={styles.optionLeft}>
                 <Ionicons name="receipt-outline" size={24} color="#34c759" />
@@ -267,7 +336,7 @@ export default function ProfileScreen() {
             <Ionicons name="chevron-forward" size={20} color="#8E8E93" />
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.option}>
+          <TouchableOpacity style={styles.option} onPress={handlePrivacyPolicy}>
             <View style={styles.optionLeft}>
               <Ionicons name="shield-checkmark-outline" size={24} color="#34c759" />
               <View style={styles.optionTextContainer}>
@@ -285,7 +354,7 @@ export default function ProfileScreen() {
             <Text style={styles.sectionTitle}>Support</Text>
           </View>
 
-          <TouchableOpacity style={styles.option}>
+          <TouchableOpacity style={styles.option} onPress={handleHelpFAQ}>
             <View style={styles.optionLeft}>
               <Ionicons name="help-circle-outline" size={24} color="#667eea" />
               <View style={styles.optionTextContainer}>
@@ -296,7 +365,7 @@ export default function ProfileScreen() {
             <Ionicons name="chevron-forward" size={20} color="#8E8E93" />
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.option}>
+          <TouchableOpacity style={styles.option} onPress={handleRateApp}>
             <View style={styles.optionLeft}>
               <Ionicons name="star-outline" size={24} color="#ffa726" />
               <View style={styles.optionTextContainer}>

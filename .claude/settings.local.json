@@ -134,7 +134,9 @@
       "WebFetch(domain:roxyapi.com)",
       "Bash(npm start)",
       "Bash(ls:*)",
-      "Bash(dir:*)"
+      "Bash(dir:*)",
+      "WebFetch(domain:www.lovelock.it.com)",
+      "WebFetch(domain:lovelock.it.com)"
     ],
     "deny": [],
     "ask": []
