@@ -128,11 +128,29 @@ export default function ProfileScreen() {
   };
 
   const handleUpgrade = async () => {
-    try {
-      await openPricingPage();
-    } catch (error) {
-      showError("Upgrade Failed", "Unable to open upgrade page. Please try again.");
-    }
+    showAlert({
+      title: "✨ Upgrade to Premium",
+      description: "You'll be redirected to our secure web portal to manage your subscription. Your account will automatically sync once you upgrade.",
+      variant: "default",
+      actions: [
+        {
+          label: "Cancel",
+          variant: "outline",
+          onPress: () => {}
+        },
+        {
+          label: "Continue to Web Portal",
+          variant: "default",
+          onPress: async () => {
+            try {
+              await openPricingPage();
+            } catch (error) {
+              showError("Redirect Failed", "Unable to open upgrade page. Please check your internet connection and try again.");
+            }
+          }
+        }
+      ]
+    });
   };
 
   return (

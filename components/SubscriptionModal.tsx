@@ -2,6 +2,8 @@ import { Ionicons } from '@expo/vector-icons';
 import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
+  Linking,
   Modal,
   SafeAreaView,
   ScrollView,
@@ -52,21 +54,51 @@ export default function SubscriptionModal({
   const handleUpgrade = async (tierId: 'premium' | 'unlimited') => {
     if (loading || processingTier) return;
 
-    // For Clerk B2C SaaS billing, show guidance instead of creating checkout session
+    const tier = tiers.find(t => t.id === tierId);
+    const tierName = tier?.name || tierId;
+
     setProcessingTier(tierId);
-    
+
     try {
-      // Show info alert and close modal
-      const tier = tiers.find(t => t.id === tierId);
-      const tierName = tier?.name || tierId;
-      
-      console.log(`User wants to upgrade to ${tierName} - directing to web billing`);
-      
-      // Close modal after a brief moment
-      setTimeout(() => {
-        setProcessingTier(null);
-        onClose();
-      }, 100);
+      Alert.alert(
+        `✨ Upgrade to ${tierName}`,
+        `To upgrade to ${tierName}, you'll be redirected to our secure web portal where you can manage your subscription.\n\nYour account will automatically sync once you complete the upgrade.`,
+        [
+          {
+            text: "Cancel",
+            style: "cancel",
+            onPress: () => {
+              setProcessingTier(null);
+            }
+          },
+          {
+            text: "Continue to Web Portal",
+            style: "default",
+            onPress: async () => {
+              try {
+                const websiteUrl = 'https://lovelock.it.com';
+                const pricingUrl = `${websiteUrl}/pricing?tier=${tierId}&userId=${encodeURIComponent(userId)}&email=${encodeURIComponent(userEmail)}&source=mobile`;
+
+                const canOpen = await Linking.canOpenURL(pricingUrl);
+                if (canOpen) {
+                  await Linking.openURL(pricingUrl);
+                  onClose(); // Close modal after successful redirect
+                } else {
+                  throw new Error('Cannot open website URL');
+                }
+              } catch (error) {
+                Alert.alert(
+                  "Redirect Failed",
+                  "Unable to open the upgrade page. Please check your internet connection and try again.",
+                  [{ text: "OK" }]
+                );
+              } finally {
+                setProcessingTier(null);
+              }
+            }
+          }
+        ]
+      );
     } catch (error) {
       console.error('Error during upgrade process:', error);
       setProcessingTier(null);
