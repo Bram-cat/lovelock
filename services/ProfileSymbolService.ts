@@ -93,12 +93,11 @@ export class ProfileSymbolService {
         meaning: lifePathSymbols.meaning
       };
 
-      // Save to Supabase profile
+      // Save to Supabase profile (excluding destiny_symbol as it doesn't exist in DB)
       const { data, error } = await supabase
         .from('profiles')
         .update({
           life_path_symbol: userSymbols.lifePathSymbol,
-          destiny_symbol: userSymbols.destinySymbol,
           personality_symbol: userSymbols.personalitySymbol,
           numerology_element: userSymbols.element,
           numerology_color: userSymbols.color,
@@ -129,12 +128,12 @@ export class ProfileSymbolService {
         .from('profiles')
         .select(`
           life_path_symbol,
-          destiny_symbol,
           personality_symbol,
           numerology_element,
           numerology_color,
           numerology_planet,
-          numerology_meaning
+          numerology_meaning,
+          full_name
         `)
         .eq('clerk_user_id', userId)
         .single();
@@ -144,16 +143,20 @@ export class ProfileSymbolService {
         return null;
       }
 
+      // Calculate destiny symbol since it's not stored in DB
+      const destinyNumber = data.full_name ? this.calculateDestinyNumber(data.full_name) : 1;
+      const destinySymbols = this.getSymbolsForNumber(destinyNumber);
+
       return {
         lifePathSymbol: data.life_path_symbol,
-        destinySymbol: data.destiny_symbol,
+        destinySymbol: destinySymbols.symbol,
         personalitySymbol: data.personality_symbol,
         element: data.numerology_element,
         color: data.numerology_color,
         planet: data.numerology_planet,
         meaning: data.numerology_meaning
       };
-      
+
     } catch (error) {
       console.error('Error fetching user symbols:', error);
       return null;

@@ -88,19 +88,24 @@ function TabsWithOnboarding() {
       <Tabs
         tabBar={({ state, descriptors, navigation }) => (
           <BlurView
-            intensity={95}
+            intensity={100}
             tint="dark"
             style={{
               position: "absolute",
               bottom: 0,
               left: 0,
               right: 0,
-              backgroundColor: "rgba(0, 0, 0, 0.95)",
-              borderTopWidth: 0.5,
-              borderTopColor: "rgba(255, 255, 255, 0.1)",
-              paddingTop: 8,
+              backgroundColor: "rgba(0, 0, 0, 0.98)",
+              borderTopWidth: 1,
+              borderTopColor: "rgba(147, 51, 234, 0.2)",
+              paddingTop: 12,
               paddingBottom: 34,
-              paddingHorizontal: 0,
+              paddingHorizontal: 8,
+              shadowColor: "#9333EA",
+              shadowOffset: { width: 0, height: -4 },
+              shadowOpacity: 0.1,
+              shadowRadius: 12,
+              elevation: 8,
             }}
           >
             <BottomTabBar
@@ -112,43 +117,50 @@ function TabsWithOnboarding() {
           </BlurView>
         )}
         screenOptions={{
-          tabBarActiveTintColor: "#FFFFFF",
-          tabBarInactiveTintColor: "rgba(255, 255, 255, 0.5)",
+          tabBarActiveTintColor: "#9333EA",
+          tabBarInactiveTintColor: "rgba(255, 255, 255, 0.4)",
           tabBarStyle: {
             backgroundColor: "transparent",
             borderTopWidth: 0,
-            height: 80,
+            height: 85,
             paddingTop: 0,
             paddingBottom: 0,
             position: "absolute" as const,
           },
           headerStyle: {
             backgroundColor: "#000000",
-            borderBottomWidth: 0,
-            shadowOpacity: 0,
+            borderBottomWidth: 1,
+            borderBottomColor: "rgba(147, 51, 234, 0.1)",
+            shadowColor: "#9333EA",
+            shadowOffset: { width: 0, height: 2 },
+            shadowOpacity: 0.1,
+            shadowRadius: 8,
+            elevation: 4,
           },
           headerTintColor: "#FFFFFF",
           headerTitleStyle: {
-            fontSize: 20,
+            fontSize: 22,
             fontWeight: "700",
             color: "#FFFFFF",
+            letterSpacing: 0.5,
           },
           tabBarLabelStyle: {
-            fontSize: 11,
-            fontWeight: "500",
-            marginTop: 4,
-            letterSpacing: 0.2,
+            fontSize: 12,
+            fontWeight: "600",
+            marginTop: 6,
+            letterSpacing: 0.3,
           },
           tabBarIconStyle: {
-            marginBottom: 0,
+            marginBottom: 2,
           },
           tabBarItemStyle: {
-            paddingVertical: 8,
-            marginHorizontal: 0,
+            paddingVertical: 10,
+            marginHorizontal: 4,
             position: 'relative',
-            height: 60,
+            height: 65,
             justifyContent: 'center',
             alignItems: 'center',
+            borderRadius: 16,
           },
           tabBarBackground: () => null,
         }}
@@ -163,14 +175,19 @@ function TabsWithOnboarding() {
                   <View
                     style={{
                       position: 'absolute',
-                      top: -12,
-                      left: -20,
-                      right: -20,
-                      bottom: -12,
-                      borderRadius: 20,
-                      backgroundColor: 'rgba(147, 51, 234, 0.15)',
-                      borderWidth: 1,
-                      borderColor: 'rgba(147, 51, 234, 0.3)',
+                      top: -15,
+                      left: -24,
+                      right: -24,
+                      bottom: -15,
+                      borderRadius: 24,
+                      backgroundColor: 'rgba(147, 51, 234, 0.12)',
+                      borderWidth: 1.5,
+                      borderColor: 'rgba(147, 51, 234, 0.4)',
+                      shadowColor: '#9333EA',
+                      shadowOffset: { width: 0, height: 4 },
+                      shadowOpacity: 0.3,
+                      shadowRadius: 8,
+                      elevation: 6,
                     }}
                   />
                 )}
@@ -193,14 +210,19 @@ function TabsWithOnboarding() {
                   <View
                     style={{
                       position: 'absolute',
-                      top: -12,
-                      left: -20,
-                      right: -20,
-                      bottom: -12,
-                      borderRadius: 20,
-                      backgroundColor: 'rgba(147, 51, 234, 0.15)',
-                      borderWidth: 1,
-                      borderColor: 'rgba(147, 51, 234, 0.3)',
+                      top: -15,
+                      left: -24,
+                      right: -24,
+                      bottom: -15,
+                      borderRadius: 24,
+                      backgroundColor: 'rgba(147, 51, 234, 0.12)',
+                      borderWidth: 1.5,
+                      borderColor: 'rgba(147, 51, 234, 0.4)',
+                      shadowColor: '#9333EA',
+                      shadowOffset: { width: 0, height: 4 },
+                      shadowOpacity: 0.3,
+                      shadowRadius: 8,
+                      elevation: 6,
                     }}
                   />
                 )}
@@ -223,14 +245,19 @@ function TabsWithOnboarding() {
                   <View
                     style={{
                       position: 'absolute',
-                      top: -12,
-                      left: -20,
-                      right: -20,
-                      bottom: -12,
-                      borderRadius: 20,
-                      backgroundColor: 'rgba(147, 51, 234, 0.15)',
-                      borderWidth: 1,
-                      borderColor: 'rgba(147, 51, 234, 0.3)',
+                      top: -15,
+                      left: -24,
+                      right: -24,
+                      bottom: -15,
+                      borderRadius: 24,
+                      backgroundColor: 'rgba(147, 51, 234, 0.12)',
+                      borderWidth: 1.5,
+                      borderColor: 'rgba(147, 51, 234, 0.4)',
+                      shadowColor: '#9333EA',
+                      shadowOffset: { width: 0, height: 4 },
+                      shadowOpacity: 0.3,
+                      shadowRadius: 8,
+                      elevation: 6,
                     }}
                   />
                 )}
@@ -253,14 +280,19 @@ function TabsWithOnboarding() {
                   <View
                     style={{
                       position: 'absolute',
-                      top: -12,
-                      left: -20,
-                      right: -20,
-                      bottom: -12,
-                      borderRadius: 20,
-                      backgroundColor: 'rgba(147, 51, 234, 0.15)',
-                      borderWidth: 1,
-                      borderColor: 'rgba(147, 51, 234, 0.3)',
+                      top: -15,
+                      left: -24,
+                      right: -24,
+                      bottom: -15,
+                      borderRadius: 24,
+                      backgroundColor: 'rgba(147, 51, 234, 0.12)',
+                      borderWidth: 1.5,
+                      borderColor: 'rgba(147, 51, 234, 0.4)',
+                      shadowColor: '#9333EA',
+                      shadowOffset: { width: 0, height: 4 },
+                      shadowOpacity: 0.3,
+                      shadowRadius: 8,
+                      elevation: 6,
                     }}
                   />
                 )}
@@ -283,14 +315,19 @@ function TabsWithOnboarding() {
                   <View
                     style={{
                       position: 'absolute',
-                      top: -12,
-                      left: -20,
-                      right: -20,
-                      bottom: -12,
-                      borderRadius: 20,
-                      backgroundColor: 'rgba(147, 51, 234, 0.15)',
-                      borderWidth: 1,
-                      borderColor: 'rgba(147, 51, 234, 0.3)',
+                      top: -15,
+                      left: -24,
+                      right: -24,
+                      bottom: -15,
+                      borderRadius: 24,
+                      backgroundColor: 'rgba(147, 51, 234, 0.12)',
+                      borderWidth: 1.5,
+                      borderColor: 'rgba(147, 51, 234, 0.4)',
+                      shadowColor: '#9333EA',
+                      shadowOffset: { width: 0, height: 4 },
+                      shadowOpacity: 0.3,
+                      shadowRadius: 8,
+                      elevation: 6,
                     }}
                   />
                 )}

@@ -307,7 +307,19 @@ export default function ProfileScreen() {
             <View style={styles.inputGroup}>
               <Text style={styles.inputLabel}>Birth Date</Text>
               <DatePicker
-                value={editForm.birth_date ? new Date(editForm.birth_date) : undefined}
+                value={editForm.birth_date ? (() => {
+                  try {
+                    // If it's in MM/DD/YYYY format, convert to Date object
+                    if (editForm.birth_date.includes('/')) {
+                      const [month, day, year] = editForm.birth_date.split('/');
+                      return new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+                    }
+                    // Otherwise try to parse as is
+                    return new Date(editForm.birth_date);
+                  } catch {
+                    return undefined;
+                  }
+                })() : undefined}
                 onSelect={(date) => {
                   if (date) {
                     const formattedDate = `${(date.getMonth() + 1).toString().padStart(2, '0')}/${date.getDate().toString().padStart(2, '0')}/${date.getFullYear()}`;
