@@ -12,6 +12,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { useUser } from '@clerk/clerk-expo';
 import { DesignSystem } from '../constants/DesignSystem';
 import StripeService, { SubscriptionTier, UserSubscription } from '../services/StripeServices';
 
@@ -30,6 +31,7 @@ export default function SubscriptionModal({
   userEmail,
   onSubscriptionChange,
 }: SubscriptionModalProps) {
+  const { user } = useUser();
   const [loading, setLoading] = useState(false);
   const [currentSubscription, setCurrentSubscription] = useState<UserSubscription | null>(null);
   const [processingTier, setProcessingTier] = useState<SubscriptionTier['id'] | null>(null);
@@ -76,8 +78,18 @@ export default function SubscriptionModal({
             style: "default",
             onPress: async () => {
               try {
+                if (!user) {
+                  Alert.alert("Authentication Required", "Please sign in to manage your subscription.");
+                  setProcessingTier(null);
+                  return;
+                }
+
+                // Get the session token for authentication
+                const session = await user.getActiveSession();
+                const token = await session?.getToken();
+
                 const websiteUrl = 'https://lovelock.it.com';
-                const pricingUrl = `${websiteUrl}/pricing?tier=${tierId}&userId=${encodeURIComponent(userId)}&email=${encodeURIComponent(userEmail)}&source=mobile`;
+                const pricingUrl = `${websiteUrl}/pricing?tier=${tierId}&userId=${encodeURIComponent(user.id)}&email=${encodeURIComponent(user.emailAddresses[0]?.emailAddress || '')}&token=${encodeURIComponent(token || '')}&source=mobile`;
 
                 const canOpen = await Linking.canOpenURL(pricingUrl);
                 if (canOpen) {
@@ -87,6 +99,7 @@ export default function SubscriptionModal({
                   throw new Error('Cannot open website URL');
                 }
               } catch (error) {
+                console.error('Subscription modal redirect error:', error);
                 Alert.alert(
                   "Redirect Failed",
                   "Unable to open the upgrade page. Please check your internet connection and try again.",

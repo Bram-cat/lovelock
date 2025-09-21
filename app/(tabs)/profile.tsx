@@ -144,7 +144,7 @@ export default function ProfileScreen() {
           variant: "default",
           onPress: async () => {
             try {
-              await openPricingPage();
+              await handleSubscriptionRedirect();
             } catch (error) {
               showError("Redirect Failed", "Unable to open upgrade page. Please check your internet connection and try again.");
             }
@@ -154,10 +154,45 @@ export default function ProfileScreen() {
     });
   };
 
+  const handleSubscriptionRedirect = async () => {
+    try {
+      if (!user) {
+        showError("Authentication Required", "Please sign in to manage your subscription.");
+        return;
+      }
+
+      // Get the session token for authentication
+      const session = await user.getActiveSession();
+      const token = await session?.getToken();
+
+      const websiteUrl = 'https://lovelock.it.com';
+      const pricingUrl = `${websiteUrl}/pricing?userId=${encodeURIComponent(user.id)}&email=${encodeURIComponent(user.emailAddresses[0]?.emailAddress || '')}&token=${encodeURIComponent(token || '')}&source=mobile`;
+
+      const canOpen = await Linking.canOpenURL(pricingUrl);
+      if (canOpen) {
+        await Linking.openURL(pricingUrl);
+      } else {
+        throw new Error('Cannot open website URL');
+      }
+    } catch (error) {
+      console.error('Subscription redirect error:', error);
+      throw error;
+    }
+  };
+
   const handleBillingHistory = async () => {
     try {
+      if (!user) {
+        showError("Authentication Required", "Please sign in to access billing history.");
+        return;
+      }
+
+      // Get the session token for authentication
+      const session = await user.getActiveSession();
+      const token = await session?.getToken();
+
       const websiteUrl = 'https://lovelock.it.com';
-      const accountUrl = `${websiteUrl}/account?userId=${encodeURIComponent(user?.id || '')}&email=${encodeURIComponent(user?.emailAddresses[0]?.emailAddress || '')}&source=mobile&section=billing`;
+      const accountUrl = `${websiteUrl}/account?userId=${encodeURIComponent(user.id)}&email=${encodeURIComponent(user.emailAddresses[0]?.emailAddress || '')}&token=${encodeURIComponent(token || '')}&source=mobile&section=billing`;
 
       const canOpen = await Linking.canOpenURL(accountUrl);
       if (canOpen) {
@@ -166,6 +201,7 @@ export default function ProfileScreen() {
         throw new Error('Cannot open website URL');
       }
     } catch (error) {
+      console.error('Billing redirect error:', error);
       showError("Redirect Failed", "Unable to open billing page. Please check your internet connection and try again.");
     }
   };
@@ -188,8 +224,17 @@ export default function ProfileScreen() {
 
   const handleHelpFAQ = async () => {
     try {
+      if (!user) {
+        showError("Authentication Required", "Please sign in to access help resources.");
+        return;
+      }
+
+      // Get the session token for authentication
+      const session = await user.getActiveSession();
+      const token = await session?.getToken();
+
       const websiteUrl = 'https://lovelock.it.com';
-      const helpUrl = `${websiteUrl}/dashboard?userId=${encodeURIComponent(user?.id || '')}&email=${encodeURIComponent(user?.emailAddresses[0]?.emailAddress || '')}&source=mobile&section=help`;
+      const helpUrl = `${websiteUrl}/dashboard?userId=${encodeURIComponent(user.id)}&email=${encodeURIComponent(user.emailAddresses[0]?.emailAddress || '')}&token=${encodeURIComponent(token || '')}&source=mobile&section=help`;
 
       const canOpen = await Linking.canOpenURL(helpUrl);
       if (canOpen) {
@@ -198,6 +243,7 @@ export default function ProfileScreen() {
         throw new Error('Cannot open website URL');
       }
     } catch (error) {
+      console.error('Help redirect error:', error);
       showError("Redirect Failed", "Unable to open help page. Please check your internet connection and try again.");
     }
   };
