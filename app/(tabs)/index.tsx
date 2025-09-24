@@ -123,7 +123,6 @@ export default function NumerologyScreen() {
       setLifePathInfo(lifePathDetails);
       setPredictions(predictionsData);
       setCharacterAnalysis(analysis.characterAnalysis);
-      setShowInput(false);
     } catch (error) {
       console.error("Error generating numerology:", error);
       showAlert(
