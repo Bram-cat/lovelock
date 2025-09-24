@@ -11,6 +11,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   Linking,
+  Dimensions,
 } from "react-native";
 import { useUser, useAuth } from "@clerk/clerk-expo";
 import { Ionicons } from "@expo/vector-icons";
@@ -20,6 +21,7 @@ import { useProfile } from "../../contexts/ProfileContext";
 import { DatePicker } from "../../components/ui";
 import { useAlert } from "../../contexts/AlertContext";
 import { useSubscription } from "../../hooks/useSubscription";
+import { useSecureAuth } from "../../services/SecureAuthService";
 import PremiumSubscriptionCard from "../../components/PremiumSubscriptionCard";
 
 interface UserProfile {
@@ -44,6 +46,7 @@ export default function ProfileScreen() {
   const { profileData, updateProfile, loading: profileLoading } = useProfile();
   const { showSuccess, showError, showConfirm } = useAlert();
   const { subscription, openPricingPage } = useSubscription();
+  const { redirectToWebApp } = useSecureAuth();
   const [showEditModal, setShowEditModal] = useState(false);
   const [loading, setLoading] = useState(false);
   const [editForm, setEditForm] = useState({
@@ -129,96 +132,44 @@ export default function ProfileScreen() {
   };
 
   const handleUpgrade = async () => {
-    showAlert({
-      title: "✨ Upgrade to Premium",
-      description: "You'll be redirected to our secure web portal to manage your subscription. Your account will automatically sync once you upgrade.",
-      variant: "default",
-      actions: [
-        {
-          label: "Cancel",
-          variant: "outline",
-          onPress: () => {}
-        },
-        {
-          label: "Continue to Web Portal",
-          variant: "default",
-          onPress: async () => {
-            try {
-              await handleSubscriptionRedirect();
-            } catch (error) {
-              showError("Redirect Failed", "Unable to open upgrade page. Please check your internet connection and try again.");
-            }
-          }
-        }
-      ]
-    });
-  };
-
-  const handleSubscriptionRedirect = async () => {
     try {
-      if (!user) {
-        showError("Authentication Required", "Please sign in to manage your subscription.");
-        return;
-      }
-
-      // Get the session token for authentication
-      const session = await user.getActiveSession();
-      const token = await session?.getToken();
-
       const websiteUrl = 'https://lovelock.it.com';
-      const pricingUrl = `${websiteUrl}/pricing?userId=${encodeURIComponent(user.id)}&email=${encodeURIComponent(user.emailAddresses[0]?.emailAddress || '')}&token=${encodeURIComponent(token || '')}&source=mobile`;
-
-      const canOpen = await Linking.canOpenURL(pricingUrl);
+      const canOpen = await Linking.canOpenURL(websiteUrl);
       if (canOpen) {
-        await Linking.openURL(pricingUrl);
+        await Linking.openURL(websiteUrl);
       } else {
-        throw new Error('Cannot open website URL');
+        await Linking.openURL(websiteUrl);
       }
     } catch (error) {
       console.error('Subscription redirect error:', error);
-      throw error;
     }
   };
 
   const handleBillingHistory = async () => {
     try {
-      if (!user) {
-        showError("Authentication Required", "Please sign in to access billing history.");
-        return;
-      }
-
-      // Get the session token for authentication
-      const session = await user.getActiveSession();
-      const token = await session?.getToken();
-
       const websiteUrl = 'https://lovelock.it.com';
-      const accountUrl = `${websiteUrl}/account?userId=${encodeURIComponent(user.id)}&email=${encodeURIComponent(user.emailAddresses[0]?.emailAddress || '')}&token=${encodeURIComponent(token || '')}&source=mobile&section=billing`;
-
-      const canOpen = await Linking.canOpenURL(accountUrl);
+      const canOpen = await Linking.canOpenURL(websiteUrl);
       if (canOpen) {
-        await Linking.openURL(accountUrl);
+        await Linking.openURL(websiteUrl);
       } else {
-        throw new Error('Cannot open website URL');
+        await Linking.openURL(websiteUrl);
       }
     } catch (error) {
       console.error('Billing redirect error:', error);
-      showError("Redirect Failed", "Unable to open billing page. Please check your internet connection and try again.");
     }
   };
 
   const handlePrivacyPolicy = async () => {
     try {
       const websiteUrl = 'https://lovelock.it.com';
-      const privacyUrl = `${websiteUrl}/privacy?source=mobile`;
-
-      const canOpen = await Linking.canOpenURL(privacyUrl);
+      const canOpen = await Linking.canOpenURL(websiteUrl);
       if (canOpen) {
-        await Linking.openURL(privacyUrl);
+        await Linking.openURL(websiteUrl);
       } else {
-        throw new Error('Cannot open website URL');
+        await Linking.openURL(websiteUrl);
       }
     } catch (error) {
-      showError("Redirect Failed", "Unable to open privacy policy page. Please check your internet connection and try again.");
+      console.error('Privacy policy redirect error:', error);
     }
   };
 
@@ -229,16 +180,12 @@ export default function ProfileScreen() {
         return;
       }
 
-      // Get the session token for authentication
-      const session = await user.getActiveSession();
-      const token = await session?.getToken();
+      // Use secure authentication service
+      const redirectUrl = await redirectToWebApp('help');
 
-      const websiteUrl = 'https://lovelock.it.com';
-      const helpUrl = `${websiteUrl}/dashboard?userId=${encodeURIComponent(user.id)}&email=${encodeURIComponent(user.emailAddresses[0]?.emailAddress || '')}&token=${encodeURIComponent(token || '')}&source=mobile&section=help`;
-
-      const canOpen = await Linking.canOpenURL(helpUrl);
+      const canOpen = await Linking.canOpenURL(redirectUrl);
       if (canOpen) {
-        await Linking.openURL(helpUrl);
+        await Linking.openURL(redirectUrl);
       } else {
         throw new Error('Cannot open website URL');
       }
@@ -532,6 +479,10 @@ export default function ProfileScreen() {
   );
 }
 
+const { width } = Dimensions.get('window');
+const isSmallScreen = width < 375;
+const isMediumScreen = width >= 375 && width < 414;
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -541,7 +492,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   header: {
-    padding: 20,
+    padding: isSmallScreen ? 16 : 20,
     paddingTop: 10,
   },
   profileHeader: {
@@ -550,9 +501,9 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   avatarContainer: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
+    width: isSmallScreen ? 50 : 60,
+    height: isSmallScreen ? 50 : 60,
+    borderRadius: isSmallScreen ? 25 : 30,
     backgroundColor: "#E91E63",
     justifyContent: "center",
     alignItems: "center",
@@ -560,28 +511,28 @@ const styles = StyleSheet.create({
   },
   avatarText: {
     color: "#fff",
-    fontSize: 24,
+    fontSize: isSmallScreen ? 20 : 24,
     fontWeight: "bold",
   },
   profileInfo: {
     flex: 1,
   },
   name: {
-    fontSize: 24,
+    fontSize: isSmallScreen ? 20 : 24,
     fontWeight: "bold",
     color: "#fff",
     marginBottom: 4,
   },
   email: {
-    fontSize: 16,
+    fontSize: isSmallScreen ? 14 : 16,
     color: "#999",
   },
   section: {
-    marginHorizontal: 20,
-    marginBottom: 20,
+    marginHorizontal: isSmallScreen ? 12 : 20,
+    marginBottom: isSmallScreen ? 16 : 20,
     backgroundColor: "#1C1C1E",
     borderRadius: 12,
-    padding: 16,
+    padding: isSmallScreen ? 12 : 16,
   },
   sectionHeader: {
     flexDirection: "row",
@@ -590,14 +541,14 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   sectionTitle: {
-    fontSize: 18,
+    fontSize: isSmallScreen ? 16 : 18,
     fontWeight: "600",
     color: "#fff",
   },
   editButton: {
     flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal: 12,
+    paddingHorizontal: isSmallScreen ? 8 : 12,
     paddingVertical: 6,
     borderRadius: 6,
     backgroundColor: "#2C2C2E",
@@ -606,6 +557,7 @@ const styles = StyleSheet.create({
     color: "#E91E63",
     marginLeft: 4,
     fontWeight: "500",
+    fontSize: isSmallScreen ? 13 : 14,
   },
   infoRow: {
     flexDirection: "row",
@@ -615,12 +567,14 @@ const styles = StyleSheet.create({
   infoLabel: {
     color: "#999",
     marginLeft: 12,
-    width: 100,
+    width: isSmallScreen ? 80 : 100,
+    fontSize: isSmallScreen ? 13 : 14,
   },
   infoValue: {
     color: "#fff",
     flex: 1,
     marginLeft: 12,
+    fontSize: isSmallScreen ? 13 : 14,
   },
   option: {
     flexDirection: "row",
@@ -636,14 +590,15 @@ const styles = StyleSheet.create({
   },
   optionTextContainer: {
     marginLeft: 12,
+    flex: 1,
   },
   optionText: {
-    fontSize: 16,
+    fontSize: isSmallScreen ? 14 : 16,
     color: "#fff",
     fontWeight: "500",
   },
   optionSubtext: {
-    fontSize: 14,
+    fontSize: isSmallScreen ? 12 : 14,
     color: "#999",
     marginTop: 2,
   },
@@ -655,17 +610,18 @@ const styles = StyleSheet.create({
   },
   signOutText: {
     color: "#FF3B30",
-    fontSize: 16,
+    fontSize: isSmallScreen ? 14 : 16,
     fontWeight: "500",
     marginLeft: 8,
   },
   appInfo: {
     alignItems: "center",
     paddingVertical: 20,
+    paddingBottom: 30,
   },
   appInfoText: {
     color: "#666",
-    fontSize: 14,
+    fontSize: isSmallScreen ? 12 : 14,
     marginBottom: 4,
   },
   modalContainer: {
@@ -682,16 +638,16 @@ const styles = StyleSheet.create({
     borderBottomColor: "#2C2C2E",
   },
   modalTitle: {
-    fontSize: 18,
+    fontSize: isSmallScreen ? 16 : 18,
     fontWeight: "600",
     color: "#fff",
   },
   modalCancelText: {
     color: "#E91E63",
-    fontSize: 16,
+    fontSize: isSmallScreen ? 14 : 16,
   },
   modalSaveButton: {
-    paddingHorizontal: 16,
+    paddingHorizontal: isSmallScreen ? 12 : 16,
     paddingVertical: 8,
     borderRadius: 8,
     backgroundColor: "#E91E63",
@@ -702,16 +658,17 @@ const styles = StyleSheet.create({
   modalSaveText: {
     color: "#fff",
     fontWeight: "600",
+    fontSize: isSmallScreen ? 14 : 16,
   },
   modalContent: {
     flex: 1,
-    padding: 20,
+    padding: isSmallScreen ? 16 : 20,
   },
   inputGroup: {
     marginBottom: 20,
   },
   inputLabel: {
-    fontSize: 16,
+    fontSize: isSmallScreen ? 14 : 16,
     color: "#fff",
     marginBottom: 8,
     fontWeight: "500",
@@ -722,6 +679,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 12,
     color: "#fff",
-    fontSize: 16,
+    fontSize: isSmallScreen ? 14 : 16,
   },
 });
