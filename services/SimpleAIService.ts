@@ -188,7 +188,6 @@ Keep it romantic and under 50 words.`;
       "Sloth",
       "Greed",
       "Gluttony",
-      "Lust",
     ];
     const randomSin = sins[profile.lifePathNumber % sins.length];
 
