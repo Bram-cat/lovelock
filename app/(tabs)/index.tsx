@@ -1,15 +1,12 @@
 import { useUser } from "@clerk/clerk-expo";
 import { Ionicons } from "@expo/vector-icons";
-import { router } from "expo-router";
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
-  ActivityIndicator,
   RefreshControl,
   SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
-  TouchableOpacity,
   View,
   Animated,
 } from "react-native";
@@ -28,7 +25,6 @@ export default function NumerologyScreen() {
   const { profileData } = useProfile();
   const { showAlert, AlertComponent } = useCustomAlert();
 
-  const [showInput, setShowInput] = useState(false);
   const [birthDate, setBirthDate] = useState("");
   const [fullName, setFullName] = useState("");
   const [profile, setProfile] = useState<any>(null);
@@ -38,22 +34,10 @@ export default function NumerologyScreen() {
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
 
-  // Animation values
-  const fadeAnim = useState(new Animated.Value(0))[0];
-  const scaleAnim = useState(new Animated.Value(0.95))[0];
-
-  const displayName = useMemo(() => {
-    if (profileData?.full_name) return profileData.full_name.split(" ")[0];
-    if (user?.firstName) return user.firstName;
-    if (user?.fullName) return user.fullName.split(" ")[0];
-    return "Beautiful Soul";
-  }, [profileData?.full_name, user?.firstName, user?.fullName]);
-
   useEffect(() => {
     const name = profileData?.full_name || user?.fullName || `${user?.firstName || ""} ${user?.lastName || ""}`.trim();
     if (name && name !== "") {
       setFullName(name);
-      if (!profile) setShowInput(true);
     }
 
     if (profileData?.birth_date) {
@@ -64,16 +48,7 @@ export default function NumerologyScreen() {
       }
       setBirthDate(formattedDate);
     }
-  }, [user, profileData, profile]);
-
-  useEffect(() => {
-    if (profile) {
-      Animated.parallel([
-        Animated.timing(fadeAnim, { toValue: 1, duration: 600, useNativeDriver: true }),
-        Animated.spring(scaleAnim, { toValue: 1, useNativeDriver: true, friction: 8 }),
-      ]).start();
-    }
-  }, [profile]);
+  }, [user, profileData]);
 
   const generateNumerology = async () => {
     if (!fullName.trim()) {
@@ -127,9 +102,6 @@ export default function NumerologyScreen() {
     setLifePathInfo(null);
     setPredictions([]);
     setCharacterAnalysis("");
-    setShowInput(true);
-    fadeAnim.setValue(0);
-    scaleAnim.setValue(0.95);
   };
 
   const onRefresh = async () => {
