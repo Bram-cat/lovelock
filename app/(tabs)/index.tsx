@@ -102,11 +102,6 @@ export default function HomeScreen() {
       icon: "restaurant",
     },
     {
-      text: "Lust is the source of all our actions, and humanity.",
-      author: "Marquis de Sade",
-      icon: "heart-dislike",
-    },
-    {
       text: "Sloth, like rust, consumes faster than labor wears, while the used key is always bright.",
       author: "Benjamin Franklin",
       icon: "bed",

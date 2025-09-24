@@ -371,7 +371,7 @@ export default function NumerologyReadingScreen({
             2: { sin: "Envy", warning: "Your sensitivity can lead to jealousy of others' success.", consequences: "Envy can poison relationships and create unnecessary conflicts." },
             3: { sin: "Vanity", warning: "Your creative nature may seek excessive admiration.", consequences: "Vanity can make you appear shallow and self-centered." },
             4: { sin: "Sloth", warning: "Your methodical nature can become rigid stubbornness.", consequences: "Spiritual laziness may prevent personal growth." },
-            5: { sin: "Lust", warning: "Your adventurous spirit may seek instant gratification.", consequences: "Excessive desires can lead to impulsive, harmful decisions." },
+            5: { sin: "Gluttony", warning: "Your adventurous spirit may lead to overindulgence.", consequences: "Excess in experiences can overwhelm your true purpose." },
             6: { sin: "Wrath", warning: "Your caring nature can turn into controlling anger.", consequences: "Anger may damage the relationships you're trying to protect." },
             7: { sin: "Greed", warning: "Your wisdom-seeking can become hoarding of knowledge.", consequences: "Greed for knowledge without sharing creates isolation." },
             8: { sin: "Greed", warning: "Your ambition may turn into materialistic obsession.", consequences: "Material greed can corrupt your natural leadership abilities." },
@@ -631,7 +631,8 @@ Get your personalized numerology reading at Lovelock! 💫`;
   return (
     <KeyboardAvoidingView
       style={styles.container}
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
+      behavior={Platform.OS === "ios" ? "padding" : undefined}
+      keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 0}
     >
       <StatusBar barStyle="light-content" backgroundColor="#667eea" />
       
@@ -2240,7 +2241,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 4,
   },
   bottomSpacing: {
-    height: 80,
+    height: 150,
     backgroundColor: "transparent",
   },
   // Usage Counter Styles
