@@ -57,19 +57,19 @@ export default function NumerologyScreen() {
 
   const generateNumerology = async () => {
     if (!fullName.trim()) {
-      showAlert("Error", "Please enter your full name");
+      showAlert("Please enter your full name", "Error");
       return;
     }
 
     if (!birthDate) {
-      showAlert("Error", "Please enter your birth date");
+      showAlert("Please enter your birth date", "Error");
       return;
     }
 
     const datePattern =
       /^(0[1-9]|1[0-2])\/(0[1-9]|[12]\d|3[01])\/(19|20)\d{2}$/;
     if (!datePattern.test(birthDate)) {
-      showAlert("Error", "Please enter birth date in MM/DD/YYYY format");
+      showAlert("Please enter birth date in MM/DD/YYYY format", "Error");
       return;
     }
 
@@ -126,8 +126,8 @@ export default function NumerologyScreen() {
     } catch (error) {
       console.error("Error generating numerology:", error);
       showAlert(
-        "Error",
-        "Failed to generate numerology reading. Please try again."
+        "Failed to generate numerology reading. Please try again.",
+        "Error"
       );
     } finally {
       setLoading(false);
@@ -168,7 +168,7 @@ export default function NumerologyScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <AlertComponent />
+      {AlertComponent && <AlertComponent />}
       <ScrollView
         style={styles.scrollView}
         showsVerticalScrollIndicator={false}
@@ -210,7 +210,7 @@ export default function NumerologyScreen() {
             <DatePicker
               label="Birth Date (MM/DD/YYYY)"
               value={birthDate ? new Date(birthDate) : undefined}
-              onChange={(date) => {
+              onChange={(date: Date | undefined) => {
                 if (date) {
                   const month = String(date.getMonth() + 1).padStart(2, "0");
                   const day = String(date.getDate()).padStart(2, "0");
