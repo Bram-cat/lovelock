@@ -17,7 +17,7 @@ import { useProfile } from "../../contexts/ProfileContext";
 import NumerologyReadingScreen from "../../screens/NumerologyReadingScreen";
 import NumerologyService from "../../services/NumerologyService";
 import { RoxyNumerologyService } from "../../services/ProkeralaNumerologyService";
-import SimpleAIService from "../../services/SimpleAIService";
+import { SimpleAIService } from "../../services/SimpleAIService";
 
 export default function NumerologyScreen() {
   const { user } = useUser();
@@ -57,19 +57,19 @@ export default function NumerologyScreen() {
 
   const generateNumerology = async () => {
     if (!fullName.trim()) {
-      showAlert("Please enter your full name", "Error");
+      showAlert({ title: "Error", message: "Please enter your full name", type: "error" });
       return;
     }
 
     if (!birthDate) {
-      showAlert("Please enter your birth date", "Error");
+      showAlert({ title: "Error", message: "Please enter your birth date", type: "error" });
       return;
     }
 
     const datePattern =
       /^(0[1-9]|1[0-2])\/(0[1-9]|[12]\d|3[01])\/(19|20)\d{2}$/;
     if (!datePattern.test(birthDate)) {
-      showAlert("Please enter birth date in MM/DD/YYYY format", "Error");
+      showAlert({ title: "Error", message: "Please enter birth date in MM/DD/YYYY format", type: "error" });
       return;
     }
 
@@ -77,7 +77,7 @@ export default function NumerologyScreen() {
 
     try {
       const [month, day, year] = birthDate.split("/").map(Number);
-      const numerologyProfile = await NumerologyService.calculateNumerology(
+      const numerologyProfile = NumerologyService.calculateNumerology(
         fullName,
         birthDate
       );
@@ -125,10 +125,11 @@ export default function NumerologyScreen() {
       setCharacterAnalysis(analysis.characterAnalysis);
     } catch (error) {
       console.error("Error generating numerology:", error);
-      showAlert(
-        "Failed to generate numerology reading. Please try again.",
-        "Error"
-      );
+      showAlert({
+        title: "Error",
+        message: "Failed to generate numerology reading. Please try again.",
+        type: "error"
+      });
     } finally {
       setLoading(false);
     }
@@ -168,7 +169,7 @@ export default function NumerologyScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      {AlertComponent && <AlertComponent />}
+      <AlertComponent />
       <ScrollView
         style={styles.scrollView}
         showsVerticalScrollIndicator={false}
