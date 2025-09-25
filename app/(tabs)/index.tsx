@@ -77,18 +77,22 @@ export default function NumerologyScreen() {
 
     try {
       const [month, day, year] = birthDate.split("/").map(Number);
-      const numerologyProfile = NumerologyService.calculateNumerology(
+      const numerologyProfile = NumerologyService.generateProfile(
         fullName,
         birthDate
       );
-      const roxyProfile = await RoxyNumerologyService.getNumerologyProfile(
-        fullName,
-        day,
-        month,
-        year
+      // Split full name for Roxy API
+      const nameParts = fullName.trim().split(' ');
+      const firstName = nameParts[0] || '';
+      const lastName = nameParts.slice(1).join(' ') || '';
+
+      const roxyProfile = await RoxyNumerologyService.getNumerologyReading(
+        firstName,
+        lastName,
+        birthDate
       );
 
-      const lifePathDetails = NumerologyService.getLifePathDetails(
+      const lifePathDetails = NumerologyService.getLifePathInfo(
         numerologyProfile.lifePathNumber
       );
 
@@ -115,7 +119,7 @@ export default function NumerologyScreen() {
 
       const analysis = await SimpleAIService.generateAllNumerologyInsights(
         fullName,
-        roxyProfile,
+        roxyProfile || numerologyProfile,
         "character-only"
       );
 
@@ -169,7 +173,7 @@ export default function NumerologyScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <AlertComponent />
+      {AlertComponent}
       <ScrollView
         style={styles.scrollView}
         showsVerticalScrollIndicator={false}
@@ -211,7 +215,7 @@ export default function NumerologyScreen() {
             <DatePicker
               label="Birth Date (MM/DD/YYYY)"
               value={birthDate ? new Date(birthDate) : undefined}
-              onChange={(date: Date | undefined) => {
+              onDateChange={(date: Date | undefined) => {
                 if (date) {
                   const month = String(date.getMonth() + 1).padStart(2, "0");
                   const day = String(date.getDate()).padStart(2, "0");
