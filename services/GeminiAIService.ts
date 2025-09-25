@@ -337,7 +337,7 @@ Keep it encouraging, specific, and actionable. Limit to 200 words.`;
     consequences: string;
   }> {
     const service = new GeminiAIService();
-    const prompt = `Based on ${fullName}'s numerology profile (Life Path: ${profile.lifePathNumber}, Destiny: ${profile.destinyNumber}), identify their primary spiritual challenge from the seven deadly sins (Pride, Envy, Wrath, Sloth, Greed, Gluttony, Lust).
+    const prompt = `Based on ${fullName}'s numerology profile (Life Path: ${profile.lifePathNumber}, Destiny: ${profile.destinyNumber}), identify their primary spiritual challenge from the six deadly sins (Pride, Envy, Wrath, Sloth, Greed, Gluttony).
 
 Respond in this exact format:
 SIN: [specific sin]

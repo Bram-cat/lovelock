@@ -138,15 +138,16 @@ export class StripeService {
       }
 
       if (this.USE_CLERK_BILLING) {
-        // For Clerk B2C SaaS billing, create a redirect URL to the website with user context
+        // For Clerk B2C SaaS billing, use secure authentication flow
+        // Note: This method should be deprecated in favor of direct SecureAuthService usage
         const websiteUrl = 'https://lovelock.it.com';
-        const paymentUrl = `${websiteUrl}/pricing?tier=${tierIdSelected}&userId=${encodeURIComponent(userId)}&email=${encodeURIComponent(userEmail)}&source=mobile`;
 
         return {
           success: true,
           requiresWebBilling: true,
-          url: paymentUrl,
-          websiteUrl: websiteUrl
+          url: `${websiteUrl}/pricing`, // Fallback URL without sensitive parameters
+          websiteUrl: websiteUrl,
+          error: 'This method should use SecureAuthService for secure authentication'
         };
       } else {
         // COMPLEX: Use custom backend (your original code)

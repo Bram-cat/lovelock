@@ -433,6 +433,7 @@ const styles = StyleSheet.create({
     color: "#E0E0E0",
   },
   bottomSpacing: {
-    height: 150,
+    height: 200,
+    backgroundColor: "transparent",
   },
 });

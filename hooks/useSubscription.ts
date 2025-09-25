@@ -3,6 +3,7 @@ import { useMemo, useCallback, useState, useEffect } from 'react';
 import { Platform, Linking } from 'react-native';
 import StripeService, { SubscriptionTier } from '../services/StripeServices';
 import { SubscriptionService } from '../services/SubscriptionService';
+import { useSecureAuth } from '../services/SecureAuthService';
 
 export interface UserSubscription {
   hasFreePlan: boolean;
@@ -26,6 +27,7 @@ export interface UserSubscription {
 
 export function useSubscription() {
   const { user, isLoaded } = useUser();
+  const { redirectToWebApp } = useSecureAuth();
   const [usageStats, setUsageStats] = useState<any>(null);
   const [supabaseSubscription, setSupabaseSubscription] = useState<any>(null);
   const [loading, setLoading] = useState(false);
@@ -169,8 +171,7 @@ export function useSubscription() {
     if (!user) throw new Error('User not authenticated');
 
     try {
-      const websiteUrl = 'https://lovelock.it.com';
-      const pricingUrl = `${websiteUrl}/pricing?userId=${encodeURIComponent(user.id)}&email=${encodeURIComponent(user.emailAddresses[0]?.emailAddress || '')}&source=mobile`;
+      const pricingUrl = await redirectToWebApp('pricing');
 
       const canOpen = await Linking.canOpenURL(pricingUrl);
       if (canOpen) {
@@ -182,7 +183,7 @@ export function useSubscription() {
       console.error('Error opening pricing page:', error);
       throw error;
     }
-  }, [user]);
+  }, [user, redirectToWebApp]);
 
   return {
     subscription,

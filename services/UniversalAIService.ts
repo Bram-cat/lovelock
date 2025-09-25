@@ -647,7 +647,7 @@ Keep it encouraging, insightful, and personalized. Limit to 150 words.`;
       profile.lifePathNumber
     );
 
-    const prompt = `Based on ${fullName}'s numerology profile (Life Path: ${profile.lifePathNumber}, Destiny: ${profile.destinyNumber}), identify their primary spiritual challenge from the seven deadly sins (Pride, Envy, Wrath, Sloth, Greed, Gluttony, Lust).
+    const prompt = `Based on ${fullName}'s numerology profile (Life Path: ${profile.lifePathNumber}, Destiny: ${profile.destinyNumber}), identify their primary spiritual challenge from the six deadly sins (Pride, Envy, Wrath, Sloth, Greed, Gluttony).
 
 Respond in this exact format:
 SIN: [specific sin]

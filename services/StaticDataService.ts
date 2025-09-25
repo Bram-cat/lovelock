@@ -10,7 +10,7 @@ export class StaticDataService {
       4: { sin: 'Sloth', warning: `${userName}, your methodical nature may sometimes lead to procrastination. Take action when needed.`, consequences: 'Inaction can prevent you from achieving your goals.' },
       5: { sin: 'Wrath', warning: `${userName}, your passionate nature may lead to anger when restricted. Channel this energy positively.`, consequences: 'Anger can destroy relationships and opportunities.' },
       6: { sin: 'Greed', warning: `${userName}, your nurturing nature may become possessive. Allow others their freedom.`, consequences: 'Possessiveness can suffocate relationships.' },
-      7: { sin: 'Lust', warning: `${userName}, your seeking nature may lead to spiritual or material obsessions. Find balance.`, consequences: 'Obsession can blind you to true fulfillment.' },
+      7: { sin: 'Gluttony', warning: `${userName}, your seeking nature may lead to overindulgence in experiences. Find balance.`, consequences: 'Excess in experiences can overwhelm your true purpose.' },
       8: { sin: 'Greed', warning: `${userName}, your ambitious nature may lead to material greed. Remember what truly matters.`, consequences: 'Greed can corrupt your values and relationships.' },
       9: { sin: 'Pride', warning: `${userName}, your wise nature may lead to spiritual pride. Stay humble in your wisdom.`, consequences: 'Spiritual pride can separate you from others.' },
       11: { sin: 'Pride', warning: `${userName}, your intuitive gifts may lead to spiritual superiority. Use your gifts to serve others.`, consequences: 'Spiritual pride can isolate you from humanity.' },

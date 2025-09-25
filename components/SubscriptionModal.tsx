@@ -15,6 +15,7 @@ import {
 import { useUser } from '@clerk/clerk-expo';
 import { DesignSystem } from '../constants/DesignSystem';
 import StripeService, { SubscriptionTier, UserSubscription } from '../services/StripeServices';
+import { useSecureAuth } from '../services/SecureAuthService';
 
 interface SubscriptionModalProps {
   visible: boolean;
@@ -32,6 +33,7 @@ export default function SubscriptionModal({
   onSubscriptionChange,
 }: SubscriptionModalProps) {
   const { user } = useUser();
+  const { redirectToWebApp } = useSecureAuth();
   const [loading, setLoading] = useState(false);
   const [currentSubscription, setCurrentSubscription] = useState<UserSubscription | null>(null);
   const [processingTier, setProcessingTier] = useState<SubscriptionTier['id'] | null>(null);
@@ -84,12 +86,8 @@ export default function SubscriptionModal({
                   return;
                 }
 
-                // Get the session token for authentication
-                const session = await user.getActiveSession();
-                const token = await session?.getToken();
-
-                const websiteUrl = 'https://lovelock.it.com';
-                const pricingUrl = `${websiteUrl}/pricing?tier=${tierId}&userId=${encodeURIComponent(user.id)}&email=${encodeURIComponent(user.emailAddresses[0]?.emailAddress || '')}&token=${encodeURIComponent(token || '')}&source=mobile`;
+                // Use secure authentication service
+                const pricingUrl = await redirectToWebApp('pricing');
 
                 const canOpen = await Linking.canOpenURL(pricingUrl);
                 if (canOpen) {
