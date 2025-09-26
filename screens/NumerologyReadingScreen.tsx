@@ -1,5 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import {
   ScrollView,
   StatusBar,
@@ -42,6 +42,21 @@ export default function NumerologyReadingScreen({
   const [isLoading, setIsLoading] = useState(false);
   const [showAiResponse, setShowAiResponse] = useState(false);
 
+  const scrollViewRef = useRef<ScrollView>(null);
+  const aiSectionRef = useRef<View>(null);
+
+  const scrollToAISection = () => {
+    if (aiSectionRef.current && scrollViewRef.current) {
+      aiSectionRef.current.measureLayout(
+        scrollViewRef.current as any,
+        (x, y) => {
+          scrollViewRef.current?.scrollTo({ y: y - 100, animated: true });
+        },
+        () => {}
+      );
+    }
+  };
+
   const handleAskQuestion = async () => {
     if (!question.trim()) return;
 
@@ -70,11 +85,8 @@ export default function NumerologyReadingScreen({
         </TouchableOpacity>
 
         <View style={styles.headerActions}>
-          <TouchableOpacity style={styles.iconButton} onPress={() => {
-            // Scroll to AI Assistant section
-            console.log("Navigate to AI Chat");
-          }}>
-            <Ionicons name="sparkles" size={20} color="#E91E63" />
+          <TouchableOpacity style={styles.iconButton} onPress={scrollToAISection}>
+            <Ionicons name="sparkles" size={20} color="#8B5CF6" />
           </TouchableOpacity>
           <TouchableOpacity style={styles.iconButton} onPress={onBack}>
             <Ionicons name="refresh" size={20} color="white" />
@@ -83,6 +95,7 @@ export default function NumerologyReadingScreen({
       </View>
 
       <ScrollView
+        ref={scrollViewRef}
         style={styles.scrollView}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
@@ -291,10 +304,12 @@ export default function NumerologyReadingScreen({
         )}
 
         {/* AI Assistant Section */}
-        <Text style={styles.sectionTitle}>AI Numerology Assistant</Text>
+        <View ref={aiSectionRef}>
+          <Text style={styles.sectionTitle}>AI Numerology Assistant</Text>
+        </View>
         <View style={styles.aiCard}>
           <View style={styles.aiHeader}>
-            <Ionicons name="chatbubble-ellipses" size={24} color="#E91E63" />
+            <Ionicons name="chatbubble-ellipses" size={24} color="#8B5CF6" />
             <Text style={styles.aiHeaderText}>Ask Your Personal Oracle</Text>
           </View>
 
@@ -327,7 +342,7 @@ export default function NumerologyReadingScreen({
           {showAiResponse && aiResponse && (
             <View style={styles.responseContainer}>
               <View style={styles.responseHeader}>
-                <Ionicons name="star" size={16} color="#E91E63" />
+                <Ionicons name="star" size={16} color="#8B5CF6" />
                 <Text style={styles.responseTitle}>Cosmic Insight</Text>
               </View>
               <Text style={styles.responseText}>{aiResponse}</Text>
@@ -388,14 +403,18 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   profileTitle: {
-    fontSize: 24,
-    fontWeight: "bold",
-    color: "white",
+    fontSize: 28,
+    fontWeight: "800",
+    color: "#FFFFFF",
     marginBottom: 8,
+    letterSpacing: -0.7,
+    lineHeight: 32,
   },
   profileSubtitle: {
-    fontSize: 14,
-    color: "#999",
+    fontSize: 16,
+    fontWeight: "500",
+    color: "#A1A1AA",
+    letterSpacing: 0.2,
   },
   enhancedButton: {
     flexDirection: "row",
@@ -421,11 +440,13 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
   sectionTitle: {
-    fontSize: 20,
-    fontWeight: "bold",
-    color: "white",
-    marginBottom: 16,
-    marginTop: 8,
+    fontSize: 24,
+    fontWeight: "700",
+    color: "#FFFFFF",
+    marginBottom: 20,
+    marginTop: 32,
+    letterSpacing: -0.5,
+    lineHeight: 28,
   },
   // Bento Grid Styles
   bentoGrid: {
@@ -466,12 +487,13 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   bentoNumber: {
-    fontSize: 32,
-    fontWeight: "bold",
-    color: "white",
-    textShadowColor: "rgba(0, 0, 0, 0.5)",
-    textShadowOffset: { width: 1, height: 1 },
-    textShadowRadius: 3,
+    fontSize: 36,
+    fontWeight: "800",
+    color: "#FFFFFF",
+    textShadowColor: "rgba(0, 0, 0, 0.6)",
+    textShadowOffset: { width: 2, height: 2 },
+    textShadowRadius: 4,
+    letterSpacing: -1,
   },
   bentoIcon: {
     width: 48,
@@ -486,23 +508,29 @@ const styles = StyleSheet.create({
     fontSize: 24,
   },
   bentoTitle: {
-    fontSize: 20,
-    fontWeight: "bold",
-    color: "white",
-    marginBottom: 8,
-    textShadowColor: "rgba(0, 0, 0, 0.5)",
+    fontSize: 22,
+    fontWeight: "700",
+    color: "#FFFFFF",
+    marginBottom: 12,
+    textShadowColor: "rgba(0, 0, 0, 0.6)",
     textShadowOffset: { width: 1, height: 1 },
-    textShadowRadius: 2,
+    textShadowRadius: 3,
+    letterSpacing: -0.3,
+    lineHeight: 26,
   },
   bentoDescription: {
-    fontSize: 14,
-    color: "rgba(255, 255, 255, 0.9)",
-    lineHeight: 20,
+    fontSize: 15,
+    fontWeight: "500",
+    color: "rgba(255, 255, 255, 0.95)",
+    lineHeight: 22,
+    letterSpacing: 0.1,
   },
   bentoDescriptionSmall: {
-    fontSize: 12,
-    color: "rgba(255, 255, 255, 0.8)",
-    lineHeight: 16,
+    fontSize: 13,
+    fontWeight: "500",
+    color: "rgba(255, 255, 255, 0.9)",
+    lineHeight: 18,
+    letterSpacing: 0.1,
   },
   // Individual Card Colors
   lifePathCard: {
@@ -556,11 +584,16 @@ const styles = StyleSheet.create({
   },
   aiCard: {
     backgroundColor: "#1C1C1E",
-    borderRadius: 20,
-    padding: 20,
+    borderRadius: 24,
+    padding: 24,
     marginBottom: 24,
     borderWidth: 1,
-    borderColor: "rgba(233, 30, 99, 0.2)",
+    borderColor: "rgba(139, 92, 246, 0.3)",
+    shadowColor: "#8B5CF6",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 4,
   },
   aiHeader: {
     flexDirection: "row",
@@ -569,23 +602,33 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   aiHeaderText: {
-    fontSize: 18,
-    fontWeight: "bold",
-    color: "white",
+    fontSize: 20,
+    fontWeight: "700",
+    color: "#FFFFFF",
+    letterSpacing: -0.3,
+    lineHeight: 24,
   },
   aiSubtext: {
-    fontSize: 14,
-    color: "#999",
-    marginBottom: 16,
+    fontSize: 15,
+    fontWeight: "500",
+    color: "#A1A1AA",
+    marginBottom: 20,
+    lineHeight: 20,
+    letterSpacing: 0.1,
   },
   inputContainer: {
     flexDirection: "row",
     alignItems: "flex-end",
     backgroundColor: "#2C2C2E",
-    borderRadius: 16,
-    padding: 4,
+    borderRadius: 20,
+    padding: 6,
     borderWidth: 1,
-    borderColor: "rgba(233, 30, 99, 0.3)",
+    borderColor: "rgba(139, 92, 246, 0.4)",
+    shadowColor: "#8B5CF6",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
   },
   input: {
     flex: 1,
@@ -596,13 +639,18 @@ const styles = StyleSheet.create({
     minHeight: 48,
   },
   sendButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
-    backgroundColor: "#E91E63",
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: "#8B5CF6",
     justifyContent: "center",
     alignItems: "center",
     margin: 4,
+    shadowColor: "#8B5CF6",
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.4,
+    shadowRadius: 6,
+    elevation: 4,
   },
   sendButtonDisabled: {
     backgroundColor: "#666",
@@ -610,11 +658,16 @@ const styles = StyleSheet.create({
   },
   responseContainer: {
     backgroundColor: "#2C2C2E",
-    borderRadius: 12,
-    padding: 16,
+    borderRadius: 16,
+    padding: 20,
     marginTop: 16,
     borderWidth: 1,
-    borderColor: "rgba(233, 30, 99, 0.2)",
+    borderColor: "rgba(139, 92, 246, 0.3)",
+    shadowColor: "#8B5CF6",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
   },
   responseHeader: {
     flexDirection: "row",
@@ -623,14 +676,17 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   responseTitle: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#E91E63",
+    fontSize: 17,
+    fontWeight: "700",
+    color: "#8B5CF6",
+    letterSpacing: -0.2,
   },
   responseText: {
-    fontSize: 15,
-    lineHeight: 22,
-    color: "#E0E0E0",
+    fontSize: 16,
+    fontWeight: "500",
+    lineHeight: 24,
+    color: "#F4F4F5",
+    letterSpacing: 0.1,
   },
   bottomSpacing: {
     height: 200,
