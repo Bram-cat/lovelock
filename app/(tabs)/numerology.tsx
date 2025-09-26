@@ -1,27 +1,24 @@
 import { useUser } from "@clerk/clerk-expo";
 import { Ionicons } from "@expo/vector-icons";
-import { router } from "expo-router";
 import React, { useEffect, useMemo, useState } from "react";
 import {
-  ActivityIndicator,
+  Animated,
   RefreshControl,
   SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
-  TouchableOpacity,
   View,
-  Animated,
 } from "react-native";
 import { useCustomAlert } from "../../components/CustomAlert";
 import { NumerologyLoadingSkeleton } from "../../components/LoadingSkeletons";
 import { DatePicker, ShadcnButton, ShadcnInput } from "../../components/ui";
 import { DesignSystem } from "../../constants/DesignSystem";
 import { useProfile } from "../../contexts/ProfileContext";
+import NumerologyReadingScreen from "../../screens/NumerologyReadingScreen";
 import NumerologyService from "../../services/NumerologyService";
 import { RoxyNumerologyService } from "../../services/ProkeralaNumerologyService";
 import SimpleAIService from "../../services/SimpleAIService";
-import NumerologyReadingScreen from "../../screens/NumerologyReadingScreen";
 
 export default function NumerologyScreen() {
   const { user } = useUser();
@@ -50,7 +47,10 @@ export default function NumerologyScreen() {
   }, [profileData?.full_name, user?.firstName, user?.fullName]);
 
   useEffect(() => {
-    const name = profileData?.full_name || user?.fullName || `${user?.firstName || ""} ${user?.lastName || ""}`.trim();
+    const name =
+      profileData?.full_name ||
+      user?.fullName ||
+      `${user?.firstName || ""} ${user?.lastName || ""}`.trim();
     if (name && name !== "") {
       setFullName(name);
       if (!profile) setShowInput(true);
@@ -58,7 +58,10 @@ export default function NumerologyScreen() {
 
     if (profileData?.birth_date) {
       let formattedDate = profileData.birth_date;
-      if (profileData.birth_date.includes("-") && profileData.birth_date.length === 10) {
+      if (
+        profileData.birth_date.includes("-") &&
+        profileData.birth_date.length === 10
+      ) {
         const [year, month, day] = profileData.birth_date.split("-");
         formattedDate = `${month.padStart(2, "0")}/${day.padStart(2, "0")}/${year}`;
       }
@@ -69,26 +72,38 @@ export default function NumerologyScreen() {
   useEffect(() => {
     if (profile) {
       Animated.parallel([
-        Animated.timing(fadeAnim, { toValue: 1, duration: 600, useNativeDriver: true }),
-        Animated.spring(scaleAnim, { toValue: 1, useNativeDriver: true, friction: 8 }),
+        Animated.timing(fadeAnim, {
+          toValue: 1,
+          duration: 600,
+          useNativeDriver: true,
+        }),
+        Animated.spring(scaleAnim, {
+          toValue: 1,
+          useNativeDriver: true,
+          friction: 8,
+        }),
       ]).start();
     }
   }, [profile]);
 
   const generateNumerology = async () => {
     if (!fullName.trim()) {
-      showAlert("Error", "Please enter your full name");
+      showAlert({ title: "Error", message: "Please enter your full name" });
       return;
     }
 
     if (!birthDate) {
-      showAlert("Error", "Please enter your birth date");
+      showAlert({ title: "Error", message: "Please enter your birth date" });
       return;
     }
 
-    const datePattern = /^(0[1-9]|1[0-2])\/(0[1-9]|[12]\d|3[01])\/(19|20)\d{2}$/;
+    const datePattern =
+      /^(0[1-9]|1[0-2])\/(0[1-9]|[12]\d|3[01])\/(19|20)\d{2}$/;
     if (!datePattern.test(birthDate)) {
-      showAlert("Error", "Please enter birth date in MM/DD/YYYY format");
+      showAlert({
+        title: "Error",
+        message: "Please enter birth date in MM/DD/YYYY format",
+      });
       return;
     }
 
@@ -96,27 +111,72 @@ export default function NumerologyScreen() {
 
     try {
       const [month, day, year] = birthDate.split("/").map(Number);
-      const numerologyProfile = await NumerologyService.calculateNumerology(fullName, birthDate);
-      const roxyProfile = await RoxyNumerologyService.getNumerologyProfile(fullName, day, month, year);
+      const numerologyProfile = NumerologyService.generateProfile(
+        fullName,
+        birthDate
+      );
+      const roxyProfile = await RoxyNumerologyService.getNumerologyReading(
+        fullName.split(" ")[0] || "",
+        fullName.split(" ").slice(1).join(" ") || "",
+        birthDate,
+        ""
+      );
 
-      const lifePathDetails = NumerologyService.getLifePathDetails(numerologyProfile.lifePathNumber);
+      const lifePathDetails = NumerologyService.getLifePathInfo(
+        numerologyProfile.lifePathNumber
+      );
 
       const predictionsData = [
-        { category: "Love & Relationships", icon: "heart", timeframe: "This Month", prediction: lifePathDetails.loveCompatibility },
-        { category: "Career & Finance", icon: "briefcase", timeframe: "Next 3 Months", prediction: lifePathDetails.careerGuidance },
-        { category: "Personal Growth", icon: "trending-up", timeframe: "This Year", prediction: lifePathDetails.personalGrowth },
+        {
+          category: "Love & Relationships",
+          timeframe: "This Month",
+          predictions: [lifePathDetails.loveCompatibility || "Your love life is influenced by your life path number."]
+        },
+        {
+          category: "Career & Finance",
+          timeframe: "Next 3 Months",
+          predictions: [lifePathDetails.careerGuidance || "Your career path aligns with your numerological profile."]
+        },
+        {
+          category: "Personal Growth",
+          timeframe: "This Year",
+          predictions: [lifePathDetails.lifeApproach || "Focus on personal development and growth."]
+        },
       ];
 
-      const analysis = await SimpleAIService.generateAllNumerologyInsights(fullName, roxyProfile, "character-only");
+      const analysis = await SimpleAIService.generateAllNumerologyInsights(
+        fullName,
+        numerologyProfile,
+        "character-only"
+      );
 
-      setProfile(numerologyProfile);
+      // Create enhanced profile with Roxy data
+      const enhancedProfile = {
+        ...numerologyProfile,
+        roxyInsights: roxyProfile ? {
+          strengths: Array.isArray(roxyProfile.strengths) ? roxyProfile.strengths : [],
+          challenges: Array.isArray(roxyProfile.challenges) ? roxyProfile.challenges : [],
+          career: roxyProfile.career_guidance || "",
+          relationship: roxyProfile.relationship_guidance || "",
+          spiritual: roxyProfile.spiritual_guidance || "",
+          luckyNumbers: Array.isArray(roxyProfile.lucky_numbers) ? roxyProfile.lucky_numbers : [],
+          luckyColors: Array.isArray(roxyProfile.lucky_colors) ? roxyProfile.lucky_colors : [],
+          lifePathDescription: roxyProfile.life_path_description || "",
+          personalYear: roxyProfile.personal_year_number || (new Date().getFullYear() % 9) + 1,
+        } : null
+      };
+
+      setProfile(enhancedProfile);
       setLifePathInfo(lifePathDetails);
       setPredictions(predictionsData);
       setCharacterAnalysis(analysis.characterAnalysis);
       setShowInput(false);
     } catch (error) {
       console.error("Error generating numerology:", error);
-      showAlert("Error", "Failed to generate numerology reading. Please try again.");
+      showAlert({
+        title: "Error",
+        message: "Failed to generate numerology reading. Please try again.",
+      });
     } finally {
       setLoading(false);
     }
@@ -159,17 +219,28 @@ export default function NumerologyScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <AlertComponent />
+      {/* Alert component is now available via useCustomAlert hook */}
       <ScrollView
         style={styles.scrollView}
         showsVerticalScrollIndicator={false}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#9b59b6" />}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor="#9b59b6"
+          />
+        }
       >
         <View style={styles.header}>
-          <Ionicons name="sparkles" size={48} color={DesignSystem.colors.primary.solidPurple} />
+          <Ionicons
+            name="sparkles"
+            size={48}
+            color={DesignSystem.colors.primary.solidPurple}
+          />
           <Text style={styles.title}>Numerology Reading</Text>
           <Text style={styles.description}>
-            Discover your life path, destiny, and soul purpose through the ancient wisdom of numbers
+            Discover your life path, destiny, and soul purpose through the
+            ancient wisdom of numbers
           </Text>
         </View>
 
@@ -190,7 +261,7 @@ export default function NumerologyScreen() {
             <DatePicker
               label="Birth Date (MM/DD/YYYY)"
               value={birthDate ? new Date(birthDate) : undefined}
-              onChange={(date) => {
+              onSelect={(date) => {
                 if (date) {
                   const month = String(date.getMonth() + 1).padStart(2, "0");
                   const day = String(date.getDate()).padStart(2, "0");
@@ -215,6 +286,7 @@ export default function NumerologyScreen() {
           </ShadcnButton>
         </View>
       </ScrollView>
+      {AlertComponent}
     </SafeAreaView>
   );
 }

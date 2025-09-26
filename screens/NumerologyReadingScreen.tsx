@@ -70,10 +70,13 @@ export default function NumerologyReadingScreen({
         </TouchableOpacity>
 
         <View style={styles.headerActions}>
-          <TouchableOpacity style={styles.iconButton}>
+          <TouchableOpacity style={styles.iconButton} onPress={() => {
+            // Scroll to AI Assistant section
+            console.log("Navigate to AI Chat");
+          }}>
             <Ionicons name="sparkles" size={20} color="#E91E63" />
           </TouchableOpacity>
-          <TouchableOpacity style={styles.iconButton}>
+          <TouchableOpacity style={styles.iconButton} onPress={onBack}>
             <Ionicons name="refresh" size={20} color="white" />
           </TouchableOpacity>
         </View>
@@ -91,7 +94,13 @@ export default function NumerologyReadingScreen({
         </View>
 
         {/* Enhanced Reading Button */}
-        <TouchableOpacity style={styles.enhancedButton}>
+        <TouchableOpacity
+          style={styles.enhancedButton}
+          onPress={() => {
+            // Auto-scroll to AI Assistant section would go here
+            console.log("Scrolling to AI Assistant");
+          }}
+        >
           <Ionicons name="sparkles" size={20} color="white" />
           <Text style={styles.enhancedButtonText}>View Enhanced Reading with AI Chat</Text>
           <Ionicons name="arrow-forward" size={20} color="white" />
@@ -167,6 +176,128 @@ export default function NumerologyReadingScreen({
         <View style={styles.analysisCard}>
           <Text style={styles.analysisText}>{characterAnalysis}</Text>
         </View>
+
+        {/* Roxy API Insights */}
+        {profile.roxyInsights && (
+          <>
+            <Text style={styles.sectionTitle}>Professional Insights</Text>
+
+            {/* Strengths */}
+            {profile.roxyInsights.strengths && profile.roxyInsights.strengths.length > 0 && (
+              <View style={styles.numberCard}>
+                <View style={styles.numberCardInner}>
+                  <View style={styles.numberLeft}>
+                    <Text style={styles.numberLabel}>✨ Your Strengths</Text>
+                    {profile.roxyInsights.strengths.map((strength: string, index: number) => (
+                      <Text key={index} style={styles.insightText}>• {strength}</Text>
+                    ))}
+                  </View>
+                </View>
+              </View>
+            )}
+
+            {/* Challenges */}
+            {profile.roxyInsights.challenges && profile.roxyInsights.challenges.length > 0 && (
+              <View style={styles.numberCard}>
+                <View style={styles.numberCardInner}>
+                  <View style={styles.numberLeft}>
+                    <Text style={styles.numberLabel}>🔮 Your Challenges</Text>
+                    {profile.roxyInsights.challenges.map((challenge: string, index: number) => (
+                      <Text key={index} style={styles.insightText}>• {challenge}</Text>
+                    ))}
+                  </View>
+                </View>
+              </View>
+            )}
+
+            {/* Career Guidance */}
+            {profile.roxyInsights.career && (
+              <View style={styles.numberCard}>
+                <View style={styles.numberCardInner}>
+                  <View style={styles.numberLeft}>
+                    <Text style={styles.numberLabel}>💼 Career Guidance</Text>
+                    <Text style={styles.insightText}>{profile.roxyInsights.career}</Text>
+                  </View>
+                </View>
+              </View>
+            )}
+
+            {/* Relationship Guidance */}
+            {profile.roxyInsights.relationship && (
+              <View style={styles.numberCard}>
+                <View style={styles.numberCardInner}>
+                  <View style={styles.numberLeft}>
+                    <Text style={styles.numberLabel}>💕 Relationship Guidance</Text>
+                    <Text style={styles.insightText}>{profile.roxyInsights.relationship}</Text>
+                  </View>
+                </View>
+              </View>
+            )}
+
+            {/* Spiritual Guidance */}
+            {profile.roxyInsights.spiritual && (
+              <View style={styles.numberCard}>
+                <View style={styles.numberCardInner}>
+                  <View style={styles.numberLeft}>
+                    <Text style={styles.numberLabel}>🙏 Spiritual Guidance</Text>
+                    <Text style={styles.insightText}>{profile.roxyInsights.spiritual}</Text>
+                  </View>
+                </View>
+              </View>
+            )}
+
+            {/* Lucky Numbers */}
+            {profile.roxyInsights.luckyNumbers && profile.roxyInsights.luckyNumbers.length > 0 && (
+              <View style={styles.numberCard}>
+                <View style={styles.numberCardInner}>
+                  <View style={styles.numberLeft}>
+                    <Text style={styles.numberLabel}>🍀 Lucky Numbers</Text>
+                    <View style={styles.luckyNumbersContainer}>
+                      {profile.roxyInsights.luckyNumbers.map((number: number, index: number) => (
+                        <View key={index} style={styles.luckyNumberBadge}>
+                          <Text style={styles.luckyNumberText}>{number}</Text>
+                        </View>
+                      ))}
+                    </View>
+                  </View>
+                </View>
+              </View>
+            )}
+
+            {/* Lucky Colors */}
+            {profile.roxyInsights.luckyColors && profile.roxyInsights.luckyColors.length > 0 && (
+              <View style={styles.numberCard}>
+                <View style={styles.numberCardInner}>
+                  <View style={styles.numberLeft}>
+                    <Text style={styles.numberLabel}>🎨 Lucky Colors</Text>
+                    <View style={styles.luckyColorsContainer}>
+                      {profile.roxyInsights.luckyColors.map((color: string, index: number) => (
+                        <View key={index} style={styles.luckyColorBadge}>
+                          <Text style={styles.luckyColorText}>{color}</Text>
+                        </View>
+                      ))}
+                    </View>
+                  </View>
+                </View>
+              </View>
+            )}
+
+            {/* Personal Year */}
+            {profile.roxyInsights.personalYear && (
+              <View style={styles.numberCard}>
+                <View style={styles.numberCardInner}>
+                  <View style={styles.numberLeft}>
+                    <Text style={styles.numberLabel}>📅 Personal Year</Text>
+                    <Text style={styles.insightText}>You are currently in Personal Year {profile.roxyInsights.personalYear}</Text>
+                  </View>
+                  <View style={styles.numberBadge}>
+                    <Text style={styles.numberValue}>{profile.roxyInsights.personalYear}</Text>
+                  </View>
+                </View>
+              </View>
+            )}
+          </>
+        )}
 
         {/* AI Assistant Section */}
         <Text style={styles.sectionTitle}>AI Numerology Assistant</Text>
@@ -435,5 +566,49 @@ const styles = StyleSheet.create({
   bottomSpacing: {
     height: 200,
     backgroundColor: "transparent",
+  },
+  insightText: {
+    fontSize: 14,
+    color: "#999",
+    lineHeight: 20,
+    marginBottom: 4,
+  },
+  luckyNumbersContainer: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+    marginTop: 8,
+  },
+  luckyNumberBadge: {
+    backgroundColor: "#E91E63",
+    borderRadius: 20,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    minWidth: 40,
+    alignItems: "center",
+  },
+  luckyNumberText: {
+    color: "white",
+    fontSize: 14,
+    fontWeight: "600",
+  },
+  luckyColorsContainer: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+    marginTop: 8,
+  },
+  luckyColorBadge: {
+    backgroundColor: "rgba(233, 30, 99, 0.2)",
+    borderRadius: 20,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderWidth: 1,
+    borderColor: "#E91E63",
+  },
+  luckyColorText: {
+    color: "#E91E63",
+    fontSize: 14,
+    fontWeight: "500",
   },
 });
