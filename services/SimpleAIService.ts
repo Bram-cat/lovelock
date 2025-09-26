@@ -17,30 +17,62 @@ interface AIResponse {
 export class SimpleAIService {
   private static async tryGemini(
     prompt: string,
-    apiKey: string
+    apiKey: string,
+    maxRetries: number = 3
   ): Promise<string> {
     if (!apiKey) {
       throw new Error("Gemini API key not configured");
     }
 
-    const response = await fetch(`${GEMINI_URL}?key=${apiKey}`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: prompt }] }],
-        generationConfig: {
-          temperature: 0.7,
-          maxOutputTokens: 1000,
-        },
-      }),
-    });
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        const response = await fetch(`${GEMINI_URL}?key=${apiKey}`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            contents: [{ parts: [{ text: prompt }] }],
+            generationConfig: {
+              temperature: 0.7,
+              maxOutputTokens: 1500,
+              topP: 0.8,
+              topK: 40,
+            },
+          }),
+        });
 
-    if (!response.ok) {
-      throw new Error(`Gemini API error: ${response.status}`);
+        if (response.status === 429) {
+          // Rate limited - wait with exponential backoff
+          const waitTime = Math.min(1000 * Math.pow(2, attempt - 1), 10000);
+          console.log(`Rate limited, waiting ${waitTime}ms before retry ${attempt}/${maxRetries}`);
+          await new Promise(resolve => setTimeout(resolve, waitTime));
+          continue;
+        }
+
+        if (!response.ok) {
+          throw new Error(`Gemini API error: ${response.status} - ${response.statusText}`);
+        }
+
+        const data = await response.json();
+        const content = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
+
+        if (content.trim()) {
+          return content.trim();
+        } else {
+          throw new Error("Empty response from Gemini");
+        }
+      } catch (error) {
+        console.log(`Gemini attempt ${attempt}/${maxRetries} failed:`, error);
+
+        if (attempt === maxRetries) {
+          throw error;
+        }
+
+        // Wait before retry
+        await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
+      }
     }
 
-    const data = await response.json();
-    return data.candidates?.[0]?.content?.parts?.[0]?.text || "";
+    throw new Error("Max retries exceeded");
   }
 
   private static async tryOpenAI(prompt: string): Promise<string> {
