@@ -22,6 +22,7 @@ interface NumerologyReadingScreenProps {
   predictions: any[];
   characterAnalysis: string;
   onBack: () => void;
+  onShowAIChat?: () => void;
   birthDate?: string;
   name?: string;
   userId?: string;
@@ -33,6 +34,7 @@ export default function NumerologyReadingScreen({
   predictions,
   characterAnalysis,
   onBack,
+  onShowAIChat,
   birthDate,
   name,
   userId,
@@ -85,7 +87,7 @@ export default function NumerologyReadingScreen({
         </TouchableOpacity>
 
         <View style={styles.headerActions}>
-          <TouchableOpacity style={styles.iconButton} onPress={scrollToAISection}>
+          <TouchableOpacity style={styles.iconButton} onPress={onShowAIChat}>
             <Ionicons name="sparkles" size={20} color="#8B5CF6" />
           </TouchableOpacity>
           <TouchableOpacity style={styles.iconButton} onPress={onBack}>
@@ -109,10 +111,7 @@ export default function NumerologyReadingScreen({
         {/* Enhanced Reading Button */}
         <TouchableOpacity
           style={styles.enhancedButton}
-          onPress={() => {
-            // Auto-scroll to AI Assistant section would go here
-            console.log("Scrolling to AI Assistant");
-          }}
+          onPress={onShowAIChat}
         >
           <Ionicons name="sparkles" size={20} color="white" />
           <Text style={styles.enhancedButtonText}>View Enhanced Reading with AI Chat</Text>

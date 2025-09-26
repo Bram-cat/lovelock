@@ -16,6 +16,7 @@ import { DatePicker, ShadcnButton, ShadcnInput } from "../../components/ui";
 import { DesignSystem } from "../../constants/DesignSystem";
 import { useProfile } from "../../contexts/ProfileContext";
 import NumerologyReadingScreen from "../../screens/NumerologyReadingScreen";
+import NumerologyAIChatScreen from "../../screens/NumerologyAIChatScreen";
 import NumerologyService from "../../services/NumerologyService";
 import { RoxyNumerologyService } from "../../services/ProkeralaNumerologyService";
 import SimpleAIService from "../../services/SimpleAIService";
@@ -34,6 +35,7 @@ export default function NumerologyScreen() {
   const [characterAnalysis, setCharacterAnalysis] = useState("");
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const [showAIChat, setShowAIChat] = useState(false);
 
   // Animation values
   const fadeAnim = useState(new Animated.Value(0))[0];
@@ -188,8 +190,17 @@ export default function NumerologyScreen() {
     setPredictions([]);
     setCharacterAnalysis("");
     setShowInput(true);
+    setShowAIChat(false);
     fadeAnim.setValue(0);
     scaleAnim.setValue(0.95);
+  };
+
+  const showAIChatScreen = () => {
+    setShowAIChat(true);
+  };
+
+  const hideAIChatScreen = () => {
+    setShowAIChat(false);
   };
 
   const onRefresh = async () => {
@@ -202,6 +213,21 @@ export default function NumerologyScreen() {
     return <NumerologyLoadingSkeleton />;
   }
 
+  if (showAIChat && profile && lifePathInfo) {
+    return (
+      <NumerologyAIChatScreen
+        profile={profile}
+        lifePathInfo={lifePathInfo}
+        predictions={predictions}
+        characterAnalysis={characterAnalysis}
+        onBack={hideAIChatScreen}
+        birthDate={birthDate}
+        name={fullName}
+        userId={user?.id}
+      />
+    );
+  }
+
   if (profile && lifePathInfo) {
     return (
       <NumerologyReadingScreen
@@ -210,6 +236,7 @@ export default function NumerologyScreen() {
         predictions={predictions}
         characterAnalysis={characterAnalysis}
         onBack={resetReading}
+        onShowAIChat={showAIChatScreen}
         birthDate={birthDate}
         name={fullName}
         userId={user?.id}
