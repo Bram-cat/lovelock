@@ -109,67 +109,68 @@ export default function NumerologyReadingScreen({
         {/* Core Numbers Section */}
         <Text style={styles.sectionTitle}>Core Numbers</Text>
 
-        {/* Life Path Card */}
-        <View style={styles.numberCard}>
-          <View style={styles.numberCardInner}>
-            <View style={styles.numberLeft}>
-              <Text style={styles.numberLabel}>Life Path</Text>
-              <Text style={styles.numberDescription}>
-                Your life's purpose and the path you're meant to walk
-              </Text>
-            </View>
-            <View style={styles.numberBadge}>
-              <Text style={styles.numberValue}>{profile.lifePathNumber}</Text>
-            </View>
-          </View>
-        </View>
-
-        {/* Destiny Card */}
-        <View style={styles.numberCard}>
-          <View style={styles.numberCardInner}>
-            <View style={styles.numberLeft}>
-              <Text style={styles.numberLabel}>Destiny</Text>
-              <Text style={styles.numberDescription}>
-                What you're destined to achieve in this lifetime
-              </Text>
-            </View>
-            <View style={styles.numberBadge}>
-              <Text style={styles.numberValue}>{profile.destinyNumber}</Text>
-            </View>
-          </View>
-        </View>
-
-        {/* Soul Urge Card */}
-        <View style={styles.numberCard}>
-          <View style={styles.numberCardInner}>
-            <View style={styles.numberLeft}>
-              <Text style={styles.numberLabel}>Soul Urge</Text>
-              <Text style={styles.numberDescription}>
-                Your heart's deepest desires and motivations
-              </Text>
-            </View>
-            <View style={styles.numberBadge}>
-              <Text style={styles.numberValue}>{profile.soulUrgeNumber}</Text>
-            </View>
-          </View>
-        </View>
-
-        {/* Expression Number Card */}
-        {profile.expressionNumber && (
-          <View style={styles.numberCard}>
-            <View style={styles.numberCardInner}>
-              <View style={styles.numberLeft}>
-                <Text style={styles.numberLabel}>Expression</Text>
-                <Text style={styles.numberDescription}>
-                  How you express yourself to the world
-                </Text>
-              </View>
-              <View style={styles.numberBadge}>
-                <Text style={styles.numberValue}>{profile.expressionNumber}</Text>
+        {/* Bento Grid Layout */}
+        <View style={styles.bentoGrid}>
+          {/* Life Path Card - Large */}
+          <View style={[styles.bentoCard, styles.bentoCardLarge, styles.lifePathCard]}>
+            <View style={styles.bentoCardHeader}>
+              <Text style={styles.bentoNumber}>{profile.lifePathNumber}</Text>
+              <View style={styles.bentoIcon}>
+                <Text style={styles.bentoIconText}>🌟</Text>
               </View>
             </View>
+            <Text style={styles.bentoTitle}>Life Path</Text>
+            <Text style={styles.bentoDescription}>
+              Your life's purpose and the path you're meant to walk
+            </Text>
           </View>
-        )}
+
+          <View style={styles.bentoRow}>
+            {/* Destiny Card - Medium */}
+            <View style={[styles.bentoCard, styles.bentoCardMedium, styles.destinyCard]}>
+              <View style={styles.bentoCardHeader}>
+                <Text style={styles.bentoNumber}>{profile.destinyNumber}</Text>
+                <View style={styles.bentoIcon}>
+                  <Text style={styles.bentoIconText}>🎯</Text>
+                </View>
+              </View>
+              <Text style={styles.bentoTitle}>Destiny</Text>
+              <Text style={styles.bentoDescriptionSmall}>
+                What you're destined to achieve
+              </Text>
+            </View>
+
+            {/* Soul Urge Card - Medium */}
+            <View style={[styles.bentoCard, styles.bentoCardMedium, styles.soulUrgeCard]}>
+              <View style={styles.bentoCardHeader}>
+                <Text style={styles.bentoNumber}>{profile.soulUrgeNumber}</Text>
+                <View style={styles.bentoIcon}>
+                  <Text style={styles.bentoIconText}>💫</Text>
+                </View>
+              </View>
+              <Text style={styles.bentoTitle}>Soul Urge</Text>
+              <Text style={styles.bentoDescriptionSmall}>
+                Your heart's deepest desires
+              </Text>
+            </View>
+          </View>
+
+          {/* Expression Number Card - If exists */}
+          {profile.expressionNumber && (
+            <View style={[styles.bentoCard, styles.bentoCardSmall, styles.expressionCard]}>
+              <View style={styles.bentoCardHeader}>
+                <Text style={styles.bentoNumber}>{profile.expressionNumber}</Text>
+                <View style={styles.bentoIcon}>
+                  <Text style={styles.bentoIconText}>🎭</Text>
+                </View>
+              </View>
+              <Text style={styles.bentoTitle}>Expression</Text>
+              <Text style={styles.bentoDescriptionSmall}>
+                How you express yourself
+              </Text>
+            </View>
+          )}
+        </View>
 
         {/* Character Analysis Section */}
         <Text style={styles.sectionTitle}>Character Analysis</Text>
@@ -184,65 +185,55 @@ export default function NumerologyReadingScreen({
 
             {/* Strengths */}
             {profile.roxyInsights.strengths && profile.roxyInsights.strengths.length > 0 && (
-              <View style={styles.numberCard}>
-                <View style={styles.numberCardInner}>
-                  <View style={styles.numberLeft}>
-                    <Text style={styles.numberLabel}>✨ Your Strengths</Text>
-                    {profile.roxyInsights.strengths.map((strength: string, index: number) => (
-                      <Text key={index} style={styles.insightText}>• {strength}</Text>
-                    ))}
-                  </View>
+              <View style={[styles.bentoCard, styles.strengthsCard]}>
+                <View style={styles.bentoCardHeader}>
+                  <Text style={styles.bentoTitle}>✨ Your Strengths</Text>
                 </View>
+                {profile.roxyInsights.strengths.map((strength: string, index: number) => (
+                  <Text key={index} style={styles.bentoDescription}>• {strength}</Text>
+                ))}
               </View>
             )}
 
             {/* Challenges */}
             {profile.roxyInsights.challenges && profile.roxyInsights.challenges.length > 0 && (
-              <View style={styles.numberCard}>
-                <View style={styles.numberCardInner}>
-                  <View style={styles.numberLeft}>
-                    <Text style={styles.numberLabel}>🔮 Your Challenges</Text>
-                    {profile.roxyInsights.challenges.map((challenge: string, index: number) => (
-                      <Text key={index} style={styles.insightText}>• {challenge}</Text>
-                    ))}
-                  </View>
+              <View style={[styles.bentoCard, styles.challengesCard]}>
+                <View style={styles.bentoCardHeader}>
+                  <Text style={styles.bentoTitle}>🔮 Your Challenges</Text>
                 </View>
+                {profile.roxyInsights.challenges.map((challenge: string, index: number) => (
+                  <Text key={index} style={styles.bentoDescription}>• {challenge}</Text>
+                ))}
               </View>
             )}
 
             {/* Career Guidance */}
             {profile.roxyInsights.career && (
-              <View style={styles.numberCard}>
-                <View style={styles.numberCardInner}>
-                  <View style={styles.numberLeft}>
-                    <Text style={styles.numberLabel}>💼 Career Guidance</Text>
-                    <Text style={styles.insightText}>{profile.roxyInsights.career}</Text>
-                  </View>
+              <View style={[styles.bentoCard, styles.careerCard]}>
+                <View style={styles.bentoCardHeader}>
+                  <Text style={styles.bentoTitle}>💼 Career Guidance</Text>
                 </View>
+                <Text style={styles.bentoDescription}>{profile.roxyInsights.career}</Text>
               </View>
             )}
 
             {/* Relationship Guidance */}
             {profile.roxyInsights.relationship && (
-              <View style={styles.numberCard}>
-                <View style={styles.numberCardInner}>
-                  <View style={styles.numberLeft}>
-                    <Text style={styles.numberLabel}>💕 Relationship Guidance</Text>
-                    <Text style={styles.insightText}>{profile.roxyInsights.relationship}</Text>
-                  </View>
+              <View style={[styles.bentoCard, styles.relationshipCard]}>
+                <View style={styles.bentoCardHeader}>
+                  <Text style={styles.bentoTitle}>💕 Relationship Guidance</Text>
                 </View>
+                <Text style={styles.bentoDescription}>{profile.roxyInsights.relationship}</Text>
               </View>
             )}
 
             {/* Spiritual Guidance */}
             {profile.roxyInsights.spiritual && (
-              <View style={styles.numberCard}>
-                <View style={styles.numberCardInner}>
-                  <View style={styles.numberLeft}>
-                    <Text style={styles.numberLabel}>🙏 Spiritual Guidance</Text>
-                    <Text style={styles.insightText}>{profile.roxyInsights.spiritual}</Text>
-                  </View>
+              <View style={[styles.bentoCard, styles.spiritualCard]}>
+                <View style={styles.bentoCardHeader}>
+                  <Text style={styles.bentoTitle}>🙏 Spiritual Guidance</Text>
                 </View>
+                <Text style={styles.bentoDescription}>{profile.roxyInsights.spiritual}</Text>
               </View>
             )}
 
@@ -410,12 +401,17 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#E91E63",
-    borderRadius: 16,
-    paddingVertical: 16,
-    paddingHorizontal: 20,
+    backgroundColor: "#8B5CF6",
+    borderRadius: 20,
+    paddingVertical: 18,
+    paddingHorizontal: 24,
     marginBottom: 32,
     gap: 8,
+    shadowColor: "#8B5CF6",
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.4,
+    shadowRadius: 12,
+    elevation: 8,
   },
   enhancedButtonText: {
     color: "white",
@@ -431,46 +427,119 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     marginTop: 8,
   },
-  numberCard: {
-    backgroundColor: "#1C1C1E",
-    borderRadius: 20,
-    padding: 20,
-    marginBottom: 16,
-    borderWidth: 1,
-    borderColor: "rgba(233, 30, 99, 0.2)",
+  // Bento Grid Styles
+  bentoGrid: {
+    gap: 16,
+    marginBottom: 24,
   },
-  numberCardInner: {
+  bentoRow: {
     flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
+    gap: 16,
   },
-  numberLeft: {
+  bentoCard: {
+    borderRadius: 24,
+    padding: 20,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.3,
+    shadowRadius: 16,
+    elevation: 8,
+  },
+  bentoCardLarge: {
+    width: "100%",
+    minHeight: 160,
+    marginBottom: 16,
+  },
+  bentoCardMedium: {
     flex: 1,
-    paddingRight: 16,
+    minHeight: 140,
   },
-  numberLabel: {
-    fontSize: 18,
+  bentoCardSmall: {
+    width: "100%",
+    minHeight: 120,
+    marginTop: 16,
+  },
+  bentoCardHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 12,
+  },
+  bentoNumber: {
+    fontSize: 32,
+    fontWeight: "bold",
+    color: "white",
+    textShadowColor: "rgba(0, 0, 0, 0.5)",
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 3,
+  },
+  bentoIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: "rgba(255, 255, 255, 0.2)",
+    justifyContent: "center",
+    alignItems: "center",
+    backdropFilter: "blur(10px)",
+  },
+  bentoIconText: {
+    fontSize: 24,
+  },
+  bentoTitle: {
+    fontSize: 20,
     fontWeight: "bold",
     color: "white",
     marginBottom: 8,
+    textShadowColor: "rgba(0, 0, 0, 0.5)",
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 2,
   },
-  numberDescription: {
+  bentoDescription: {
     fontSize: 14,
-    color: "#999",
+    color: "rgba(255, 255, 255, 0.9)",
     lineHeight: 20,
   },
-  numberBadge: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: "#E91E63",
-    justifyContent: "center",
-    alignItems: "center",
+  bentoDescriptionSmall: {
+    fontSize: 12,
+    color: "rgba(255, 255, 255, 0.8)",
+    lineHeight: 16,
   },
-  numberValue: {
-    fontSize: 24,
-    fontWeight: "bold",
-    color: "white",
+  // Individual Card Colors
+  lifePathCard: {
+    background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+    backgroundColor: "#667eea",
+  },
+  destinyCard: {
+    background: "linear-gradient(135deg, #f093fb 0%, #f5576c 100%)",
+    backgroundColor: "#f093fb",
+  },
+  soulUrgeCard: {
+    background: "linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)",
+    backgroundColor: "#4facfe",
+  },
+  expressionCard: {
+    background: "linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)",
+    backgroundColor: "#43e97b",
+  },
+  strengthsCard: {
+    backgroundColor: "#10B981",
+    marginBottom: 16,
+  },
+  challengesCard: {
+    backgroundColor: "#F59E0B",
+    marginBottom: 16,
+  },
+  careerCard: {
+    backgroundColor: "#3B82F6",
+    marginBottom: 16,
+  },
+  relationshipCard: {
+    backgroundColor: "#EC4899",
+    marginBottom: 16,
+  },
+  spiritualCard: {
+    backgroundColor: "#8B5CF6",
+    marginBottom: 16,
   },
   analysisCard: {
     backgroundColor: "#1C1C1E",
@@ -580,12 +649,17 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   luckyNumberBadge: {
-    backgroundColor: "#E91E63",
+    backgroundColor: "#F59E0B",
     borderRadius: 20,
     paddingHorizontal: 12,
     paddingVertical: 6,
     minWidth: 40,
     alignItems: "center",
+    shadowColor: "#F59E0B",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 3,
   },
   luckyNumberText: {
     color: "white",
@@ -599,15 +673,15 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   luckyColorBadge: {
-    backgroundColor: "rgba(233, 30, 99, 0.2)",
+    backgroundColor: "rgba(139, 92, 246, 0.2)",
     borderRadius: 20,
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderWidth: 1,
-    borderColor: "#E91E63",
+    borderColor: "#8B5CF6",
   },
   luckyColorText: {
-    color: "#E91E63",
+    color: "#8B5CF6",
     fontSize: 14,
     fontWeight: "500",
   },
