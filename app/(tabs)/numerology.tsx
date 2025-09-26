@@ -287,7 +287,23 @@ export default function NumerologyScreen() {
           <View style={styles.inputContainer}>
             <DatePicker
               label="Birth Date (MM/DD/YYYY)"
-              value={birthDate ? new Date(birthDate) : undefined}
+              value={birthDate ? (() => {
+                try {
+                  // Handle MM/DD/YYYY format
+                  if (birthDate.includes('/')) {
+                    const [month, day, year] = birthDate.split('/');
+                    return new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+                  }
+                  // Handle YYYY-MM-DD format
+                  if (birthDate.includes('-')) {
+                    const [year, month, day] = birthDate.split('-');
+                    return new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+                  }
+                  return new Date(birthDate);
+                } catch {
+                  return undefined;
+                }
+              })() : undefined}
               onSelect={(date) => {
                 if (date) {
                   const month = String(date.getMonth() + 1).padStart(2, "0");

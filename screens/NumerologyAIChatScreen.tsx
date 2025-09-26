@@ -40,7 +40,17 @@ export default function NumerologyAIChatScreen({
   const [messages, setMessages] = useState<Array<{type: 'user' | 'ai', content: string, timestamp: Date}>>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [summaryLoading, setSummaryLoading] = useState(true);
+  const [showSuggestions, setShowSuggestions] = useState(true);
   const scrollViewRef = useRef<ScrollView>(null);
+
+  const suggestionQuestions = [
+    "How is my life going to be?",
+    "How is my career going to be?",
+    "What about my love life?",
+    "What are my strengths?",
+    "What challenges should I expect?",
+    "What is my life purpose?",
+  ];
 
   // Generate AI summary on mount
   useEffect(() => {
@@ -59,37 +69,62 @@ export default function NumerologyAIChatScreen({
   const generateNumerologySummary = async () => {
     setSummaryLoading(true);
     try {
-      const summaryPrompt = `Create a personalized numerology summary for ${name || 'this person'} based on their profile:
+      // Include Roxy API data if available
+      const roxyData = profile.roxyInsights ? `
 
-Life Path Number: ${profile.lifePathNumber}
-Destiny Number: ${profile.destinyNumber}
-Soul Urge Number: ${profile.soulUrgeNumber}
-Birth Date: ${birthDate}
+Professional Insights from Roxy API:
+- Strengths: ${profile.roxyInsights.strengths?.join(', ') || 'Not available'}
+- Challenges: ${profile.roxyInsights.challenges?.join(', ') || 'Not available'}
+- Career Guidance: ${profile.roxyInsights.career || 'Not available'}
+- Relationship Guidance: ${profile.roxyInsights.relationship || 'Not available'}
+- Spiritual Guidance: ${profile.roxyInsights.spiritual || 'Not available'}
+- Lucky Numbers: ${profile.roxyInsights.luckyNumbers?.join(', ') || 'Not available'}
+- Lucky Colors: ${profile.roxyInsights.luckyColors?.join(', ') || 'Not available'}
+- Personal Year: ${profile.roxyInsights.personalYear || 'Not available'}` : '';
 
-Please provide a warm, insightful 3-paragraph summary covering:
-1. Their core personality and life purpose
-2. Their key strengths and natural talents
-3. Important guidance for their spiritual journey
+      const summaryPrompt = `Hello ${name || 'beautiful soul'}! 🌟
 
-Keep it personal, encouraging, and mystical in tone.`;
+I'm your personal AI Oracle, and I've analyzed your complete numerology profile. Here's your cosmic blueprint:
+
+**Your Core Numbers:**
+- Life Path Number: ${profile.lifePathNumber}
+- Destiny Number: ${profile.destinyNumber}
+- Soul Urge Number: ${profile.soulUrgeNumber}
+- Birth Date: ${birthDate}${roxyData}
+
+**Character Analysis:**
+${characterAnalysis || 'Your character analysis reveals unique insights about your personality.'}
+
+Please provide a warm, personal welcome message that:
+1. Greets them by name warmly
+2. Gives a brief overview of what their numbers reveal about their core personality
+3. Mentions 2-3 key insights from their professional data (if available)
+4. Invites them to ask questions about their life, career, relationships, or future
+
+Keep it conversational, encouraging, and mystical. Make it feel like talking to a wise friend who truly understands them.`;
 
       const result = await SimpleAIService.generateResponse(summaryPrompt, "numerology");
 
       setMessages([{
         type: 'ai',
-        content: result.content || "Welcome to your personalized numerology insights! I'm here to help you understand your cosmic blueprint.",
+        content: result.content || `Welcome ${name}! 🌟\n\nYour numbers reveal a fascinating cosmic blueprint. Your Life Path ${profile.lifePathNumber} suggests you're here to bring unique gifts to the world, while your Destiny ${profile.destinyNumber} points toward your ultimate purpose.\n\nI'm here to help you understand your numerological journey. Feel free to ask me anything about your life path, relationships, career, or what the future holds for you!`,
         timestamp: new Date()
       }]);
     } catch (error) {
       console.error("Error generating summary:", error);
       setMessages([{
         type: 'ai',
-        content: "Welcome to your personalized numerology insights! I'm here to help you understand your cosmic blueprint and answer any questions about your numbers.",
+        content: `Welcome ${name}! 🌟\n\nYour numerology profile reveals incredible insights about your life path and purpose. I'm here to guide you through your cosmic blueprint and answer any questions about your journey.\n\nFeel free to ask me about your relationships, career, future, or anything else on your mind!`,
         timestamp: new Date()
       }]);
     } finally {
       setSummaryLoading(false);
     }
+  };
+
+  const handleSuggestionTap = (suggestion: string) => {
+    setQuestion(suggestion);
+    setShowSuggestions(false);
   };
 
   const handleAskQuestion = async () => {
@@ -103,6 +138,7 @@ Keep it personal, encouraging, and mystical in tone.`;
 
     setMessages(prev => [...prev, userMessage]);
     setQuestion("");
+    setShowSuggestions(false);
     setIsLoading(true);
 
     try {
@@ -221,6 +257,24 @@ Keep it personal, encouraging, and mystical in tone.`;
           )}
         </ScrollView>
 
+        {/* Suggestion Chips */}
+        {showSuggestions && messages.length > 0 && (
+          <View style={styles.suggestionsContainer}>
+            <Text style={styles.suggestionsTitle}>Try asking:</Text>
+            <View style={styles.suggestionsGrid}>
+              {suggestionQuestions.map((suggestion, index) => (
+                <TouchableOpacity
+                  key={index}
+                  style={styles.suggestionChip}
+                  onPress={() => handleSuggestionTap(suggestion)}
+                >
+                  <Text style={styles.suggestionText}>{suggestion}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+        )}
+
         {/* Input */}
         <View style={styles.inputSection}>
           <View style={styles.inputContainer}>
@@ -229,7 +283,14 @@ Keep it personal, encouraging, and mystical in tone.`;
               placeholder="Ask about your numbers, future, or relationships..."
               placeholderTextColor="#888"
               value={question}
-              onChangeText={setQuestion}
+              onChangeText={(text) => {
+                setQuestion(text);
+                if (text.length > 0) {
+                  setShowSuggestions(false);
+                } else {
+                  setShowSuggestions(true);
+                }
+              }}
               multiline
               maxLength={500}
               onSubmitEditing={handleAskQuestion}
@@ -385,9 +446,42 @@ const styles = StyleSheet.create({
     color: "#8B5CF6",
     fontStyle: "italic",
   },
+  suggestionsContainer: {
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    backgroundColor: "#000000",
+    borderTopWidth: 1,
+    borderTopColor: "#1C1C1E",
+  },
+  suggestionsTitle: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#8B5CF6",
+    marginBottom: 12,
+  },
+  suggestionsGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+  },
+  suggestionChip: {
+    backgroundColor: "#1C1C1E",
+    borderRadius: 20,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderWidth: 1,
+    borderColor: "rgba(139, 92, 246, 0.3)",
+    marginBottom: 8,
+  },
+  suggestionText: {
+    fontSize: 13,
+    color: "#8B5CF6",
+    fontWeight: "500",
+  },
   inputSection: {
     paddingHorizontal: 20,
     paddingVertical: 16,
+    paddingBottom: 32,
     backgroundColor: "#000000",
     borderTopWidth: 1,
     borderTopColor: "#1C1C1E",
