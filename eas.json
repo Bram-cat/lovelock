@@ -22,7 +22,10 @@
       "ios": {
         "buildConfiguration": "Release"
       },
-      "distribution": "internal"
+      "distribution": "internal",
+      "env": {
+        "NODE_ENV": "production"
+      }
     },
     "production": {
       "android": {

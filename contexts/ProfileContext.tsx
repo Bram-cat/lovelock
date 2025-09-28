@@ -54,7 +54,7 @@ export function ProfileProvider({ children }: { children: React.ReactNode }) {
         const newProfile: Partial<ProfileData> = {
           user_id: user.id,
           email: user.emailAddresses[0]?.emailAddress || '',
-          full_name: user.fullName || `${user.firstName || ''} ${user.lastName || ''}`.trim() || 'Unknown User'
+          full_name: user.fullName || `${user.firstName || ''} ${user.lastName || ''}`.trim() || 'Beautiful Soul'
         };
         
         const { data: created, error: createError } = await supabase

@@ -146,8 +146,8 @@ export function useSubscription() {
     const limit = subscription.limits[feature];
     const used = subscription.usage?.[feature] || 0;
 
-    // Unlimited access
-    if (limit === -1) return true;
+    // Unlimited access (either -1 or high numbers like 999)
+    if (limit === -1 || limit >= 999) return true;
 
     // Check if under limit
     return used < limit;

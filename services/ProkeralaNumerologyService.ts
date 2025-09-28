@@ -29,7 +29,7 @@ export interface RoxyApiResponse {
 }
 
 export class RoxyNumerologyService {
-  private static readonly API_TOKEN = process.env.ROXY_TOKEN || "8846c0d9-1f59-45bb-8092-9b2650ad3d80";
+  private static readonly API_TOKEN = process.env.ROXY_TOKEN;
   private static readonly BASE_URL =
     "https://roxyapi.com/api/v1/data/astro/numerology";
 
@@ -104,46 +104,35 @@ export class RoxyNumerologyService {
     return `roxy_${firstName.toLowerCase()}_${lastName.toLowerCase()}_${birthDate}`;
   }
 
-  // Make API request to Roxy API with token authentication
+  // Simplified Roxy API request - try but don't block on failure
   private static async makeRoxyRequest(
     endpoint: string,
-    params: any,
-    method: "GET" | "POST" = "GET"
+    params: any
   ): Promise<any> {
+    if (!this.API_TOKEN) {
+      throw new Error("No Roxy API token configured");
+    }
+
     await this.waitForRoxyRateLimit();
 
     const url = new URL(`${this.BASE_URL}/${endpoint}`);
-    if (RoxyNumerologyService.API_TOKEN) {
-      url.searchParams.append("token", RoxyNumerologyService.API_TOKEN);
-    } else {
-      throw new Error("Roxy API token not configured");
-    }
 
-    let requestOptions: RequestInit = {
-      method,
+    // Add all parameters including token to URL
+    Object.keys(params).forEach((key) => {
+      if (params[key] !== undefined && params[key] !== null) {
+        url.searchParams.append(key, params[key]);
+      }
+    });
+    url.searchParams.append("token", this.API_TOKEN);
+
+    const response = await fetch(url.toString(), {
+      method: "GET",
       headers: {
         Accept: "application/json",
-        "Content-Type": "application/json",
       },
-    };
-
-    if (method === "GET") {
-      // Add parameters to URL for GET requests
-      Object.keys(params).forEach((key) => {
-        if (params[key] !== undefined && params[key] !== null) {
-          url.searchParams.append(key, params[key]);
-        }
-      });
-    } else {
-      // Add parameters to body for POST requests
-      requestOptions.body = JSON.stringify(params);
-    }
-
-    const response = await fetch(url.toString(), requestOptions);
+    });
 
     if (!response.ok) {
-      const errorText = await response.text();
-      console.error("Roxy API request error:", response.status, errorText);
       throw new Error(`Roxy API request failed: ${response.status}`);
     }
 
@@ -175,22 +164,18 @@ export class RoxyNumerologyService {
         formattedBirthDate = `${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`;
       }
 
-      // Get numerology key figures from Roxy API
+      // Try to get basic numerology data from Roxy API
       const params = {
         first_name: firstName,
         last_name: lastName,
         birthdate: formattedBirthDate,
       };
 
-      // Try to get numerology data from key-figures endpoint
-      const roxyData = await this.makeRoxyRequest(
-        "key-figures",
-        params,
-        "POST"
-      );
+      // Try main numerology endpoint
+      const roxyData = await this.makeRoxyRequest("", params);
 
       if (roxyData) {
-        console.log("Successfully fetched from Roxy numerology API:", roxyData);
+        console.log("✅ Successfully fetched from Roxy numerology API");
         // Transform response to our format
         const reading = this.transformRoxyDataToReading(
           roxyData,
@@ -212,7 +197,7 @@ export class RoxyNumerologyService {
       this.setCachedRoxyResponse(cacheKey, fallbackData);
       return fallbackData;
     } catch (error) {
-      console.error("Error fetching from Roxy API:", error);
+      console.log("🔄 Roxy API unavailable, using enhanced local calculations...");
 
       const fallbackData = this.getFallbackNumerology(
         firstName + " " + lastName,
@@ -692,314 +677,6 @@ export class RoxyNumerologyService {
     return guidanceMap[lifePathNumber] || guidanceMap[1];
   }
 
-  // Enhancement methods to combine API data with local insights
-
-  // Get daily predictions with Roxy API enhancement
-  static async getDailyPredictions(
-    firstName: string,
-    lastName: string,
-    birthDate: string,
-    date?: Date,
-    birthTime?: string
-  ): Promise<{
-    love: string;
-    career: string;
-    health: string;
-    spiritual: string;
-    luckyNumbers: number[];
-    luckyColors: string[];
-    energyLevel: number;
-  }> {
-    const targetDate = date || new Date();
-    const numerologyReading = await this.getNumerologyReading(
-      firstName,
-      lastName,
-      birthDate,
-      birthTime
-    );
-
-    if (!numerologyReading) {
-      throw new Error("Unable to generate numerology reading");
-    }
-
-    // Generate enhanced local predictions (Roxy doesn't have daily predictions endpoint)
-    return this.generateEnhancedDailyPredictions(numerologyReading, targetDate);
-  }
-
-  // Get compatibility analysis from Roxy API
-  static async getCompatibilityAnalysis(
-    person1FirstName: string,
-    person1LastName: string,
-    person1BirthDate: string,
-    person2FirstName: string,
-    person2LastName: string,
-    person2BirthDate: string
-  ): Promise<{ compatibility_score: number; analysis: string }> {
-    try {
-      const params = {
-        person1_first_name: person1FirstName,
-        person1_last_name: person1LastName,
-        person1_birthdate: person1BirthDate,
-        person2_first_name: person2FirstName,
-        person2_last_name: person2LastName,
-        person2_birthdate: person2BirthDate,
-      };
-
-      const roxyData = await this.makeRoxyRequest(
-        "compatibility-analysis",
-        params
-      );
-
-      if (roxyData?.success && roxyData?.data) {
-        return {
-          compatibility_score: roxyData.data.compatibility_score || 75,
-          analysis:
-            roxyData.data.analysis ||
-            "Your numerological compatibility shows strong potential for harmony.",
-        };
-      }
-
-      // Fallback compatibility calculation
-      return this.calculateLocalCompatibility(
-        person1FirstName + " " + person1LastName,
-        person1BirthDate,
-        person2FirstName + " " + person2LastName,
-        person2BirthDate
-      );
-    } catch (error) {
-      console.error("Error fetching compatibility from Roxy API:", error);
-      return this.calculateLocalCompatibility(
-        person1FirstName + " " + person1LastName,
-        person1BirthDate,
-        person2FirstName + " " + person2LastName,
-        person2BirthDate
-      );
-    }
-  }
-
-  // Local fallback compatibility calculation
-  private static calculateLocalCompatibility(
-    name1: string,
-    birthDate1: string,
-    name2: string,
-    birthDate2: string
-  ): { compatibility_score: number; analysis: string } {
-    const lifePathNum1 = this.calculateLifePathNumber(birthDate1);
-    const lifePathNum2 = this.calculateLifePathNumber(birthDate2);
-    const destinyNum1 = this.calculateDestinyNumber(name1);
-    const destinyNum2 = this.calculateDestinyNumber(name2);
-
-    // Simple compatibility scoring based on numerological harmony
-    const lifePathCompatibility = this.getNumberCompatibility(
-      lifePathNum1,
-      lifePathNum2
-    );
-    const destinyCompatibility = this.getNumberCompatibility(
-      destinyNum1,
-      destinyNum2
-    );
-
-    const overallScore = Math.round(
-      (lifePathCompatibility + destinyCompatibility) / 2
-    );
-
-    return {
-      compatibility_score: overallScore,
-      analysis: `Your Life Path numbers (${lifePathNum1} and ${lifePathNum2}) and Destiny numbers (${destinyNum1} and ${destinyNum2}) create a ${overallScore > 80 ? "highly compatible" : overallScore > 60 ? "moderately compatible" : "challenging but growth-oriented"} relationship dynamic.`,
-    };
-  }
-
-  // Number compatibility helper
-  private static getNumberCompatibility(num1: number, num2: number): number {
-    const compatibilityMatrix: { [key: string]: number } = {
-      "1-1": 85,
-      "1-2": 70,
-      "1-3": 95,
-      "1-4": 60,
-      "1-5": 80,
-      "1-6": 75,
-      "1-7": 65,
-      "1-8": 90,
-      "1-9": 70,
-      "2-2": 90,
-      "2-3": 85,
-      "2-4": 95,
-      "2-5": 60,
-      "2-6": 100,
-      "2-7": 85,
-      "2-8": 70,
-      "2-9": 80,
-      "3-3": 80,
-      "3-4": 65,
-      "3-5": 90,
-      "3-6": 85,
-      "3-7": 75,
-      "3-8": 70,
-      "3-9": 95,
-      "4-4": 85,
-      "4-5": 55,
-      "4-6": 90,
-      "4-7": 80,
-      "4-8": 95,
-      "4-9": 65,
-      "5-5": 75,
-      "5-6": 60,
-      "5-7": 70,
-      "5-8": 65,
-      "5-9": 85,
-      "6-6": 95,
-      "6-7": 75,
-      "6-8": 80,
-      "6-9": 90,
-      "7-7": 90,
-      "7-8": 75,
-      "7-9": 85,
-      "8-8": 85,
-      "8-9": 70,
-      "9-9": 95,
-    };
-
-    const key1 = `${Math.min(num1, num2)}-${Math.max(num1, num2)}`;
-    const key2 = `${Math.max(num1, num2)}-${Math.min(num1, num2)}`;
-
-    return compatibilityMatrix[key1] || compatibilityMatrix[key2] || 70;
-  }
-
-  private static generateEnhancedDailyPredictions(
-    reading: NumerologyReading,
-    date: Date
-  ): {
-    love: string;
-    career: string;
-    health: string;
-    spiritual: string;
-    luckyNumbers: number[];
-    luckyColors: string[];
-    energyLevel: number;
-  } {
-    const dayOfYear = Math.floor(
-      (date.getTime() - new Date(date.getFullYear(), 0, 0).getTime()) /
-        (1000 * 60 * 60 * 24)
-    );
-    const personalDayNumber =
-      ((reading.life_path_number + dayOfYear - 1) % 9) + 1;
-
-    type DailyPrediction = {
-      love: string;
-      career: string;
-      health: string;
-      spiritual: string;
-    };
-
-    const predictions: { [key: number]: DailyPrediction } = {
-      1: {
-        love: "New romantic opportunities or fresh energy in existing relationships. Your confidence attracts others.",
-        career:
-          "Leadership opportunities emerge. Take initiative on important projects.",
-        health:
-          "High energy levels. Perfect day for starting new fitness routines.",
-        spiritual:
-          "Focus on self-discovery and personal growth. Meditate on your goals.",
-      },
-      2: {
-        love: "Harmony and cooperation dominate your relationships. Deep emotional connections.",
-        career:
-          "Teamwork and partnerships bring success. Collaborate rather than compete.",
-        health:
-          "Balance is key. Gentle exercises like yoga or walking are beneficial.",
-        spiritual:
-          "Focus on compassion and helping others. Your intuition is heightened.",
-      },
-      3: {
-        love: "Playful, joyful energy in love. Express your feelings creatively.",
-        career:
-          "Your communication skills shine. Present ideas or network actively.",
-        health:
-          "Creative activities boost your wellbeing. Dance or art therapy helps.",
-        spiritual:
-          "Express gratitude and share your joy with others. Laughter heals.",
-      },
-      4: {
-        love: "Stability and commitment are highlighted. Build lasting foundations.",
-        career:
-          "Hard work and persistence pay off. Focus on practical, achievable goals.",
-        health:
-          "Structured routines benefit you. Maintain consistent healthy habits.",
-        spiritual:
-          "Ground yourself in nature. Practice patience and perseverance.",
-      },
-      5: {
-        love: "Adventure and excitement in romance. Try something new with your partner.",
-        career:
-          "Change and variety are favored. Embrace new opportunities or methods.",
-        health:
-          "Dynamic activities energize you. Mix up your routine for best results.",
-        spiritual:
-          "Embrace freedom and explore new spiritual practices or philosophies.",
-      },
-      6: {
-        love: "Family and nurturing take priority. Deep, caring connections flourish.",
-        career:
-          "Service-oriented work brings fulfillment. Help others achieve their goals.",
-        health:
-          "Caring for others nourishes your soul. Maintain emotional balance.",
-        spiritual:
-          "Practice unconditional love and compassion. Heal old wounds.",
-      },
-      7: {
-        love: "Deep, spiritual connections are possible. Look beyond surface attractions.",
-        career:
-          "Research and analysis lead to breakthrough insights. Trust your intuition.",
-        health:
-          "Quiet reflection and meditation restore your energy. Avoid crowds.",
-        spiritual:
-          "Seek inner wisdom through meditation. Mystical experiences are possible.",
-      },
-      8: {
-        love: "Practical approach to relationships. Shared goals strengthen bonds.",
-        career:
-          "Business success and financial opportunities abound. Think big.",
-        health:
-          "Ambitious health goals can be achieved. Invest in your wellbeing.",
-        spiritual:
-          "Balance material and spiritual pursuits. Success includes service.",
-      },
-      9: {
-        love: "Universal love and compassion guide your relationships. Forgiveness heals.",
-        career:
-          "Complete important projects. Your wisdom and experience are valued.",
-        health:
-          "Holistic approaches to health work well. Consider mind-body connections.",
-        spiritual:
-          "Share your wisdom with others. Focus on humanitarian causes.",
-      },
-    };
-
-    const prediction = predictions[personalDayNumber];
-
-    if (!prediction) {
-      // Fallback for safety, though personalDayNumber should always be 1-9
-      return {
-        love: "A day of unexpected turns. Be open to new experiences.",
-        career: "Stay adaptable at work. New opportunities may arise.",
-        health: "Listen to your body's needs today.",
-        spiritual: "A good day for introspection and quiet contemplation.",
-        luckyNumbers: this.generateLuckyNumbers(reading.life_path_number),
-        luckyColors: this.getLuckyColors(reading.life_path_number),
-        energyLevel: 65,
-      };
-    }
-
-    return {
-      love: prediction.love,
-      career: prediction.career,
-      health: prediction.health,
-      spiritual: prediction.spiritual,
-      luckyNumbers: reading.lucky_numbers.slice(0, 3),
-      luckyColors: reading.lucky_colors.slice(0, 2),
-      energyLevel: 60 + personalDayNumber * 5 + Math.floor(Math.random() * 20),
-    };
-  }
 
   // Status monitoring for rate limiting
   static getServiceStatus(): {

@@ -1,1016 +1,404 @@
-import { supabase } from "../lib/supabase-client";
-import StripeService, { SubscriptionTier } from "./StripeServices";
-
-interface UserSubscription {
-  userId: string;
-  tier: string;
-  status: string;
-  currentPeriodStart: Date;
-  currentPeriodEnd: Date;
-  usage: {
-    numerology: number;
-    loveMatch: number;
-    trustAssessment: number;
-  };
-  stripeCustomerId?: string;
-  stripeSubscriptionId?: string;
-}
+// Subscription Service - Check user subscription status and track usage
+import { supabase } from '../lib/supabase-client';
 
 export interface SubscriptionStatus {
   isPremium: boolean;
-  subscriptionType: "free" | "premium" | "unlimited";
-  tier: SubscriptionTier["id"];
-  expiryDate?: string;
-  startDate?: string;
-  stripeSubscriptionId?: string;
-}
-
-export interface UsageCount {
-  totalAIRequests: number;
-  numerology: number;
-  loveMatch: number;
-  trustAssessment: number;
-  lastResetDate: string;
+  isUnlimited: boolean;
+  isActive: boolean;
+  subscriptionType: string;
+  endsAt: string | null;
+  daysRemaining: number;
 }
 
 export interface UsageStats {
-  totalUsed: number;
-  limit: number;
-  remaining: number;
-  resetsAt: string;
+  numerology: { used: number; limit: number };
+  loveMatch: { used: number; limit: number };
+  trustAssessment: { used: number; limit: number };
 }
 
 export class SubscriptionService {
-  // Free tier limits - 5 total AI requests (lifetime, not per month)
-  private static readonly FREE_AI_REQUESTS_LIMIT = 5;
-
-  // Free tier limits per feature (3 requests per month per feature)
-  private static readonly FREE_LIMIT_PER_FEATURE = 3;
-
-  // Premium tier limits - 50 AI requests per month
-  private static readonly PREMIUM_AI_REQUESTS_LIMIT = 50;
-
-  // Subscription prices
-  static readonly PREMIUM_MONTHLY_PRICE = 4.99;
-  static readonly UNLIMITED_MONTHLY_PRICE = 9.99;
-
-  // Special unlimited accounts (add your user IDs here)
-  private static readonly UNLIMITED_ACCOUNTS = [
-    "user_31yK29VRF1fXjDvXOe9yLCZr4IN", // Your actual user ID from logs
-    "user_2qNQD9g8LjQWvVZfBJVo6xGhVNq", // Backup
-    "vsbha@outlook.com", // Add your email as backup
-  ];
-
-  /**
-   * Check if user has unlimited access (special accounts or premium)
-   */
-  private static hasUnlimitedAccess(
-    userId: string,
-    userEmail?: string
-  ): boolean {
-    return (
-      this.UNLIMITED_ACCOUNTS.includes(userId) ||
-      (Boolean(userEmail) && this.UNLIMITED_ACCOUNTS.includes(userEmail!))
-    );
-  }
-
-  /**
-   * Get current subscription status from Supabase
-   */
-  static async getSubscriptionStatus(
-    userId: string
-  ): Promise<SubscriptionStatus> {
+  // Check if user has active subscription
+  static async getSubscriptionStatus(userId: string): Promise<SubscriptionStatus> {
     try {
-
-      // Check if user has unlimited access first
-      if (this.hasUnlimitedAccess(userId)) {
-        return {
-          isPremium: true,
-          subscriptionType: "premium",
-          tier: "premium",
-          expiryDate: undefined,
-          startDate: new Date().toISOString(),
-          stripeSubscriptionId: undefined,
-        };
-      }
-
-      const { data, error } = await supabase
-        .from("subscriptions")
-        .select("*")
-        .eq("user_id", userId)
-        .eq("status", "active")
-        .order("created_at", { ascending: false })
-        .limit(1)
+      const { data: subscription, error } = await supabase
+        .from('subscriptions')
+        .select('*')
+        .eq('user_id', userId)
+        .eq('status', 'active')
         .single();
 
-      if (error && error.code !== "PGRST116") {
-        console.error("❌ Error getting subscription:", error);
-        return { isPremium: false, subscriptionType: "free", tier: "free" };
+      if (error && error.code !== 'PGRST116') {
+        console.error('Error fetching subscription:', error);
+        return this.getFreeUserStatus();
       }
 
-      if (!data) {
-        return { isPremium: false, subscriptionType: "free", tier: "free" };
+      if (!subscription) {
+        return this.getFreeUserStatus();
       }
 
-      // Check if subscription is still valid
-      if (data.ends_at && new Date(data.ends_at) < new Date()) {
-        await this.expireSubscription(userId, data.id);
-        return { isPremium: false, subscriptionType: "free", tier: "free" };
-      }
+      const now = new Date();
+      const endsAt = new Date(subscription.ends_at);
+      const daysRemaining = Math.max(0, Math.ceil((endsAt.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)));
 
       return {
-        isPremium: data.subscription_type === "premium",
-        subscriptionType: data.subscription_type,
-        tier: data.subscription_type || "free",
-        expiryDate: data.ends_at,
-        startDate: data.starts_at,
-        stripeSubscriptionId: data.stripe_subscription_id,
+        isPremium: subscription.is_premium || false,
+        isUnlimited: subscription.is_unlimited || false,
+        isActive: now < endsAt,
+        subscriptionType: subscription.subscription_type || 'free',
+        endsAt: subscription.ends_at,
+        daysRemaining
       };
     } catch (error) {
-      console.error("💥 Unexpected error getting subscription status:", error);
-      return { isPremium: false, subscriptionType: "free", tier: "free" };
+      console.error('Error checking subscription status:', error);
+      return this.getFreeUserStatus();
     }
   }
 
-  /**
-   * Create or update subscription status in Supabase
-   */
-  static async createSubscription(
-    userId: string,
-    subscriptionType: "free" | "premium",
-    stripeSubscriptionId?: string,
-    endsAt?: string
-  ): Promise<void> {
-    try {
-      const startDate = new Date().toISOString();
-      const endDate =
-        endsAt ||
-        (subscriptionType === "premium"
-          ? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
-          : null);
-
-      // First, deactivate any existing subscriptions
-      await supabase
-        .from("subscriptions")
-        .update({ status: "cancelled" })
-        .eq("user_id", userId)
-        .eq("status", "active");
-
-      // Create new subscription
-      const { error } = await supabase.from("subscriptions").insert({
-        user_id: userId,
-        subscription_type: subscriptionType,
-        status: "active",
-        starts_at: startDate,
-        ends_at: endDate,
-        stripe_subscription_id: stripeSubscriptionId,
-      });
-
-      if (error) {
-        console.error("❌ Error creating subscription:", error);
-        throw error;
-      }
-
-    } catch (error) {
-      console.error("💥 Error creating subscription:", error);
-      throw error;
-    }
-  }
-
-  /**
-   * Get current usage count from Supabase (all-time for free, monthly for premium/unlimited)
-   */
-  static async getUsageCount(
-    userId: string,
-    subscriptionType?: "free" | "premium" | "unlimited"
-  ): Promise<UsageCount> {
-    try {
-      const today = new Date();
-      const startOfMonth = new Date(
-        today.getFullYear(),
-        today.getMonth(),
-        1
-      ).toISOString();
-      const endOfMonth = new Date(
-        today.getFullYear(),
-        today.getMonth() + 1,
-        0,
-        23,
-        59,
-        59
-      ).toISOString();
-
-      // For free users: get all-time usage. For premium/unlimited: get monthly usage
-      // Note: ai_usage table might not exist, so we'll use feature tables as fallback
-      let aiUsageResult = { count: 0 };
-
-      try {
-        let aiUsageQuery = supabase
-          .from("ai_usage")
-          .select("id", { count: "exact", head: true })
-          .eq("user_id", userId);
-
-        if (subscriptionType !== "free") {
-          aiUsageQuery = aiUsageQuery
-            .gte("created_at", startOfMonth)
-            .lte("created_at", endOfMonth);
-        } else {
-          aiUsageQuery = aiUsageQuery.gte("created_at", "1970-01-01");
-        }
-
-        aiUsageResult = await aiUsageQuery;
-      } catch (error) {
-        console.warn("ai_usage table not found, using feature tables for total count");
-        aiUsageResult = { count: 0 };
-      }
-
-      // Get counts from each feature table using the correct schema
-      const [numerologyResult, loveMatchResult, trustResult] =
-        await Promise.all([
-          supabase
-            .from("numerology_readings")
-            .select("id", { count: "exact", head: true })
-            .eq("user_id", userId)
-            .gte("created_at", subscriptionType === "free" ? "1970-01-01" : startOfMonth)
-            .lte("created_at", endOfMonth),
-          supabase
-            .from("love_matches")
-            .select("id", { count: "exact", head: true })
-            .eq("user_id", userId)
-            .gte("created_at", subscriptionType === "free" ? "1970-01-01" : startOfMonth)
-            .lte("created_at", endOfMonth),
-          supabase
-            .from("trust_assessments")
-            .select("id", { count: "exact", head: true })
-            .eq("user_id", userId)
-            .gte("created_at", subscriptionType === "free" ? "1970-01-01" : startOfMonth)
-            .lte("created_at", endOfMonth),
-        ]);
-
-      const usage: UsageCount = {
-        totalAIRequests: aiUsageResult.count || 0,
-        numerology: numerologyResult.count || 0,
-        loveMatch: loveMatchResult.count || 0,
-        trustAssessment: trustResult.count || 0,
-        lastResetDate: startOfMonth,
-      };
-
-      return usage;
-    } catch (error) {
-      console.error("💥 Error getting usage count:", error);
-      return {
-        totalAIRequests: 0,
-        numerology: 0,
-        loveMatch: 0,
-        trustAssessment: 0,
-        lastResetDate: new Date().toISOString(),
-      };
-    }
-  }
-
-  /**
-   * Record AI usage in Supabase
-   */
-  static async recordAIUsage(
-    userId: string,
-    feature:
-      | "numerology"
-      | "loveMatch"
-      | "trustAssessment"
-      | "dailyInsights"
-      | "oracle"
-      | "celebrityMatch",
-    provider: "openai" | "gemini",
-    estimatedCost: number = 0.12,
-    promptTokens: number = 0,
-    completionTokens: number = 0
-  ): Promise<void> {
-    try {
-
-      // Try to record in AI usage table for tracking (if it exists)
-      try {
-        const aiUsageResult = await supabase.from("ai_usage").insert({
-          user_id: userId,
-          feature_type: feature,
-          ai_provider: provider,
-          estimated_cost: estimatedCost,
-          prompt_tokens: promptTokens,
-          completion_tokens: completionTokens,
-          total_tokens: promptTokens + completionTokens,
-        });
-
-        if (aiUsageResult?.error) {
-          console.warn("⚠️ AI usage table not found or error recording:", aiUsageResult.error);
-        } else {
-        }
-      } catch (error) {
-        console.warn("⚠️ AI usage table not accessible, skipping AI usage recording");
-      }
-    } catch (error) {
-      console.error("💥 Error recording AI usage:", error);
-      throw error;
-    }
-  }
-
-  /**
-   * Record feature usage in Supabase (backward compatibility)
-   */
-  static async recordUsage(
-    userId: string,
-    feature: "numerology" | "loveMatch" | "trustAssessment",
-    data: any
-  ): Promise<void> {
-    try {
-
-      let insertResult;
-
-      switch (feature) {
-        case "numerology":
-          insertResult = await supabase.from("numerology_readings").insert({
-            user_id: userId,
-            reading_type: data.reading_type || "general",
-            reading_data: data,
-          });
-          break;
-        case "loveMatch":
-          insertResult = await supabase.from("love_matches").insert({
-            user_id: userId,
-            partner_name: data.partner_name || "Unknown",
-            partner_birth_date: data.partner_birth_date,
-            compatibility_score: data.compatibility_score,
-            match_details: data,
-          });
-          break;
-        case "trustAssessment":
-          insertResult = await supabase.from("trust_assessments").insert({
-            user_id: userId,
-            assessment_data: data,
-            trust_score: data.trust_score || 0,
-          });
-          break;
-      }
-
-      if (insertResult?.error) {
-        console.error(
-          `❌ Error recording ${feature} usage:`,
-          insertResult.error
-        );
-        throw insertResult.error;
-      }
-
-    } catch (error) {
-      console.error(`💥 Error recording ${feature} usage:`, error);
-      throw error;
-    }
-  }
-
-  /**
-   * Check if user can make an AI request
-   */
-  static async canMakeAIRequest(userId: string): Promise<{
-    canUse: boolean;
-    usageCount: number;
-    limit: number;
-    remaining: number;
-    subscriptionType: "free" | "premium" | "unlimited";
-    message?: string;
-  }> {
-    try {
-      // Check for unlimited access first
-      if (this.hasUnlimitedAccess(userId)) {
-        return {
-          canUse: true,
-          usageCount: 0,
-          limit: -1, // Unlimited
-          remaining: -1, // Unlimited
-          subscriptionType: "unlimited",
-          message: "Developer Account - Unlimited access",
-        };
-      }
-
-      const subscription = await this.getSubscriptionStatus(userId);
-      const subscriptionType = subscription.subscriptionType || "free";
-      const usage = await this.getUsageCount(userId, subscriptionType);
-
-      const aiUsageCount = usage.totalAIRequests;
-
-      // Unlimited tier
-      if (subscription.subscriptionType === "unlimited") {
-        return {
-          canUse: true,
-          usageCount: aiUsageCount,
-          limit: -1, // Unlimited
-          remaining: -1, // Unlimited
-          subscriptionType: "unlimited",
-          message: "Unlimited - No limits",
-        };
-      }
-
-      // Premium tier - 50 requests/month
-      if (subscription.isPremium) {
-        const canUse = aiUsageCount < this.PREMIUM_AI_REQUESTS_LIMIT;
-        const remaining = Math.max(
-          0,
-          this.PREMIUM_AI_REQUESTS_LIMIT - aiUsageCount
-        );
-
-        let message;
-        if (canUse) {
-          if (remaining <= 5) {
-            message = `⚠️ Only ${remaining} AI requests remaining! Upgrade to Unlimited for no limits.`;
-          } else {
-            message = `${remaining} AI requests remaining this month`;
-          }
-        } else {
-          message = `🚫 Premium limit reached! You've used all ${this.PREMIUM_AI_REQUESTS_LIMIT} requests. Upgrade to Unlimited for no limits.`;
-        }
-
-        return {
-          canUse,
-          usageCount: aiUsageCount,
-          limit: this.PREMIUM_AI_REQUESTS_LIMIT,
-          remaining,
-          subscriptionType: "premium",
-          message,
-        };
-      }
-
-      // Free tier - 5 requests total (lifetime)
-      const canUse = aiUsageCount < this.FREE_AI_REQUESTS_LIMIT;
-      const remaining = Math.max(0, this.FREE_AI_REQUESTS_LIMIT - aiUsageCount);
-
-      let message;
-      if (canUse) {
-        if (remaining === 1) {
-          message = `⚠️ Last free AI request remaining! Upgrade to Premium for 50 requests/month.`;
-        } else if (remaining <= 2) {
-          message = `⚠️ Only ${remaining} free AI requests remaining.`;
-        } else {
-          message = `${remaining} free AI requests remaining`;
-        }
-      } else {
-        message = `🚫 Free AI limit reached! You've used all ${this.FREE_AI_REQUESTS_LIMIT} free requests. Upgrade to Premium for 50 requests/month or Unlimited for no limits.`;
-      }
-
-      return {
-        canUse,
-        usageCount: aiUsageCount,
-        limit: this.FREE_AI_REQUESTS_LIMIT,
-        remaining,
-        subscriptionType: "free",
-        message,
-      };
-    } catch (error) {
-      console.error("💥 Error checking AI access:", error);
-      return {
-        canUse: false,
-        usageCount: 0,
-        limit: 0,
-        remaining: 0,
-        subscriptionType: "free",
-        message: "Error checking access",
-      };
-    }
-  }
-
-  /**
-   * Check if user can access a feature (backward compatibility)
-   */
-  static async canAccessFeature(
-    userId: string,
-    feature: "numerology" | "loveMatch" | "trustAssessment"
-  ): Promise<{
-    canUse: boolean;
-    usageCount: number;
-    limit: number;
-    remaining: number;
-    isPremium: boolean;
-    message?: string;
-  }> {
-    const aiAccess = await this.canMakeAIRequest(userId);
-
+  private static getFreeUserStatus(): SubscriptionStatus {
     return {
-      canUse: aiAccess.canUse,
-      usageCount: aiAccess.usageCount,
-      limit: aiAccess.limit,
-      remaining: aiAccess.remaining,
-      isPremium: aiAccess.subscriptionType !== "free",
-      message: aiAccess.message,
+      isPremium: false,
+      isUnlimited: false,
+      isActive: false,
+      subscriptionType: 'free',
+      endsAt: null,
+      daysRemaining: 0
     };
   }
 
-  /**
-   * Get usage statistics for display
-   */
-  static async getUsageStats(userId: string): Promise<{
-    numerology: UsageStats;
-    loveMatch: UsageStats;
-    trustAssessment: UsageStats;
-    isPremium: boolean;
-  }> {
+  // Get usage statistics for current month
+  static async getUsageStats(userId: string): Promise<UsageStats> {
     try {
-      const [subscription, usage] = await Promise.all([
-        this.getSubscriptionStatus(userId),
-        this.getUsageCount(userId),
-      ]);
+      const startOfMonth = new Date();
+      startOfMonth.setDate(1);
+      startOfMonth.setHours(0, 0, 0, 0);
 
-      const now = new Date();
-      const nextMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+      // Get numerology readings count
+      const { count: numerologyCount } = await supabase
+        .from('numerology_readings')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', userId)
+        .gte('created_at', startOfMonth.toISOString());
 
-      const createStats = (featureUsage: number): UsageStats => {
-        if (subscription.isPremium) {
-          return {
-            totalUsed: featureUsage,
-            limit: -1,
-            remaining: -1,
-            resetsAt: "Never (Premium)",
-          };
-        }
+      // Get love matches count
+      const { count: loveMatchCount } = await supabase
+        .from('love_matches')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', userId)
+        .gte('created_at', startOfMonth.toISOString());
 
-        return {
-          totalUsed: featureUsage,
-          limit: this.FREE_LIMIT_PER_FEATURE,
-          remaining: Math.max(0, this.FREE_LIMIT_PER_FEATURE - featureUsage),
-          resetsAt: nextMonth.toISOString(),
-        };
-      };
+      // Get trust assessments count
+      const { count: trustCount } = await supabase
+        .from('trust_assessments')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', userId)
+        .gte('created_at', startOfMonth.toISOString());
 
-      return {
-        numerology: createStats(usage.numerology),
-        loveMatch: createStats(usage.loveMatch),
-        trustAssessment: createStats(usage.trustAssessment),
-        isPremium: subscription.isPremium,
-      };
-    } catch (error) {
-      console.error("💥 Error getting usage stats:", error);
-      const emptyStats: UsageStats = {
-        totalUsed: 0,
-        limit: this.FREE_LIMIT_PER_FEATURE,
-        remaining: this.FREE_LIMIT_PER_FEATURE,
-        resetsAt: "Error",
-      };
-
-      return {
-        numerology: emptyStats,
-        loveMatch: emptyStats,
-        trustAssessment: emptyStats,
-        isPremium: false,
-      };
-    }
-  }
-
-  /**
-   * Activate premium subscription (called after successful payment)
-   */
-  static async activatePremiumSubscription(
-    userId: string,
-    sessionId: string,
-    subscriptionId?: string
-  ): Promise<void> {
-    try {
-
-      // Calculate expiry date (30 days from now)
-      const expiryDate = new Date();
-      expiryDate.setMonth(expiryDate.getMonth() + 1);
-
-      await this.createSubscription(
-        userId,
-        "premium",
-        subscriptionId,
-        expiryDate.toISOString()
-      );
-
-    } catch (error) {
-      console.error("💥 Error activating premium subscription:", error);
-      throw error;
-    }
-  }
-
-  /**
-   * Cancel premium subscription
-   */
-  static async cancelSubscription(userId: string): Promise<boolean> {
-    try {
+      // Get subscription status to determine limits
       const subscription = await this.getSubscriptionStatus(userId);
 
-      if (subscription.stripeSubscriptionId) {
-        const cancelled = await StripeService.cancelSubscription(
-          subscription.stripeSubscriptionId
-        );
-        if (!cancelled) {
+      // Determine limits based on subscription tier (Unlimited takes priority over Premium)
+      let limits;
+      if (subscription.isUnlimited) {
+        limits = { numerology: 999, loveMatch: 999, trustAssessment: 999 };
+      } else if (subscription.isPremium) {
+        limits = { numerology: 25, loveMatch: 15, trustAssessment: 10 };
+      } else {
+        limits = { numerology: 3, loveMatch: 2, trustAssessment: 1 };
+      }
+
+      return {
+        numerology: { used: numerologyCount || 0, limit: limits.numerology },
+        loveMatch: { used: loveMatchCount || 0, limit: limits.loveMatch },
+        trustAssessment: { used: trustCount || 0, limit: limits.trustAssessment }
+      };
+    } catch (error) {
+      console.error('Error getting usage stats:', error);
+      return {
+        numerology: { used: 0, limit: 3 },
+        loveMatch: { used: 0, limit: 2 },
+        trustAssessment: { used: 0, limit: 1 }
+      };
+    }
+  }
+
+  // Track feature usage
+  static async trackUsage(userId: string, feature: 'numerology' | 'love_match' | 'trust_assessment', data: any): Promise<boolean> {
+    try {
+      // Validate required parameters
+      if (!userId || !feature || !data) {
+        console.error('Missing required parameters for trackUsage');
+        return false;
+      }
+
+      const subscription = await this.getSubscriptionStatus(userId);
+      const usage = await this.getUsageStats(userId);
+
+      // Check if user has reached their limit
+      if (!subscription.isUnlimited) {
+        const featureUsage = usage[feature === 'love_match' ? 'loveMatch' : feature === 'trust_assessment' ? 'trustAssessment' : 'numerology'];
+        if (featureUsage.used >= featureUsage.limit) {
+          console.log(`User ${userId} has reached ${feature} limit`);
           return false;
         }
       }
 
-      // Update subscription status to cancelled in database
+      // Record usage based on feature type
+      let tableName = '';
+      let recordData = {};
+
+      switch (feature) {
+        case 'numerology':
+          tableName = 'numerology_readings';
+          recordData = {
+            user_id: userId,
+            reading_type: data.readingType || 'standard',
+            reading_data: data
+          };
+          break;
+        case 'love_match':
+          tableName = 'love_matches';
+          recordData = {
+            user_id: userId,
+            partner_name: data.partnerName || 'Self Analysis',
+            partner_birth_date: data.partnerBirthDate || null,
+            compatibility_score: data.compatibilityScore || 0,
+            match_details: data
+          };
+          break;
+        case 'trust_assessment':
+          tableName = 'trust_assessments';
+          recordData = {
+            user_id: userId,
+            assessment_data: data,
+            trust_score: data.trustScore || data.compatibilityScore || 0
+          };
+          break;
+      }
+
+      console.log(`📊 Tracking ${feature} usage for user ${userId}:`, recordData);
+
       const { error } = await supabase
-        .from("subscriptions")
-        .update({ status: "cancelled" })
-        .eq("user_id", userId)
-        .eq("status", "active");
+        .from(tableName)
+        .insert(recordData);
 
       if (error) {
-        console.error("❌ Error cancelling subscription in database:", error);
+        console.error(`❌ Error tracking ${feature} usage:`, error);
+        console.error('Record data that failed:', recordData);
         return false;
       }
 
       return true;
     } catch (error) {
-      console.error("💥 Error cancelling subscription:", error);
+      console.error(`Error tracking ${feature} usage:`, error);
       return false;
     }
   }
 
-  /**
-   * Expire a subscription
-   */
-  private static async expireSubscription(
-    userId: string,
-    subscriptionId: number
-  ): Promise<void> {
+  // Check if user can use a feature
+  static async canUseFeature(userId: string, feature: 'numerology' | 'love_match' | 'trust_assessment'): Promise<boolean> {
     try {
-      const { error } = await supabase
-        .from("subscriptions")
-        .update({ status: "expired" })
-        .eq("id", subscriptionId);
+      const subscription = await this.getSubscriptionStatus(userId);
 
-      if (error) {
-        console.error("❌ Error expiring subscription:", error);
-      } else {
-      }
-    } catch (error) {
-      console.error("💥 Error in expireSubscription:", error);
-    }
-  }
-
-  /**
-   * Format remaining time until subscription expires
-   */
-  static getTimeUntilExpiry(expiryDate: string): string {
-    const expiry = new Date(expiryDate);
-    const now = new Date();
-    const diffTime = expiry.getTime() - now.getTime();
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-
-    if (diffDays <= 0) {
-      return "Expired";
-    } else if (diffDays === 1) {
-      return "1 day left";
-    } else if (diffDays < 30) {
-      return `${diffDays} days left`;
-    } else {
-      const diffMonths = Math.floor(diffDays / 30);
-      return diffMonths === 1 ? "1 month left" : `${diffMonths} months left`;
-    }
-  }
-
-  // ========== NEW STRIPE INTEGRATION METHODS ==========
-
-  /**
-   * Create subscription using new StripeService
-   */
-  static async createStripeSubscription(
-    userId: string,
-    userEmail: string,
-    tier: "premium" | "unlimited"
-  ): Promise<{ success: boolean; url?: string; error?: string }> {
-    return StripeService.createCheckoutSession(userId, userEmail, tier);
-  }
-
-  /**
-   * Get subscription using new StripeService with fallback to old system
-   */
-  static async getEnhancedSubscriptionStatus(
-    userId: string
-  ): Promise<SubscriptionStatus> {
-    try {
-      // First try the new StripeService
-      const stripeSubscription =
-        await StripeService.getUserSubscription(userId);
-
-      if (stripeSubscription) {
-        return {
-          isPremium: stripeSubscription.tier !== "free",
-          subscriptionType:
-            stripeSubscription.tier === "unlimited"
-              ? "unlimited"
-              : stripeSubscription.tier,
-          tier: stripeSubscription.tier,
-          expiryDate: stripeSubscription.currentPeriodEnd.toISOString(),
-          startDate: stripeSubscription.currentPeriodStart.toISOString(),
-          stripeSubscriptionId: stripeSubscription.stripeSubscriptionId,
-        };
+      if (!subscription.isActive && subscription.subscriptionType === 'free') {
+        // Free users have limited access
+        const usage = await this.getUsageStats(userId);
+        const featureUsage = usage[feature === 'love_match' ? 'loveMatch' : feature === 'trust_assessment' ? 'trustAssessment' : 'numerology'];
+        return featureUsage.used < featureUsage.limit;
       }
 
-      // Fallback to old system
-      const oldStatus = await this.getSubscriptionStatus(userId);
-      return {
-        ...oldStatus,
-        tier: oldStatus.isPremium ? "premium" : "free",
-      };
+      return subscription.isActive;
     } catch (error) {
-      console.error("Error getting enhanced subscription status:", error);
-      // Default to free tier
-      return {
-        isPremium: false,
-        subscriptionType: "free",
-        tier: "free",
-      };
+      console.error('Error checking feature access:', error);
+      return false;
     }
   }
 
-  /**
-   * Enhanced usage stats using new StripeService
-   */
-  static async getEnhancedUsageStats(userId: string) {
-    try {
-      const stripeStats = await StripeService.getUsageStats(userId);
-
-      if (stripeStats) {
-        return {
-          isPremium: stripeStats.tier !== "free",
-          tier: stripeStats.tier,
-          numerology: {
-            totalUsed: stripeStats.usage.numerology,
-            remaining:
-              stripeStats.limits.numerology === -1
-                ? -1
-                : Math.max(
-                    0,
-                    stripeStats.limits.numerology - stripeStats.usage.numerology
-                  ),
-            limit: stripeStats.limits.numerology,
-            resetsAt: stripeStats.periodEnd.toISOString(),
-          },
-          loveMatch: {
-            totalUsed: stripeStats.usage.loveMatch,
-            remaining:
-              stripeStats.limits.loveMatch === -1
-                ? -1
-                : Math.max(
-                    0,
-                    stripeStats.limits.loveMatch - stripeStats.usage.loveMatch
-                  ),
-            limit: stripeStats.limits.loveMatch,
-            resetsAt: stripeStats.periodEnd.toISOString(),
-          },
-          trustAssessment: {
-            totalUsed: stripeStats.usage.trustAssessment,
-            remaining:
-              stripeStats.limits.trustAssessment === -1
-                ? -1
-                : Math.max(
-                    0,
-                    stripeStats.limits.trustAssessment -
-                      stripeStats.usage.trustAssessment
-                  ),
-            limit: stripeStats.limits.trustAssessment,
-            resetsAt: stripeStats.periodEnd.toISOString(),
-          },
-        };
-      }
-
-      // Fallback to old system
-      const oldStats = await this.getUsageStats(userId);
-      return {
-        isPremium: false,
-        tier: "free",
-        numerology: oldStats.numerology,
-        loveMatch: oldStats.loveMatch,
-        trustAssessment: oldStats.trustAssessment,
-      };
-    } catch (error) {
-      console.error("Error getting enhanced usage stats:", error);
-      // Default free tier stats
-      const freeTier = StripeService.getSubscriptionTier("free");
-      return {
-        isPremium: false,
-        tier: "free",
-        numerology: {
-          totalUsed: 0,
-          remaining: freeTier.limits.numerology,
-          limit: freeTier.limits.numerology,
-          resetsAt: new Date(
-            Date.now() + 30 * 24 * 60 * 60 * 1000
-          ).toISOString(),
-        },
-        loveMatch: {
-          totalUsed: 0,
-          remaining: freeTier.limits.loveMatch,
-          limit: freeTier.limits.loveMatch,
-          resetsAt: new Date(
-            Date.now() + 30 * 24 * 60 * 60 * 1000
-          ).toISOString(),
-        },
-        trustAssessment: {
-          totalUsed: 0,
-          remaining: freeTier.limits.trustAssessment,
-          limit: freeTier.limits.trustAssessment,
-          resetsAt: new Date(
-            Date.now() + 30 * 24 * 60 * 60 * 1000
-          ).toISOString(),
-        },
-      };
-    }
-  }
-
-  /**
-   * Enhanced feature access check using new StripeService
-   */
-  static async canAccessFeatureEnhanced(
-    userId: string,
-    feature: "numerology" | "loveMatch" | "trustAssessment"
-  ): Promise<{
+  // Check if user has exceeded their limit and return subscription prompt
+  static async checkUsageLimitWithPrompt(userId: string, feature: 'numerology' | 'love_match' | 'trust_assessment'): Promise<{
     canUse: boolean;
-    remaining: number;
-    tier: SubscriptionTier["id"];
-    message?: string;
+    showUpgradePrompt: boolean;
+    promptConfig?: {
+      title: string;
+      message: string;
+      featureName: string;
+      usedCount: number;
+      limitCount: number;
+    }
   }> {
     try {
-      return await StripeService.canAccessFeature(userId, feature);
-    } catch (error) {
-      console.error("Error checking enhanced feature access:", error);
-      // Fallback to old system
-      const oldResult = await this.canAccessFeature(userId, feature);
-      return {
-        canUse: oldResult.canUse,
-        remaining: oldResult.remaining,
-        tier: "free",
-        message: oldResult.message,
+      const subscription = await this.getSubscriptionStatus(userId);
+      const usage = await this.getUsageStats(userId);
+
+      // If user has active premium or unlimited, they can use the feature
+      if (subscription.isPremium || subscription.isUnlimited) {
+        return { canUse: true, showUpgradePrompt: false };
+      }
+
+      // Check free user limits
+      const featureUsage = usage[feature === 'love_match' ? 'loveMatch' : feature === 'trust_assessment' ? 'trustAssessment' : 'numerology'];
+      const featureNames = {
+        'numerology': 'Numerology Reading',
+        'love_match': 'Love Match Analysis',
+        'trust_assessment': 'Trust Assessment'
       };
-    }
-  }
 
-  /**
-   * Enhanced usage recording using new StripeService
-   */
-  static async recordUsageEnhanced(
-    userId: string,
-    feature: "numerology" | "loveMatch" | "trustAssessment",
-    metadata?: Record<string, any>
-  ): Promise<{ success: boolean; error?: string }> {
-    try {
-      // Record in new system
-      const stripeResult = await StripeService.recordUsage(
-        userId,
-        feature,
-        metadata
-      );
-
-      // Also record in old system for backward compatibility
-      await this.recordUsage(userId, feature, metadata);
-
-      return stripeResult;
-    } catch (error) {
-      console.error("Error recording enhanced usage:", error);
-      // Fallback to old system only
-      try {
-        await this.recordUsage(userId, feature, metadata);
-        return { success: true };
-      } catch (fallbackError) {
+      if (featureUsage.used >= featureUsage.limit) {
         return {
-          success: false,
-          error:
-            fallbackError instanceof Error
-              ? fallbackError.message
-              : "Unknown error",
+          canUse: false,
+          showUpgradePrompt: true,
+          promptConfig: {
+            title: `${featureNames[feature]} Limit Reached`,
+            message: `You've used all ${featureUsage.limit} of your free ${featureNames[feature].toLowerCase()} readings this month.\n\nUpgrade to continue accessing premium features:`,
+            featureName: featureNames[feature],
+            usedCount: featureUsage.used,
+            limitCount: featureUsage.limit
+          }
         };
       }
+
+      return { canUse: true, showUpgradePrompt: false };
+
+    } catch (error) {
+      console.error('Error checking usage limit:', error);
+      return { canUse: false, showUpgradePrompt: false };
     }
   }
 
-  /**
-   * Purchase premium subscription (legacy method with new integration)
-   */
-  static async purchasePremiumSubscription(
-    userId: string,
-    userEmail: string
-  ): Promise<{ success: boolean; url?: string; error?: string }> {
-    return this.createStripeSubscription(userId, userEmail, "premium");
-  }
+  // Reset usage for new billing cycle or plan changes
+  static async resetUsageCycle(userId: string, reason: 'billing_cycle' | 'plan_change' = 'billing_cycle'): Promise<boolean> {
+    try {
+      const startOfMonth = new Date();
+      startOfMonth.setDate(1);
+      startOfMonth.setHours(0, 0, 0, 0);
 
-  /**
-   * Purchase unlimited subscription
-   */
-  static async purchaseUnlimitedSubscription(
-    userId: string,
-    userEmail: string
-  ): Promise<{ success: boolean; url?: string; error?: string }> {
-    return this.createStripeSubscription(userId, userEmail, "unlimited");
-  }
+      console.log(`🔄 Resetting usage cycle for user ${userId} - reason: ${reason}`);
 
-  /**
-   * Cancel subscription using new StripeService
-   */
-  static async cancelSubscriptionEnhanced(
-    userId: string
-  ): Promise<{ success: boolean; error?: string }> {
-    return StripeService.cancelSubscription(userId);
-  }
+      // Clear all usage data for the current month
+      const deletePromises = [
+        supabase
+          .from('numerology_readings')
+          .delete()
+          .eq('user_id', userId)
+          .gte('created_at', startOfMonth.toISOString()),
 
-  /**
-   * Get all subscription tiers
-   */
-  static getSubscriptionTiers(): SubscriptionTier[] {
-    return StripeService.getAllSubscriptionTiers();
-  }
+        supabase
+          .from('love_match_readings')
+          .delete()
+          .eq('user_id', userId)
+          .gte('created_at', startOfMonth.toISOString()),
 
-  /**
-   * Get specific subscription tier info
-   */
-  static getSubscriptionTier(tierId: SubscriptionTier["id"]): SubscriptionTier {
-    return StripeService.getSubscriptionTier(tierId);
-  }
+        supabase
+          .from('trust_assessments')
+          .delete()
+          .eq('user_id', userId)
+          .gte('created_at', startOfMonth.toISOString())
+      ];
 
-  static async getUserSubscription(
-    userId: string
-  ): Promise<UserSubscription | null> {
-    const { data, error } = await supabase
-      .from("subscriptions")
-      .select("*")
-      .eq("user_id", userId)
-      .eq("status", "active")
-      .order("created_at", { ascending: false })
-      .limit(1)
-      .single();
+      await Promise.all(deletePromises);
 
-    if (error || !data) {
-      // Return default free tier
-      return {
-        userId,
-        tier: "free",
-        status: "active",
-        currentPeriodStart: new Date(),
-        currentPeriodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
-        usage: {
-          numerology: 0,
-          loveMatch: 0,
-          trustAssessment: 0,
-        },
-      };
+      // Log the reset event
+      await supabase
+        .from('usage_resets')
+        .insert({
+          user_id: userId,
+          reset_reason: reason,
+          reset_date: new Date().toISOString(),
+          reset_month: startOfMonth.toISOString()
+        });
+
+      console.log(`✅ Usage cycle reset completed for user ${userId}`);
+      return true;
+
+    } catch (error) {
+      console.error('Error resetting usage cycle:', error);
+      return false;
     }
-
-    // Map subscription_type to tier
-    let tier = "free";
-    if (data.is_unlimited) {
-      tier = "unlimited";
-    } else if (data.is_premium) {
-      tier = "premium";
-    } else if (data.subscription_type === "premium") {
-      tier = "premium";
-    } else if (data.subscription_type === "unlimited") {
-      tier = "unlimited";
-    }
-
-    return {
-      userId: data.user_id,
-      tier,
-      status: data.status,
-      currentPeriodStart: new Date(data.starts_at),
-      currentPeriodEnd: new Date(data.ends_at || Date.now() + 30 * 24 * 60 * 60 * 1000),
-      usage: {
-        numerology: 0, // Usage is tracked in separate tables
-        loveMatch: 0,
-        trustAssessment: 0,
-      },
-      stripeCustomerId: data.stripe_customer_id,
-      stripeSubscriptionId: data.stripe_subscription_id,
-    };
   }
 
-  static async updateUsage(
-    userId: string,
-    feature: "numerology" | "loveMatch" | "trustAssessment"
-  ): Promise<void> {
-    // Usage is now tracked in the individual feature tables
-    // (numerology_readings, love_matches, trust_assessments)
-    // No need for a separate usage table or RPC call
-  }
+  // Check if billing cycle should reset (call this periodically or on app start)
+  static async checkAndResetBillingCycle(userId: string): Promise<boolean> {
+    try {
+      // Get the last reset date
+      const { data: lastReset } = await supabase
+        .from('usage_resets')
+        .select('reset_date, reset_month')
+        .eq('user_id', userId)
+        .order('reset_date', { ascending: false })
+        .limit(1)
+        .single();
 
-  static async createStripeCheckoutSession(
-    userId: string,
-    priceId: string,
-    successUrl: string,
-    cancelUrl: string
-  ): Promise<string> {
-    // This would call your backend API to create a Stripe session
-    const response = await fetch(
-      `${process.env.STRIPE_BACKEND_URL}/api/create-checkout-session`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          userId,
-          priceId,
-          successUrl,
-          cancelUrl,
-        }),
+      const now = new Date();
+      const currentMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+
+      // If no reset record exists or it's a new month, reset the cycle
+      if (!lastReset || new Date(lastReset.reset_month) < currentMonth) {
+        return await this.resetUsageCycle(userId, 'billing_cycle');
       }
-    );
 
-    const { sessionUrl } = await response.json();
-    return sessionUrl;
+      return false; // No reset needed
+    } catch (error) {
+      console.error('Error checking billing cycle:', error);
+      return false;
+    }
+  }
+
+  // Reset usage for ALL users - run this monthly via cron job or scheduled function
+  static async resetAllUsersMonthly(): Promise<void> {
+    try {
+      const startOfMonth = new Date();
+      startOfMonth.setDate(1);
+      startOfMonth.setHours(0, 0, 0, 0);
+
+      console.log(`🔄 Starting monthly reset for all users - ${startOfMonth.toISOString()}`);
+
+      // Get all users who have usage data
+      const { data: usersWithUsage } = await supabase
+        .from('numerology_readings')
+        .select('user_id')
+        .gte('created_at', startOfMonth.toISOString());
+
+      if (usersWithUsage) {
+        const uniqueUserIds = [...new Set(usersWithUsage.map(u => u.user_id))];
+
+        // Clear usage data for all users
+        const deletePromises = [
+          supabase
+            .from('numerology_readings')
+            .delete()
+            .gte('created_at', startOfMonth.toISOString()),
+
+          supabase
+            .from('love_match_readings')
+            .delete()
+            .gte('created_at', startOfMonth.toISOString()),
+
+          supabase
+            .from('trust_assessments')
+            .delete()
+            .gte('created_at', startOfMonth.toISOString())
+        ];
+
+        await Promise.all(deletePromises);
+
+        // Log the monthly reset for all users
+        const resetRecords = uniqueUserIds.map(userId => ({
+          user_id: userId,
+          reset_reason: 'monthly_automatic',
+          reset_date: new Date().toISOString(),
+          reset_month: startOfMonth.toISOString()
+        }));
+
+        if (resetRecords.length > 0) {
+          await supabase
+            .from('usage_resets')
+            .insert(resetRecords);
+        }
+
+        console.log(`✅ Monthly reset completed for ${uniqueUserIds.length} users`);
+      }
+
+    } catch (error) {
+      console.error('Error in monthly reset for all users:', error);
+    }
   }
 }

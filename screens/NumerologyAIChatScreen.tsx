@@ -37,7 +37,7 @@ export default function NumerologyAIChatScreen({
   userId,
 }: NumerologyAIChatScreenProps) {
   const [question, setQuestion] = useState("");
-  const [messages, setMessages] = useState<Array<{type: 'user' | 'ai', content: string, timestamp: Date}>>([]);
+  const [messages, setMessages] = useState<Array<{type: 'user' | 'ai', content: string, timestamp: Date, provider?: string}>>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [summaryLoading, setSummaryLoading] = useState(true);
   const [showSuggestions, setShowSuggestions] = useState(true);
@@ -79,42 +79,25 @@ Professional Insights from Roxy API:
 - Relationship Guidance: ${profile.roxyInsights.relationship || 'Not available'}
 - Spiritual Guidance: ${profile.roxyInsights.spiritual || 'Not available'}
 - Lucky Numbers: ${profile.roxyInsights.luckyNumbers?.join(', ') || 'Not available'}
-- Lucky Colors: ${profile.roxyInsights.luckyColors?.join(', ') || 'Not available'}
 - Personal Year: ${profile.roxyInsights.personalYear || 'Not available'}` : '';
 
-      const summaryPrompt = `Hello ${name || 'beautiful soul'}! 🌟
+      const summaryPrompt = `Create a short welcome for ${name || 'beautiful soul'} with Life Path ${profile.lifePathNumber}.
 
-I'm your personal AI Oracle, and I've analyzed your complete numerology profile. Here's your cosmic blueprint:
-
-**Your Core Numbers:**
-- Life Path Number: ${profile.lifePathNumber}
-- Destiny Number: ${profile.destinyNumber}
-- Soul Urge Number: ${profile.soulUrgeNumber}
-- Birth Date: ${birthDate}${roxyData}
-
-**Character Analysis:**
-${characterAnalysis || 'Your character analysis reveals unique insights about your personality.'}
-
-Please provide a warm, personal welcome message that:
-1. Greets them by name warmly
-2. Gives a brief overview of what their numbers reveal about their core personality
-3. Mentions 2-3 key insights from their professional data (if available)
-4. Invites them to ask questions about their life, career, relationships, or future
-
-Keep it conversational, encouraging, and mystical. Make it feel like talking to a wise friend who truly understands them.`;
+Write exactly 10 words. Be mystical and welcoming. No emojis.`;
 
       const result = await SimpleAIService.generateResponse(summaryPrompt, "numerology");
 
       setMessages([{
         type: 'ai',
-        content: result.content || `Welcome ${name}! 🌟\n\nYour numbers reveal a fascinating cosmic blueprint. Your Life Path ${profile.lifePathNumber} suggests you're here to bring unique gifts to the world, while your Destiny ${profile.destinyNumber} points toward your ultimate purpose.\n\nI'm here to help you understand your numerological journey. Feel free to ask me anything about your life path, relationships, career, or what the future holds for you!`,
-        timestamp: new Date()
+        content: result.content || `Welcome ${name}! Your cosmic journey awaits divine guidance.`,
+        timestamp: new Date(),
+        provider: result.provider || 'fallback'
       }]);
     } catch (error) {
       console.error("Error generating summary:", error);
       setMessages([{
         type: 'ai',
-        content: `Welcome ${name}! 🌟\n\nYour numerology profile reveals incredible insights about your life path and purpose. I'm here to guide you through your cosmic blueprint and answer any questions about your journey.\n\nFeel free to ask me about your relationships, career, future, or anything else on your mind!`,
+        content: `Welcome ${name}! Your cosmic numbers hold sacred wisdom.`,
         timestamp: new Date()
       }]);
     } finally {
@@ -147,7 +130,8 @@ Keep it conversational, encouraging, and mystical. Make it feel like talking to 
       const aiMessage = {
         type: 'ai' as const,
         content: result.content || "I'm having trouble connecting to the cosmos right now. Please try again.",
-        timestamp: new Date()
+        timestamp: new Date(),
+        provider: result.provider || 'fallback'
       };
 
       setMessages(prev => [...prev, aiMessage]);
@@ -248,10 +232,17 @@ Keep it conversational, encouraging, and mystical. Make it feel like talking to 
                   <Ionicons name="sparkles" size={16} color="white" />
                 </View>
                 <Text style={styles.messageAuthor}>Oracle</Text>
+                <Text style={styles.messageTime}>
+                  {formatTime(new Date())}
+                </Text>
               </View>
               <View style={styles.typingIndicator}>
-                <ActivityIndicator size="small" color="#8B5CF6" />
-                <Text style={styles.typingText}>Channeling cosmic wisdom...</Text>
+                <View style={styles.typingDots}>
+                  <View style={[styles.dot, styles.dot1]} />
+                  <View style={[styles.dot, styles.dot2]} />
+                  <View style={[styles.dot, styles.dot3]} />
+                </View>
+                <Text style={styles.typingText}>Consulting the cosmic energies...</Text>
               </View>
             </View>
           )}
@@ -300,9 +291,12 @@ Keep it conversational, encouraging, and mystical. Make it feel like talking to 
               style={[styles.sendButton, (!question.trim() || isLoading) && styles.sendButtonDisabled]}
               onPress={handleAskQuestion}
               disabled={!question.trim() || isLoading}
+              activeOpacity={0.7}
             >
               {isLoading ? (
-                <ActivityIndicator size="small" color="white" />
+                <View style={styles.sendButtonLoading}>
+                  <ActivityIndicator size="small" color="white" />
+                </View>
               ) : (
                 <Ionicons name="send" size={20} color="white" />
               )}
@@ -396,6 +390,14 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     borderBottomRightRadius: 8,
     padding: 16,
+    shadowColor: "#8B5CF6",
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    elevation: 3,
   },
   aiMessage: {
     alignSelf: "flex-start",
@@ -403,8 +405,16 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     borderBottomLeftRadius: 8,
     padding: 16,
-    borderWidth: 1,
-    borderColor: "rgba(139, 92, 246, 0.2)",
+    borderWidth: 1.5,
+    borderColor: "rgba(139, 92, 246, 0.4)",
+    shadowColor: "#8B5CF6",
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 4,
   },
   messageHeader: {
     flexDirection: "row",
@@ -439,12 +449,33 @@ const styles = StyleSheet.create({
   typingIndicator: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
+    gap: 12,
+  },
+  typingDots: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+  },
+  dot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: "#8B5CF6",
+  },
+  dot1: {
+    opacity: 0.4,
+  },
+  dot2: {
+    opacity: 0.7,
+  },
+  dot3: {
+    opacity: 1.0,
   },
   typingText: {
     fontSize: 14,
     color: "#8B5CF6",
     fontStyle: "italic",
+    fontWeight: "500",
   },
   suggestionsContainer: {
     paddingHorizontal: 20,
@@ -526,5 +557,9 @@ const styles = StyleSheet.create({
   sendButtonDisabled: {
     backgroundColor: "#666",
     opacity: 0.5,
+    shadowOpacity: 0.1,
+  },
+  sendButtonLoading: {
+    transform: [{ scale: 0.9 }],
   },
 });

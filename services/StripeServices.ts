@@ -49,13 +49,13 @@ export class StripeService {
       interval: 'month',
       limits: {
         numerology: 3,
-        loveMatch: 3,
-        trustAssessment: 3,
+        loveMatch: 2,
+        trustAssessment: 1,
       },
       features: [
         '3 numerology readings per month',
-        '3 love matches per month',
-        '3 trust assessments per month',
+        '2 love matches per month',
+        '1 trust assessment per month',
         'Basic insights',
       ],
     },

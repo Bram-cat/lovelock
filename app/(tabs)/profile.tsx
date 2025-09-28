@@ -23,6 +23,7 @@ import { useAlert } from "../../contexts/AlertContext";
 import { useSubscription } from "../../hooks/useSubscription";
 import { useSecureAuth } from "../../services/SecureAuthService";
 import PremiumSubscriptionCard from "../../components/PremiumSubscriptionCard";
+import { SubscriptionService, UsageStats } from "../../services/SubscriptionService";
 
 interface UserProfile {
   id?: string;
@@ -49,12 +50,29 @@ export default function ProfileScreen() {
   const { redirectToWebApp } = useSecureAuth();
   const [showEditModal, setShowEditModal] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [usageStats, setUsageStats] = useState<UsageStats | null>(null);
+  const [loadingUsage, setLoadingUsage] = useState(false);
   const [editForm, setEditForm] = useState({
     full_name: "",
     birth_date: "",
     birth_location: "",
     birth_time: "",
   });
+
+  // Load usage statistics
+  const loadUsageStats = async () => {
+    if (!user?.id) return;
+
+    try {
+      setLoadingUsage(true);
+      const stats = await SubscriptionService.getUsageStats(user.id);
+      setUsageStats(stats);
+    } catch (error) {
+      console.error('Error loading usage stats:', error);
+    } finally {
+      setLoadingUsage(false);
+    }
+  };
 
   useEffect(() => {
     if (profileData) {
@@ -80,6 +98,12 @@ export default function ProfileScreen() {
       });
     }
   }, [profileData]);
+
+  useEffect(() => {
+    if (user?.id) {
+      loadUsageStats();
+    }
+  }, [user?.id]);
 
   const handleEditProfile = () => {
     setShowEditModal(true);
@@ -175,23 +199,18 @@ export default function ProfileScreen() {
 
   const handleHelpFAQ = async () => {
     try {
-      if (!user) {
-        showError("Authentication Required", "Please sign in to access help resources.");
-        return;
-      }
+      // Redirect to Lovelock Reddit community for FAQ and questions
+      const redditUrl = "https://www.reddit.com/r/Lovelock/";
 
-      // Use secure authentication service
-      const redirectUrl = await redirectToWebApp('help');
-
-      const canOpen = await Linking.canOpenURL(redirectUrl);
+      const canOpen = await Linking.canOpenURL(redditUrl);
       if (canOpen) {
-        await Linking.openURL(redirectUrl);
+        await Linking.openURL(redditUrl);
       } else {
-        throw new Error('Cannot open website URL');
+        throw new Error('Cannot open Reddit URL');
       }
     } catch (error) {
-      console.error('Help redirect error:', error);
-      showError("Redirect Failed", "Unable to open help page. Please check your internet connection and try again.");
+      console.error('Reddit FAQ redirect error:', error);
+      showError("Redirect Failed", "Unable to open FAQ page. Please check your internet connection and try again.");
     }
   };
 
@@ -273,6 +292,124 @@ export default function ProfileScreen() {
           </View>
         </View>
 
+        {/* Usage Statistics */}
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Usage Statistics</Text>
+            <TouchableOpacity onPress={loadUsageStats} style={styles.editButton}>
+              <Ionicons name="refresh" size={18} color="#E91E63" />
+              <Text style={styles.editButtonText}>Refresh</Text>
+            </TouchableOpacity>
+          </View>
+
+          {loadingUsage ? (
+            <View style={styles.loadingContainer}>
+              <Text style={styles.loadingText}>Loading usage statistics...</Text>
+            </View>
+          ) : usageStats ? (
+            <View style={styles.usageStatsContainer}>
+              {/* Subscription Status */}
+              <View style={styles.usageHeader}>
+                <View style={styles.subscriptionBadge}>
+                  <Ionicons
+                    name={subscription?.hasUnlimitedPlan ? "infinite" : subscription?.hasPremiumPlan ? "diamond" : "star-outline"}
+                    size={16}
+                    color={subscription?.hasUnlimitedPlan ? "#FF9500" : subscription?.hasPremiumPlan ? "#FFD700" : "#8E8E93"}
+                  />
+                  <Text style={[
+                    styles.subscriptionText,
+                    subscription?.hasUnlimitedPlan && styles.unlimitedText,
+                    subscription?.hasPremiumPlan && !subscription?.hasUnlimitedPlan && styles.premiumText
+                  ]}>
+                    {subscription?.hasUnlimitedPlan ? "Unlimited" : subscription?.hasPremiumPlan ? "Premium" : "Free Plan"}
+                  </Text>
+                </View>
+                <Text style={styles.monthlyUsageText}>This Month</Text>
+              </View>
+
+              {/* Usage Cards */}
+              <View style={styles.usageGrid}>
+                <View style={styles.usageCard}>
+                  <View style={styles.usageCardHeader}>
+                    <Ionicons name="calculator" size={20} color="#667eea" />
+                    <Text style={styles.usageCardTitle}>Numerology</Text>
+                  </View>
+                  <View style={styles.usageProgressContainer}>
+                    <View style={styles.usageProgressBar}>
+                      <View
+                        style={[
+                          styles.usageProgressFill,
+                          { width: `${Math.min((Math.min(usageStats.numerology.used, usageStats.numerology.limit) / usageStats.numerology.limit) * 100, 100)}%` },
+                          { backgroundColor: usageStats.numerology.used >= usageStats.numerology.limit ? "#FF3B30" : "#667eea" }
+                        ]}
+                      />
+                    </View>
+                    <Text style={styles.usageText}>
+                      {Math.min(usageStats.numerology.used, usageStats.numerology.limit)} / {usageStats.numerology.limit}
+                    </Text>
+                  </View>
+                </View>
+
+                <View style={styles.usageCard}>
+                  <View style={styles.usageCardHeader}>
+                    <Ionicons name="heart" size={20} color="#E91E63" />
+                    <Text style={styles.usageCardTitle}>Love Match</Text>
+                  </View>
+                  <View style={styles.usageProgressContainer}>
+                    <View style={styles.usageProgressBar}>
+                      <View
+                        style={[
+                          styles.usageProgressFill,
+                          { width: `${Math.min((Math.min(usageStats.loveMatch.used, usageStats.loveMatch.limit) / usageStats.loveMatch.limit) * 100, 100)}%` },
+                          { backgroundColor: usageStats.loveMatch.used >= usageStats.loveMatch.limit ? "#FF3B30" : "#E91E63" }
+                        ]}
+                      />
+                    </View>
+                    <Text style={styles.usageText}>
+                      {Math.min(usageStats.loveMatch.used, usageStats.loveMatch.limit)} / {usageStats.loveMatch.limit}
+                    </Text>
+                  </View>
+                </View>
+
+                <View style={styles.usageCard}>
+                  <View style={styles.usageCardHeader}>
+                    <Ionicons name="shield-checkmark" size={20} color="#34C759" />
+                    <Text style={styles.usageCardTitle}>Trust Check</Text>
+                  </View>
+                  <View style={styles.usageProgressContainer}>
+                    <View style={styles.usageProgressBar}>
+                      <View
+                        style={[
+                          styles.usageProgressFill,
+                          { width: `${Math.min((Math.min(usageStats.trustAssessment.used, usageStats.trustAssessment.limit) / usageStats.trustAssessment.limit) * 100, 100)}%` },
+                          { backgroundColor: usageStats.trustAssessment.used >= usageStats.trustAssessment.limit ? "#FF3B30" : "#34C759" }
+                        ]}
+                      />
+                    </View>
+                    <Text style={styles.usageText}>
+                      {Math.min(usageStats.trustAssessment.used, usageStats.trustAssessment.limit)} / {usageStats.trustAssessment.limit}
+                    </Text>
+                  </View>
+                </View>
+              </View>
+
+              {/* Upgrade Suggestion */}
+              {!subscription?.hasPremiumPlan && !subscription?.hasUnlimitedPlan && (
+                <View style={styles.upgradeHint}>
+                  <Ionicons name="information-circle" size={16} color="#FF9500" />
+                  <Text style={styles.upgradeHintText}>
+                    Upgrade to Premium for more readings or Unlimited for endless access
+                  </Text>
+                </View>
+              )}
+            </View>
+          ) : (
+            <View style={styles.noDataContainer}>
+              <Text style={styles.noDataText}>Unable to load usage statistics</Text>
+            </View>
+          )}
+        </View>
+
         {/* Payment Management */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
@@ -288,14 +425,16 @@ export default function ProfileScreen() {
               <View style={styles.optionTextContainer}>
                 <Text style={styles.optionText}>Subscription</Text>
                 <Text style={styles.optionSubtext}>
-                  {subscription?.hasPremiumPlan ? "Manage your premium subscription" : "Upgrade to premium features"}
+                  {subscription?.hasUnlimitedPlan ? "Manage your unlimited subscription" :
+                   subscription?.hasPremiumPlan ? "Manage your premium subscription" :
+                   "Upgrade to premium features"}
                 </Text>
               </View>
             </View>
             <Ionicons name="chevron-forward" size={20} color="#8E8E93" />
           </TouchableOpacity>
 
-          {subscription?.hasPremiumPlan && (
+          {(subscription?.hasPremiumPlan || subscription?.hasUnlimitedPlan) && (
             <TouchableOpacity
               style={styles.option}
               onPress={handleBillingHistory}
@@ -352,7 +491,7 @@ export default function ProfileScreen() {
               <Ionicons name="help-circle-outline" size={24} color="#667eea" />
               <View style={styles.optionTextContainer}>
                 <Text style={styles.optionText}>Help & FAQ</Text>
-                <Text style={styles.optionSubtext}>Get answers to common questions</Text>
+                <Text style={styles.optionSubtext}>Join our Reddit community for help</Text>
               </View>
             </View>
             <Ionicons name="chevron-forward" size={20} color="#8E8E93" />
@@ -680,5 +819,110 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     color: "#fff",
     fontSize: isSmallScreen ? 14 : 16,
+  },
+  // Usage Statistics Styles
+  usageStatsContainer: {
+    gap: 16,
+  },
+  usageHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 16,
+  },
+  subscriptionBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#2C2C2E",
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+    gap: 6,
+  },
+  subscriptionText: {
+    color: "#8E8E93",
+    fontSize: 12,
+    fontWeight: "600",
+  },
+  premiumText: {
+    color: "#FFD700",
+  },
+  unlimitedText: {
+    color: "#FF9500",
+  },
+  monthlyUsageText: {
+    color: "#8E8E93",
+    fontSize: 12,
+    fontWeight: "500",
+  },
+  usageGrid: {
+    gap: 12,
+  },
+  usageCard: {
+    backgroundColor: "#2C2C2E",
+    borderRadius: 12,
+    padding: 16,
+  },
+  usageCardHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 12,
+    gap: 8,
+  },
+  usageCardTitle: {
+    color: "#FFFFFF",
+    fontSize: 14,
+    fontWeight: "600",
+  },
+  usageProgressContainer: {
+    gap: 8,
+  },
+  usageProgressBar: {
+    height: 6,
+    backgroundColor: "#3A3A3C",
+    borderRadius: 3,
+    overflow: "hidden",
+  },
+  usageProgressFill: {
+    height: "100%",
+    borderRadius: 3,
+  },
+  usageText: {
+    color: "#8E8E93",
+    fontSize: 12,
+    fontWeight: "500",
+    textAlign: "right",
+  },
+  upgradeHint: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "rgba(255, 149, 0, 0.1)",
+    borderRadius: 8,
+    padding: 12,
+    gap: 8,
+    marginTop: 8,
+  },
+  upgradeHintText: {
+    color: "#FF9500",
+    fontSize: 12,
+    fontWeight: "500",
+    flex: 1,
+  },
+  loadingContainer: {
+    padding: 20,
+    alignItems: "center",
+  },
+  loadingText: {
+    color: "#8E8E93",
+    fontSize: 14,
+  },
+  noDataContainer: {
+    padding: 20,
+    alignItems: "center",
+  },
+  noDataText: {
+    color: "#8E8E93",
+    fontSize: 14,
+    textAlign: "center",
   },
 });

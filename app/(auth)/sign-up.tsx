@@ -372,14 +372,20 @@ export default function SignUpScreen() {
         }
         return;
       }
-      
+
       const errorMsg = err.errors?.[0]?.message || err.message || 'Verification failed';
-      setCodeError(errorMsg);
+
+      // Handle invalid verification strategy - user likely doesn't exist
+      if (errorMsg.includes('Invalid verification strategy') ||
+          err.errors?.[0]?.code === 'verification_failed') {
+        setCodeError('Account doesn\'t exist');
+      } else {
+        setCodeError(errorMsg);
+      }
     } finally {
       setIsLoading(false);
     }
   }, [isLoaded, signUp, setActive, code, router, debugSignUpState, emailAddress, firstName, lastName]);
-
 
 
   // Email verification step

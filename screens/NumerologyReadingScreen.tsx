@@ -267,87 +267,29 @@ export default function NumerologyReadingScreen({
               </View>
             )}
 
-            {/* Lucky Colors */}
-            {profile.roxyInsights.luckyColors && profile.roxyInsights.luckyColors.length > 0 && (
-              <View style={styles.numberCard}>
-                <View style={styles.numberCardInner}>
-                  <View style={styles.numberLeft}>
-                    <Text style={styles.numberLabel}>🎨 Lucky Colors</Text>
-                    <View style={styles.luckyColorsContainer}>
-                      {profile.roxyInsights.luckyColors.map((color: string, index: number) => (
-                        <View key={index} style={styles.luckyColorBadge}>
-                          <Text style={styles.luckyColorText}>{color}</Text>
-                        </View>
-                      ))}
-                    </View>
-                  </View>
-                </View>
-              </View>
-            )}
 
             {/* Personal Year */}
             {profile.roxyInsights.personalYear && (
-              <View style={styles.numberCard}>
-                <View style={styles.numberCardInner}>
-                  <View style={styles.numberLeft}>
-                    <Text style={styles.numberLabel}>📅 Personal Year</Text>
-                    <Text style={styles.insightText}>You are currently in Personal Year {profile.roxyInsights.personalYear}</Text>
+              <View style={[styles.bentoCard, styles.personalYearCard]}>
+                <View style={styles.bentoCardHeader}>
+                  <Text style={styles.bentoTitle}>📅 Personal Year {profile.roxyInsights.personalYear}</Text>
+                  <View style={styles.personalYearBadge}>
+                    <Text style={styles.personalYearBadgeText}>{profile.roxyInsights.personalYear}</Text>
                   </View>
-                  <View style={styles.numberBadge}>
-                    <Text style={styles.numberValue}>{profile.roxyInsights.personalYear}</Text>
-                  </View>
+                </View>
+                <Text style={styles.bentoDescription}>
+                  Your current Personal Year reveals the cosmic energy and themes that will influence your journey throughout 2025.
+                  This number guides your opportunities, challenges, and spiritual growth for the year.
+                </Text>
+                <View style={styles.personalYearDetails}>
+                  <Text style={styles.personalYearTheme}>✨ Year Theme: Transformation & Growth</Text>
+                  <Text style={styles.personalYearEnergy}>🌟 Energy Level: High Creative Flow</Text>
                 </View>
               </View>
             )}
           </>
         )}
 
-        {/* AI Assistant Section */}
-        <View ref={aiSectionRef}>
-          <Text style={styles.sectionTitle}>AI Numerology Assistant</Text>
-        </View>
-        <View style={styles.aiCard}>
-          <View style={styles.aiHeader}>
-            <Ionicons name="chatbubble-ellipses" size={24} color="#8B5CF6" />
-            <Text style={styles.aiHeaderText}>Ask Your Personal Oracle</Text>
-          </View>
-
-          <Text style={styles.aiSubtext}>
-            Get instant cosmic guidance tailored to you
-          </Text>
-
-          <View style={styles.inputContainer}>
-            <TextInput
-              style={styles.input}
-              placeholder="What would you like to know about your future?"
-              placeholderTextColor="#666"
-              value={question}
-              onChangeText={setQuestion}
-              multiline
-            />
-            <TouchableOpacity
-              style={[styles.sendButton, (!question.trim() || isLoading) && styles.sendButtonDisabled]}
-              onPress={handleAskQuestion}
-              disabled={!question.trim() || isLoading}
-            >
-              {isLoading ? (
-                <ActivityIndicator size="small" color="white" />
-              ) : (
-                <Ionicons name="send" size={18} color="white" />
-              )}
-            </TouchableOpacity>
-          </View>
-
-          {showAiResponse && aiResponse && (
-            <View style={styles.responseContainer}>
-              <View style={styles.responseHeader}>
-                <Ionicons name="star" size={16} color="#8B5CF6" />
-                <Text style={styles.responseTitle}>Cosmic Insight</Text>
-              </View>
-              <Text style={styles.responseText}>{aiResponse}</Text>
-            </View>
-          )}
-        </View>
 
         <View style={styles.bottomSpacing} />
       </ScrollView>
@@ -570,16 +512,24 @@ const styles = StyleSheet.create({
   },
   analysisCard: {
     backgroundColor: "#1C1C1E",
-    borderRadius: 20,
-    padding: 20,
+    borderRadius: 24,
+    padding: 24,
     marginBottom: 24,
     borderWidth: 1,
-    borderColor: "rgba(233, 30, 99, 0.2)",
+    borderColor: "rgba(139, 92, 246, 0.3)",
+    shadowColor: "#8B5CF6",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 4,
   },
   analysisText: {
-    fontSize: 16,
-    lineHeight: 24,
-    color: "#E0E0E0",
+    fontSize: 17,
+    lineHeight: 26,
+    color: "#FFFFFF",
+    fontWeight: "500",
+    letterSpacing: 0.2,
+    textAlign: "left",
   },
   aiCard: {
     backgroundColor: "#1C1C1E",
@@ -721,23 +671,73 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "600",
   },
-  luckyColorsContainer: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 8,
-    marginTop: 8,
+  personalYearCard: {
+    background: "linear-gradient(135deg, #f093fb 0%, #f5576c 100%)",
+    backgroundColor: "#f093fb",
+    minHeight: 140,
+    marginBottom: 16,
+    padding: 24,
   },
-  luckyColorBadge: {
-    backgroundColor: "rgba(139, 92, 246, 0.2)",
+  personalYearBadge: {
+    backgroundColor: "rgba(255, 255, 255, 0.3)",
     borderRadius: 20,
     paddingHorizontal: 12,
     paddingVertical: 6,
-    borderWidth: 1,
-    borderColor: "#8B5CF6",
+    marginLeft: 'auto',
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
   },
-  luckyColorText: {
-    color: "#8B5CF6",
+  personalYearBadgeText: {
+    color: "white",
+    fontSize: 16,
+    fontWeight: "700",
+    textShadowColor: "rgba(0, 0, 0, 0.3)",
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
+  },
+  personalYearDetails: {
+    marginTop: 12,
+    gap: 8,
+  },
+  personalYearTheme: {
+    color: "rgba(255, 255, 255, 0.95)",
+    fontSize: 14,
+    fontWeight: "600",
+    lineHeight: 20,
+  },
+  personalYearEnergy: {
+    color: "rgba(255, 255, 255, 0.9)",
     fontSize: 14,
     fontWeight: "500",
+    lineHeight: 20,
+  },
+  numberCard: {
+    backgroundColor: "#1C1C1E",
+    borderRadius: 20,
+    padding: 20,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: "rgba(139, 92, 246, 0.3)",
+    shadowColor: "#8B5CF6",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  numberCardInner: {
+    flex: 1,
+  },
+  numberLeft: {
+    flex: 1,
+  },
+  numberLabel: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: "#FFFFFF",
+    marginBottom: 12,
+    letterSpacing: -0.3,
   },
 });

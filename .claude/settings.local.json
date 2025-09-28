@@ -136,7 +136,11 @@
       "Bash(ls:*)",
       "Bash(dir:*)",
       "WebFetch(domain:www.lovelock.it.com)",
-      "WebFetch(domain:lovelock.it.com)"
+      "WebFetch(domain:lovelock.it.com)",
+      "Bash(node:*)",
+      "WebFetch(domain:ai.google.dev)",
+      "Bash(npx expo export:*)",
+      "Bash(rg:*)"
     ],
     "deny": [],
     "ask": []

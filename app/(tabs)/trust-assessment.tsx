@@ -3,7 +3,6 @@ import { Ionicons } from "@expo/vector-icons";
 import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
-  Alert,
   Animated,
   RefreshControl,
   SafeAreaView,
@@ -13,18 +12,22 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { useCustomAlert } from "../../components/CustomAlert";
+import {
+  showUsageLimitAlert,
+  useCustomAlert,
+} from "../../components/CustomAlert";
 import { TrustAssessmentLoadingSkeleton } from "../../components/LoadingSkeletons";
 // import PaymentModal from "../../components/PaymentModal";
 import { DatePicker, ShadcnButton, ShadcnInput } from "../../components/ui";
+import UpgradePromptModal from "../../components/UpgradePromptModal";
 import { DesignSystem } from "../../constants/DesignSystem";
 import { useProfile } from "../../contexts/ProfileContext";
+import { useSubscription } from "../../hooks/useSubscription";
 import NumerologyService from "../../services/NumerologyService";
+import { OnboardingService } from "../../services/OnboardingService";
 import { RoxyNumerologyService } from "../../services/ProkeralaNumerologyService";
 import SimpleAIService from "../../services/SimpleAIService";
 import { SubscriptionService } from "../../services/SubscriptionService";
-import { useSubscription } from "../../hooks/useSubscription";
-import { UsageLimitModal } from "../../components/UsageLimitModal";
 import {
   TrustAssessment,
   TrustAssessmentService,
@@ -60,7 +63,9 @@ export default function TrustAssessmentScreen() {
   );
   const [usageStats, setUsageStats] = useState<any>(null);
   const [refreshing, setRefreshing] = useState(false);
-  const [showUsageLimitModal, setShowUsageLimitModal] = useState(false);
+  const [showUpgradePrompt, setShowUpgradePrompt] = useState(false);
+  const [upgradePromptConfig, setUpgradePromptConfig] = useState<any>(null);
+  const [userIsEditing, setUserIsEditing] = useState(false);
   const { showAlert, AlertComponent } = useCustomAlert();
 
   // Animation values for shadow effects
@@ -74,17 +79,29 @@ export default function TrustAssessmentScreen() {
       if (user?.id) {
         try {
           const stats = await SubscriptionService.getUsageStats(user.id);
-          const resetDate = new Date(stats.trustAssessment.resetsAt);
+          const subscription = await SubscriptionService.getSubscriptionStatus(
+            user.id
+          );
+
+          // Calculate next month reset date
+          const nextMonth = new Date();
+          nextMonth.setMonth(nextMonth.getMonth() + 1);
+          nextMonth.setDate(1);
+          nextMonth.setHours(0, 0, 0, 0);
+
           const now = new Date();
           const daysUntilReset = Math.ceil(
-            (resetDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)
+            (nextMonth.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)
           );
 
           setUsageStats({
-            trustAssessmentUsage: stats.trustAssessment.totalUsed,
-            trustAssessmentRemaining: stats.trustAssessment.remaining,
+            trustAssessmentUsage: stats.trustAssessment.used,
+            trustAssessmentRemaining: Math.max(
+              0,
+              stats.trustAssessment.limit - stats.trustAssessment.used
+            ),
             daysUntilReset: Math.max(0, daysUntilReset),
-            isPremium: stats.isPremium,
+            isPremium: subscription.isPremium || subscription.isUnlimited,
           });
         } catch (error) {
           console.error("Error loading usage stats:", error);
@@ -95,11 +112,15 @@ export default function TrustAssessmentScreen() {
   }, [user?.id]);
 
   useEffect(() => {
+    // Only auto-populate from database if user is not actively editing
+    if (userIsEditing) return;
+
     // Auto-show input if user has name but no assessment yet
     const fullName =
-      profileData?.full_name ||
-      user?.fullName ||
-      `${user?.firstName || ""} ${user?.lastName || ""}`.trim();
+      (profileData?.full_name && !profileData.full_name.includes('Unknown') ? profileData.full_name : null) ||
+      (user?.fullName && !user.fullName.includes('Unknown') ? user.fullName : null) ||
+      `${user?.firstName || ""} ${user?.lastName || ""}`.trim() ||
+      "Beautiful Soul";
     if (fullName && fullName !== "" && !assessment) {
       setShowInput(true);
     }
@@ -107,15 +128,13 @@ export default function TrustAssessmentScreen() {
     // Global name synchronization
     if (fullName && fullName !== userFullName.trim()) {
       setUserFullName(fullName);
+    } else if (!userFullName && fullName) {
+      // Ensure userFullName is set if we have a fullName but userFullName is empty
+      setUserFullName(fullName);
     }
 
     // Auto-fill birth date from profile if available
-    // Update yourBirthDate whenever profileData.birth_date changes
     if (profileData?.birth_date) {
-      console.log(
-        "🛡️ Trust Assessment: Auto-filling birth date from profile:",
-        profileData.birth_date
-      );
       // Convert YYYY-MM-DD format to MM/DD/YYYY format if needed
       let formattedBirthDate = profileData.birth_date;
       try {
@@ -126,30 +145,19 @@ export default function TrustAssessmentScreen() {
           // This is likely YYYY-MM-DD format from database
           const [year, month, day] = profileData.birth_date.split("-");
           formattedBirthDate = `${month.padStart(2, "0")}/${day.padStart(2, "0")}/${year}`;
-          console.log(
-            "🛡️ Trust Assessment: Converted to MM/DD/YYYY format:",
-            formattedBirthDate
-          );
-        } else if (profileData.birth_date.includes("/")) {
-          // Already in MM/DD/YYYY format, use as-is
-          console.log(
-            "🛡️ Trust Assessment: Birth date already in MM/DD/YYYY format"
-          );
         }
       } catch (error) {
-        console.log("Error formatting birth date:", error);
+        console.error("Error formatting birth date:", error);
       }
       setYourBirthDate(formattedBirthDate);
     }
-  }, [user, assessment, profileData, userFullName]);
+  }, [user, assessment, profileData, userFullName, userIsEditing]);
 
-  // Dedicated profile birth_date watcher for immediate sync
+  // Dedicated profile birth_date watcher for immediate sync (only if user is not editing)
   useEffect(() => {
+    if (userIsEditing) return;
+
     if (profileData?.birth_date) {
-      console.log(
-        "🛡️ Trust Assessment: Profile birth_date changed, updating local state:",
-        profileData.birth_date
-      );
       let formattedBirthDate = profileData.birth_date;
       try {
         if (
@@ -159,17 +167,32 @@ export default function TrustAssessmentScreen() {
           // Convert YYYY-MM-DD format to MM/DD/YYYY format
           const [year, month, day] = profileData.birth_date.split("-");
           formattedBirthDate = `${month.padStart(2, "0")}/${day.padStart(2, "0")}/${year}`;
-          console.log(
-            "🛡️ Trust Assessment: Converted to MM/DD/YYYY format:",
-            formattedBirthDate
-          );
         }
       } catch (error) {
-        console.log("Error formatting birth date:", error);
+        console.error("Error formatting birth date:", error);
       }
       setYourBirthDate(formattedBirthDate);
     }
-  }, [profileData?.birth_date]);
+  }, [profileData?.birth_date, userIsEditing]);
+
+  // Show feature introduction for new users
+  useEffect(() => {
+    const showIntroduction = async () => {
+      if (user?.id && showInput && !assessment && step === "your-info") {
+        try {
+          const { shouldShow, alertConfig } =
+            await OnboardingService.getFeatureIntro(user.id, "trustAssessment");
+          if (shouldShow && alertConfig) {
+            showAlert(alertConfig);
+          }
+        } catch (error) {
+          console.error("Error showing trust assessment introduction:", error);
+        }
+      }
+    };
+
+    showIntroduction();
+  }, [user?.id, showInput, assessment, step]);
 
   const generateRoxyCompatibilityAnalysis = (
     yourData: any,
@@ -265,48 +288,106 @@ export default function TrustAssessmentScreen() {
     }
   };
 
+  const isFormValid = (): boolean => {
+    switch (step) {
+      case "your-info":
+        return !!userFullName.trim() && !!yourBirthDate;
+      case "relationship-type":
+        return !!relationshipType;
+      case "partner-info":
+        return !!partnerFullName.trim() && !!partnerBirthDate;
+      case "results":
+        return true;
+      default:
+        const _exhaustiveCheck: never = step;
+        return _exhaustiveCheck;
+    }
+  };
+
   const validateAndProceed = () => {
+
+    // Check usage limits first for all steps using subscription hook
+    if (!canUse("trustAssessment")) {
+      showAlert({
+        type: "limit",
+        title: "🛡️ Trust Assessment Limit Reached",
+        message: `You've used all your trust assessments for this month.\n\nUpgrade to Premium for 10 assessments per month, or upgrade to Unlimited for unlimited access!`,
+        buttons: [
+          {
+            text: "Maybe Later",
+            style: "cancel",
+          },
+          {
+            text: "Upgrade Now",
+            style: "upgrade",
+            onPress: openPricingPage,
+          },
+        ],
+      });
+      return;
+    }
+
     if (step === "your-info") {
       if (!yourBirthDate) {
-        Alert.alert("Error", "Please enter your birth date");
+        showAlert({
+          type: "error",
+          title: "Birth Date Required",
+          message: "Please enter your birth date to continue",
+        });
         return;
       }
 
       const datePattern =
         /^(0[1-9]|1[0-2])\/(0[1-9]|[12]\d|3[01])\/(19|20)\d{2}$/;
       if (!datePattern.test(yourBirthDate)) {
-        Alert.alert(
-          "Error",
-          "Please enter your birth date in MM/DD/YYYY format"
-        );
+        showAlert({
+          type: "warning",
+          title: "Invalid Date Format",
+          message:
+            "Please enter your birth date in MM/DD/YYYY format (e.g., 03/15/1990)",
+        });
         return;
       }
 
       setStep("relationship-type");
     } else if (step === "relationship-type") {
       if (!relationshipType) {
-        Alert.alert("Error", "Please select your relationship type");
+        showAlert({
+          type: "warning",
+          title: "Relationship Type Required",
+          message: "Please select your relationship type to continue",
+        });
         return;
       }
       setStep("partner-info");
     } else if (step === "partner-info") {
       if (!partnerFullName.trim()) {
-        Alert.alert("Error", "Please enter your partner's full name");
+        showAlert({
+          type: "error",
+          title: "Partner Name Required",
+          message: "Please enter your partner's full name",
+        });
         return;
       }
 
       if (!partnerBirthDate) {
-        Alert.alert("Error", "Please enter your partner's birth date");
+        showAlert({
+          type: "error",
+          title: "Partner Birth Date Required",
+          message: "Please enter your partner's birth date",
+        });
         return;
       }
 
       const datePattern =
         /^(0[1-9]|1[0-2])\/(0[1-9]|[12]\d|3[01])\/(19|20)\d{2}$/;
       if (!datePattern.test(partnerBirthDate)) {
-        Alert.alert(
-          "Error",
-          "Please enter partner's birth date in MM/DD/YYYY format"
-        );
+        showAlert({
+          type: "warning",
+          title: "Invalid Date Format",
+          message:
+            "Please enter your partner's birth date in MM/DD/YYYY format (e.g., 03/15/1990)",
+        });
         return;
       }
 
@@ -320,12 +401,20 @@ export default function TrustAssessmentScreen() {
       const fullPartnerName = partnerFullName.trim();
 
       if (!fullUserName) {
-        Alert.alert("Error", "Please enter your full name");
+        showAlert({
+          type: "error",
+          title: "Name Required",
+          message: "Please enter your full name to generate trust assessment",
+        });
         return;
       }
 
       if (!fullPartnerName) {
-        Alert.alert("Error", "Please enter your partner's full name");
+        showAlert({
+          type: "error",
+          title: "Partner Name Required",
+          message: "Please enter your partner's full name to continue",
+        });
         return;
       }
 
@@ -339,11 +428,36 @@ export default function TrustAssessmentScreen() {
         });
       }
 
-      // Check usage limits
+      // Check usage limits first
       if (user?.id) {
-        if (!canUse('trustAssessment')) {
-          setLoading(false);
-          setShowUsageLimitModal(true);
+        try {
+          const usageCheck =
+            await SubscriptionService.checkUsageLimitWithPrompt(
+              user.id,
+              "trust_assessment"
+            );
+
+          if (!usageCheck.canUse) {
+            showUsageLimitAlert(
+              showAlert,
+              "trust_assessment",
+              usageCheck.promptConfig?.usedCount || 0,
+              usageCheck.promptConfig?.limitCount || 1,
+              () => {
+                // Open pricing page or handle upgrade
+                console.log("Upgrade to premium clicked");
+              }
+            );
+            return;
+          }
+        } catch (error) {
+          console.error("Error checking usage limits:", error);
+          showAlert({
+            type: "error",
+            title: "Connection Error",
+            message:
+              "Unable to verify usage limits. Please check your connection and try again.",
+          });
           return;
         }
       }
@@ -560,7 +674,7 @@ export default function TrustAssessmentScreen() {
         let yourDeadlySinWarning;
         try {
           if (!profileData?.full_name || !profileData?.birth_date) {
-            throw new Error('Profile data not available');
+            throw new Error("Profile data not available");
           }
           // Create a numerology profile for the deadly sin warning
           const quickProfile = NumerologyService.generateProfile(
@@ -620,38 +734,31 @@ export default function TrustAssessmentScreen() {
         });
       }, 2000);
 
-      // Track usage by recording in database
+      // Track usage after successful generation
       if (user?.id) {
-        await SubscriptionService.recordUsage(user.id, "trustAssessment", {
-          user_name: fullUserName,
-          birth_date: yourBirthDate,
-          partner_name: fullPartnerName,
-          partner_birth_date: partnerBirthDate,
-          relationship_type: relationshipType,
-          trust_score: basicTrustAssessment?.compatibilityScore || 0,
-          assessment_data: basicTrustAssessment,
-        });
-
-        // Reload usage stats after recording
-        const stats = await SubscriptionService.getUsageStats(user.id);
-        const resetDate = new Date(stats.trustAssessment.resetsAt);
-        const now = new Date();
-        const daysUntilReset = Math.ceil(
-          (resetDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)
-        );
-
-        setUsageStats({
-          trustAssessmentUsage: stats.trustAssessment.totalUsed,
-          trustAssessmentRemaining: stats.trustAssessment.remaining,
-          daysUntilReset: Math.max(0, daysUntilReset),
-          isPremium: stats.isPremium,
-        });
+        try {
+          await SubscriptionService.trackUsage(user.id, "trust_assessment", {
+            readingType: "trust_assessment_analysis",
+            fullUserName,
+            yourBirthDate,
+            partnerFullName,
+            partnerBirthDate,
+            relationshipType,
+            trustScore: basicTrustAssessment?.compatibilityScore || 0,
+            assessmentData: basicTrustAssessment,
+            timestamp: new Date().toISOString(),
+          });
+        } catch (error) {
+          console.error("Error tracking trust assessment usage:", error);
+        }
       }
     } catch (error) {
-      Alert.alert(
-        "Error",
-        "Failed to generate trust assessment. Please check your information."
-      );
+      showAlert({
+        type: "error",
+        title: "Assessment Failed",
+        message:
+          "We couldn't generate your trust assessment right now. Please check your information and try again.",
+      });
       console.error("Trust assessment calculation error:", error);
     }
     setLoading(false);
@@ -695,17 +802,27 @@ export default function TrustAssessmentScreen() {
         const subscriptionStatus =
           await SubscriptionService.getSubscriptionStatus(user.id);
         const stats = await SubscriptionService.getUsageStats(user.id);
-        const resetDate = new Date(stats.trustAssessment.resetsAt);
+
+        // Calculate next month reset date
+        const nextMonth = new Date();
+        nextMonth.setMonth(nextMonth.getMonth() + 1);
+        nextMonth.setDate(1);
+        nextMonth.setHours(0, 0, 0, 0);
+
         const now = new Date();
         const daysUntilReset = Math.ceil(
-          (resetDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)
+          (nextMonth.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)
         );
 
         setUsageStats({
-          trustAssessmentUsage: stats.trustAssessment.totalUsed,
-          trustAssessmentRemaining: stats.trustAssessment.remaining,
+          trustAssessmentUsage: stats.trustAssessment.used,
+          trustAssessmentRemaining: Math.max(
+            0,
+            stats.trustAssessment.limit - stats.trustAssessment.used
+          ),
           daysUntilReset: Math.max(0, daysUntilReset),
-          isPremium: stats.isPremium,
+          isPremium:
+            subscriptionStatus.isPremium || subscriptionStatus.isUnlimited,
         });
       }
 
@@ -742,6 +859,33 @@ export default function TrustAssessmentScreen() {
     setPartnerBirthDate("");
     setRelationshipType("");
     setExpandedIndicator(null);
+    setUserIsEditing(false);
+  };
+
+  const handleNameChange = (newName: string) => {
+    setUserIsEditing(true);
+    setUserFullName(newName);
+    // Clear assessment if user changes name significantly
+    if (assessment && newName.trim() !== assessment.person1?.name?.trim()) {
+      resetAssessment();
+    }
+  };
+
+  const handleBirthDateChange = (date: Date | undefined) => {
+    setUserIsEditing(true);
+    if (date) {
+      const formattedDate = `${(date.getMonth() + 1).toString().padStart(2, "0")}/${date.getDate().toString().padStart(2, "0")}/${date.getFullYear()}`;
+      setYourBirthDate(formattedDate);
+      // Clear assessment if user changes birth date
+      if (assessment && assessment.person1?.birthDate !== formattedDate) {
+        resetAssessment();
+      }
+    } else {
+      setYourBirthDate("");
+      if (assessment) {
+        resetAssessment();
+      }
+    }
   };
 
   const shareResults = () => {
@@ -849,7 +993,7 @@ export default function TrustAssessmentScreen() {
                     label="Your Full Name"
                     placeholder="Enter your full name"
                     value={userFullName}
-                    onChangeText={setUserFullName}
+                    onChangeText={handleNameChange}
                     autoCapitalize="words"
                     leftIcon="person"
                     required
@@ -871,12 +1015,7 @@ export default function TrustAssessmentScreen() {
                           })()
                         : undefined
                     }
-                    onSelect={(date) => {
-                      if (date) {
-                        const formattedDate = `${(date.getMonth() + 1).toString().padStart(2, "0")}/${date.getDate().toString().padStart(2, "0")}/${date.getFullYear()}`;
-                        setYourBirthDate(formattedDate);
-                      }
-                    }}
+                    onSelect={handleBirthDateChange}
                     placeholder="MM/DD/YYYY"
                     maxDate={new Date()}
                   />
@@ -1049,16 +1188,45 @@ export default function TrustAssessmentScreen() {
                   />
                 </View>
 
+                {/* Usage Limit Warning */}
+                {!canUse("trustAssessment") && (
+                  <View style={styles.limitWarningContainer}>
+                    <Ionicons name="lock-closed" size={20} color="#FF6B9D" />
+                    <Text style={styles.limitWarningText}>
+                      You&apos;ve reached your trust assessment limit for this month.
+                      Upgrade to Premium for 10 assessments per month!
+                    </Text>
+                  </View>
+                )}
+
                 <ShadcnButton
                   onPress={validateAndProceed}
-                  variant="default"
+                  variant={(!canUse("trustAssessment") || !isFormValid()) ? "secondary" : "default"}
                   size="lg"
-                  disabled={loading}
+                  disabled={
+                    loading ||
+                    !canUse("trustAssessment") ||
+                    !isFormValid()
+                  }
                   loading={loading}
                   startIcon="shield-checkmark"
-                  style={styles.proceedButton}
+                  style={{
+                    ...styles.proceedButton,
+                    ...((!canUse("trustAssessment") || !isFormValid()) ? {
+                      backgroundColor: "#666666",
+                      borderColor: "#666666",
+                      borderWidth: 1,
+                      opacity: 1, // Override any disabled opacity
+                    } : {})
+                  }}
                 >
-                  {loading ? "Analyzing..." : "Analyze Trust"}
+                  {loading
+                    ? "Analyzing..."
+                    : !canUse("trustAssessment")
+                      ? "Limit Reached"
+                      : !isFormValid()
+                        ? "Fill Required Fields"
+                        : "Next"}
                 </ShadcnButton>
               </>
             )}
@@ -1484,13 +1652,18 @@ export default function TrustAssessmentScreen() {
       {/* Custom Alert Component */}
       {AlertComponent}
 
-      {/* Usage Limit Modal */}
-      <UsageLimitModal
-        visible={showUsageLimitModal}
-        onClose={() => setShowUsageLimitModal(false)}
-        onUpgrade={openPricingPage}
-        feature="trustAssessment"
-      />
+      {/* Upgrade Prompt Modal */}
+      {upgradePromptConfig && (
+        <UpgradePromptModal
+          visible={showUpgradePrompt}
+          onClose={() => setShowUpgradePrompt(false)}
+          title={upgradePromptConfig.title}
+          message={upgradePromptConfig.message}
+          featureName={upgradePromptConfig.featureName}
+          usedCount={upgradePromptConfig.usedCount}
+          limitCount={upgradePromptConfig.limitCount}
+        />
+      )}
 
       {/* Payment Modal */}
       {/* <PaymentModal
@@ -1500,17 +1673,20 @@ export default function TrustAssessmentScreen() {
           // Reload usage stats after successful payment
           if (user?.id) {
             const stats = await SubscriptionService.getUsageStats(user.id);
-            const resetDate = new Date(stats.trustAssessment.resetsAt);
+            const subscription = await SubscriptionService.getSubscriptionStatus(user.id);
+
+            // Calculate days until next month (reset date)
             const now = new Date();
+            const nextMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1);
             const daysUntilReset = Math.ceil(
-              (resetDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)
+              (nextMonth.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)
             );
 
             setUsageStats({
-              trustAssessmentUsage: stats.trustAssessment.totalUsed,
-              trustAssessmentRemaining: stats.trustAssessment.remaining,
+              trustAssessmentUsage: stats.trustAssessment.used,
+              trustAssessmentRemaining: Math.max(0, stats.trustAssessment.limit - stats.trustAssessment.used),
               daysUntilReset: Math.max(0, daysUntilReset),
-              isPremium: stats.isPremium,
+              isPremium: subscription.isPremium || subscription.isUnlimited,
             });
           }
         }}
@@ -1643,6 +1819,10 @@ const styles = StyleSheet.create({
   proceedButton: {
     marginTop: DesignSystem.spacing.scale["2xl"],
   },
+  limitExceededButton: {
+    backgroundColor: "#666666",
+    borderColor: "#666666",
+  },
   disabledButton: {
     opacity: 0.6,
   },
@@ -1651,6 +1831,25 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     color: "#FFFFFF",
     marginHorizontal: 8,
+  },
+  limitWarningContainer: {
+    backgroundColor: "rgba(255, 107, 157, 0.1)",
+    borderRadius: 12,
+    padding: 16,
+    marginTop: 16,
+    marginBottom: 8,
+    flexDirection: "row",
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "rgba(255, 107, 157, 0.3)",
+  },
+  limitWarningText: {
+    fontSize: 14,
+    color: "#FF6B9D",
+    marginLeft: 12,
+    flex: 1,
+    lineHeight: 18,
+    fontWeight: "500",
   },
   profileHeader: {
     paddingHorizontal: 20,

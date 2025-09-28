@@ -1,5 +1,5 @@
 // Celebrity Match Service for finding compatible celebrities using AI
-import { UniversalAIService } from "./UniversalAIService";
+import SimpleAIService from "./SimpleAIService";
 
 export interface CelebrityMatch {
   name: string;
@@ -297,7 +297,7 @@ export class CelebrityMatchService {
           let matchReason: string;
           try {
             const result =
-              await UniversalAIService.generateCelebrityMatchReason(
+              await SimpleAIService.generateCelebrityMatch(
                 userLifePath,
                 celebrity.name,
                 celebrity.lifePathNumber,

@@ -6,6 +6,7 @@ import { Redirect, Tabs } from "expo-router";
 import React, { useEffect, useState } from "react";
 import { View, TouchableOpacity, Text } from "react-native";
 import OnboardingScreen from "../../components/OnboardingScreen";
+import CustomAlert, { useCustomAlert } from "../../components/CustomAlert";
 import { DesignSystem } from "../../constants/DesignSystem";
 import {
   AlertProvider,
@@ -16,12 +17,14 @@ import { ProfileProvider, useProfile } from "../../contexts/ProfileContext";
 import { useUserSync } from "../../lib/user-sync";
 import { SubscriptionService } from "../../services/SubscriptionService";
 import { useDeepLinking } from "../../hooks/useDeepLinking";
+import { OnboardingService } from "../../services/OnboardingService";
 
 // Wrapper component that uses the profile context
 function TabsWithOnboarding() {
   const { profileData, loading, markOnboardingCompleted, refreshProfile } = useProfile();
   const { user } = useUser();
   const alertContext = useAlert();
+  const { showAlert, AlertComponent } = useCustomAlert();
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [paymentStatus, setPaymentStatus] = useState<{isPremium: boolean} | null>(null);
 
@@ -41,12 +44,32 @@ function TabsWithOnboarding() {
   }, [user?.id]);
 
   useEffect(() => {
-    // Temporarily disable onboarding to fix navigation issues
+    // Show welcome message for new users and check billing cycle
+    const showWelcomeForNewUsers = async () => {
+      if (!loading && user?.id && profileData) {
+        try {
+          // Check and reset billing cycle if needed
+          await SubscriptionService.checkAndResetBillingCycle(user.id);
+
+          // Show welcome message for new users using CustomAlert
+          const { shouldShow, alertConfig } = await OnboardingService.getWelcomeMessage(user.id);
+          if (shouldShow && alertConfig) {
+            showAlert(alertConfig);
+          }
+        } catch (error) {
+          console.error('Error showing welcome message:', error);
+        }
+      }
+    };
+
+    showWelcomeForNewUsers();
+
+    // Temporarily disable old onboarding to fix navigation issues
     // Show onboarding if profile exists but onboarding hasn't been completed
     // if (!loading && profileData && !profileData.onboarding_completed) {
     //   setShowOnboarding(true);
     // }
-  }, [profileData, loading]);
+  }, [profileData, loading, user?.id]);
 
   const handleOnboardingComplete = async () => {
     await markOnboardingCompleted();
@@ -85,6 +108,7 @@ function TabsWithOnboarding() {
         onComplete={handleOnboardingComplete}
         onUpgradeToPremium={handleUpgradeToPremium}
       />
+      {AlertComponent}
       <Tabs
         tabBar={({ state, descriptors, navigation }) => (
           <View

@@ -1,5 +1,6 @@
 import { useUser } from "@clerk/clerk-expo";
 import { Ionicons } from "@expo/vector-icons";
+import { router } from "expo-router";
 import React, { useEffect, useMemo, useState } from "react";
 import {
   Animated,
@@ -10,7 +11,7 @@ import {
   Text,
   View,
 } from "react-native";
-import { useCustomAlert } from "../../components/CustomAlert";
+import { useCustomAlert, showUsageLimitAlert } from "../../components/CustomAlert";
 import { NumerologyLoadingSkeleton } from "../../components/LoadingSkeletons";
 import { DatePicker, ShadcnButton, ShadcnInput } from "../../components/ui";
 import { DesignSystem } from "../../constants/DesignSystem";
@@ -19,11 +20,16 @@ import NumerologyReadingScreen from "../../screens/NumerologyReadingScreen";
 import NumerologyService from "../../services/NumerologyService";
 import { RoxyNumerologyService } from "../../services/ProkeralaNumerologyService";
 import SimpleAIService from "../../services/SimpleAIService";
+import { SubscriptionService } from "../../services/SubscriptionService";
+import UpgradePromptModal from "../../components/UpgradePromptModal";
+import { OnboardingService } from "../../services/OnboardingService";
+import { useSubscription } from "../../hooks/useSubscription";
 
 export default function NumerologyScreen() {
   const { user } = useUser();
   const { profileData } = useProfile();
   const { showAlert, AlertComponent } = useCustomAlert();
+  const { subscription, canUse, openPricingPage } = useSubscription();
 
   const [showInput, setShowInput] = useState(false);
   const [birthDate, setBirthDate] = useState("");
@@ -34,6 +40,9 @@ export default function NumerologyScreen() {
   const [characterAnalysis, setCharacterAnalysis] = useState("");
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const [showUpgradePrompt, setShowUpgradePrompt] = useState(false);
+  const [upgradePromptConfig, setUpgradePromptConfig] = useState<any>(null);
+  const [userIsEditing, setUserIsEditing] = useState(false);
 
   // Animation values
   const fadeAnim = useState(new Animated.Value(0))[0];
@@ -47,6 +56,9 @@ export default function NumerologyScreen() {
   }, [profileData?.full_name, user?.firstName, user?.fullName]);
 
   useEffect(() => {
+    // Only auto-populate from database if user is not actively editing
+    if (userIsEditing) return;
+
     const name =
       profileData?.full_name ||
       user?.fullName ||
@@ -67,7 +79,7 @@ export default function NumerologyScreen() {
       }
       setBirthDate(formattedDate);
     }
-  }, [user, profileData, profile]);
+  }, [user, profileData, profile, userIsEditing]);
 
   useEffect(() => {
     if (profile) {
@@ -86,14 +98,61 @@ export default function NumerologyScreen() {
     }
   }, [profile]);
 
+  // Show feature introduction for new users
+  useEffect(() => {
+    const showIntroduction = async () => {
+      if (user?.id && showInput && !profile) {
+        try {
+          const { shouldShow, alertConfig } = await OnboardingService.getFeatureIntro(user.id, 'numerology');
+          if (shouldShow && alertConfig) {
+            showAlert(alertConfig);
+          }
+        } catch (error) {
+          console.error('Error showing numerology introduction:', error);
+        }
+      }
+    };
+
+    showIntroduction();
+  }, [user?.id, showInput, profile]);
+
   const generateNumerology = async () => {
+    // Check usage limits first
+    if (!canUse("numerology")) {
+      showAlert({
+        type: "limit",
+        title: "🔮 Numerology Limit Reached",
+        message: `You've used all your numerology readings for this month.\n\nUpgrade to Premium for 25 readings per month, or upgrade to Unlimited for unlimited access!`,
+        buttons: [
+          {
+            text: "Maybe Later",
+            style: "cancel",
+          },
+          {
+            text: "Upgrade Now",
+            style: "upgrade",
+            onPress: openPricingPage,
+          },
+        ],
+      });
+      return;
+    }
+
     if (!fullName.trim()) {
-      showAlert({ title: "Error", message: "Please enter your full name" });
+      showAlert({
+        type: "error",
+        title: "Name Required",
+        message: "Please enter your full name to generate your numerology reading"
+      });
       return;
     }
 
     if (!birthDate) {
-      showAlert({ title: "Error", message: "Please enter your birth date" });
+      showAlert({
+        type: "error",
+        title: "Birth Date Required",
+        message: "Please enter your birth date to calculate your numbers"
+      });
       return;
     }
 
@@ -101,29 +160,55 @@ export default function NumerologyScreen() {
       /^(0[1-9]|1[0-2])\/(0[1-9]|[12]\d|3[01])\/(19|20)\d{2}$/;
     if (!datePattern.test(birthDate)) {
       showAlert({
-        title: "Error",
-        message: "Please enter birth date in MM/DD/YYYY format",
+        type: "warning",
+        title: "Invalid Date Format",
+        message: "Please enter your birth date in MM/DD/YYYY format (e.g., 03/15/1990)",
       });
       return;
+    }
+
+    // Check usage limits first
+    if (user?.id) {
+      try {
+        const usageCheck = await SubscriptionService.checkUsageLimitWithPrompt(user.id, 'numerology');
+
+        if (!usageCheck.canUse) {
+          showUsageLimitAlert(
+            showAlert,
+            'numerology',
+            usageCheck.promptConfig?.usedCount || 0,
+            usageCheck.promptConfig?.limitCount || 3,
+            () => {
+              // Open pricing page or handle upgrade
+              console.log('Upgrade to premium clicked');
+            }
+          );
+          return;
+        }
+      } catch (error) {
+        console.error('Error checking usage limits:', error);
+        showAlert({
+          type: "error",
+          title: "Connection Error",
+          message: "Unable to verify usage limits. Please check your connection and try again."
+        });
+        return;
+      }
     }
 
     setLoading(true);
 
     try {
       const [month, day, year] = birthDate.split("/").map(Number);
-      const numerologyProfile = NumerologyService.generateProfile(
+
+      // STEP 1: Generate basic profile immediately
+      const basicNumerologyProfile = NumerologyService.generateProfile(
         fullName,
         birthDate
       );
-      const roxyProfile = await RoxyNumerologyService.getNumerologyReading(
-        fullName.split(" ")[0] || "",
-        fullName.split(" ").slice(1).join(" ") || "",
-        birthDate,
-        ""
-      );
 
       const lifePathDetails = NumerologyService.getLifePathInfo(
-        numerologyProfile.lifePathNumber
+        basicNumerologyProfile.lifePathNumber
       );
 
       const predictionsData = [
@@ -135,7 +220,7 @@ export default function NumerologyScreen() {
         {
           category: "Career & Finance",
           timeframe: "Next 3 Months",
-          predictions: [lifePathDetails.careerGuidance || "Your career path aligns with your numerological profile."]
+          predictions: [lifePathDetails.careerPaths?.[0] || "Your career path aligns with your numerological profile."]
         },
         {
           category: "Personal Growth",
@@ -144,38 +229,99 @@ export default function NumerologyScreen() {
         },
       ];
 
-      const analysis = await SimpleAIService.generateAllNumerologyInsights(
-        fullName,
-        numerologyProfile,
-        "character-only"
-      );
-
-      // Create enhanced profile with Roxy data
-      const enhancedProfile = {
-        ...numerologyProfile,
-        roxyInsights: roxyProfile ? {
-          strengths: Array.isArray(roxyProfile.strengths) ? roxyProfile.strengths : [],
-          challenges: Array.isArray(roxyProfile.challenges) ? roxyProfile.challenges : [],
-          career: roxyProfile.career_guidance || "",
-          relationship: roxyProfile.relationship_guidance || "",
-          spiritual: roxyProfile.spiritual_guidance || "",
-          luckyNumbers: Array.isArray(roxyProfile.lucky_numbers) ? roxyProfile.lucky_numbers : [],
-          luckyColors: Array.isArray(roxyProfile.lucky_colors) ? roxyProfile.lucky_colors : [],
-          lifePathDescription: roxyProfile.life_path_description || "",
-          personalYear: roxyProfile.personal_year_number || (new Date().getFullYear() % 9) + 1,
-        } : null
+      // Show basic profile immediately with user input data
+      const initialProfile = {
+        ...basicNumerologyProfile,
+        name: fullName, // Use user input name
+        birthDate: birthDate, // Use user input birth date
       };
 
-      setProfile(enhancedProfile);
+      setProfile(initialProfile);
       setLifePathInfo(lifePathDetails);
       setPredictions(predictionsData);
-      setCharacterAnalysis(analysis.characterAnalysis);
+      setCharacterAnalysis("Generating your personalized insights...");
       setShowInput(false);
+      setLoading(false); // Stop loading immediately
+
+      // STEP 2: Get Roxy API data in background and update immediately when available
+      RoxyNumerologyService.getNumerologyReading(
+        fullName.split(" ")[0] || "",
+        fullName.split(" ").slice(1).join(" ") || "",
+        birthDate,
+        ""
+      ).then((roxyProfile) => {
+        if (roxyProfile) {
+          console.log("✅ Roxy API data received, updating profile...");
+          // Create enhanced profile with Roxy data immediately
+          const enhancedProfile = {
+            ...basicNumerologyProfile,
+            // Override with Roxy API numbers if available
+            lifePathNumber: roxyProfile.life_path_number || basicNumerologyProfile.lifePathNumber,
+            destinyNumber: roxyProfile.destiny_number || basicNumerologyProfile.destinyNumber,
+            soulUrgeNumber: roxyProfile.soul_urge_number || basicNumerologyProfile.soulUrgeNumber,
+            name: fullName, // Use user input name
+            birthDate: birthDate, // Use user input birth date
+            roxyInsights: {
+              strengths: Array.isArray(roxyProfile.strengths) ? roxyProfile.strengths : [],
+              challenges: Array.isArray(roxyProfile.challenges) ? roxyProfile.challenges : [],
+              career: roxyProfile.career_guidance || "",
+              relationship: roxyProfile.relationship_guidance || "",
+              spiritual: roxyProfile.spiritual_guidance || "",
+              luckyNumbers: Array.isArray(roxyProfile.lucky_numbers) ? roxyProfile.lucky_numbers : [],
+              luckyColors: Array.isArray(roxyProfile.lucky_colors) ? roxyProfile.lucky_colors : [],
+              lifePathDescription: roxyProfile.life_path_description || "",
+              personalYear: roxyProfile.personality_number || (new Date().getFullYear() % 9) + 1,
+            }
+          };
+
+          // Update profile with Roxy data immediately
+          setProfile(enhancedProfile);
+
+          // Update life path info with Roxy numbers
+          const updatedLifePathDetails = NumerologyService.getLifePathInfo(
+            roxyProfile.life_path_number || basicNumerologyProfile.lifePathNumber
+          );
+          setLifePathInfo(updatedLifePathDetails);
+        }
+      }).catch((error) => {
+        console.log("🔄 Roxy API unavailable, keeping basic profile");
+      });
+
+      // STEP 3: Generate AI analysis in background
+      SimpleAIService.generateAllNumerologyInsights(
+        fullName,
+        basicNumerologyProfile,
+        "character-only"
+      ).then((analysis) => {
+        setCharacterAnalysis(analysis.characterAnalysis);
+      }).catch((error) => {
+        console.log("AI analysis failed, using static content");
+        setCharacterAnalysis("Your numerological profile reveals unique insights about your personality and life path. Each number in your chart represents different aspects of your character and destiny.");
+      });
+
+      // Track usage after successful generation
+      if (user?.id) {
+        try {
+          await SubscriptionService.trackUsage(user.id, 'numerology', {
+            readingType: 'full_numerology',
+            fullName,
+            birthDate,
+            lifePathNumber: basicNumerologyProfile.lifePathNumber,
+            destinyNumber: basicNumerologyProfile.destinyNumber,
+            soulUrgeNumber: basicNumerologyProfile.soulUrgeNumber,
+            timestamp: new Date().toISOString()
+          });
+          console.log('✅ Numerology usage tracked successfully');
+        } catch (error) {
+          console.error('Error tracking numerology usage:', error);
+        }
+      }
     } catch (error) {
       console.error("Error generating numerology:", error);
       showAlert({
-        title: "Error",
-        message: "Failed to generate numerology reading. Please try again.",
+        type: "error",
+        title: "Generation Failed",
+        message: "We couldn't generate your numerology reading right now. Please check your information and try again.",
       });
     } finally {
       setLoading(false);
@@ -190,6 +336,33 @@ export default function NumerologyScreen() {
     setShowInput(true);
     fadeAnim.setValue(0);
     scaleAnim.setValue(0.95);
+    setUserIsEditing(false);
+  };
+
+  const handleNameChange = (newName: string) => {
+    setUserIsEditing(true);
+    setFullName(newName);
+    // Clear profile if user changes name significantly
+    if (profile && newName.trim() !== profile.name.trim()) {
+      resetReading();
+    }
+  };
+
+  const handleBirthDateChange = (date: Date | undefined) => {
+    setUserIsEditing(true);
+    if (date) {
+      const formattedDate = `${(date.getMonth() + 1).toString().padStart(2, '0')}/${date.getDate().toString().padStart(2, '0')}/${date.getFullYear()}`;
+      setBirthDate(formattedDate);
+      // Clear profile if user changes birth date
+      if (profile && profile.birthDate !== formattedDate) {
+        resetReading();
+      }
+    } else {
+      setBirthDate('');
+      if (profile) {
+        resetReading();
+      }
+    }
   };
 
   const showAIChatScreen = () => {
@@ -271,7 +444,7 @@ export default function NumerologyScreen() {
               label="Full Name"
               placeholder="Enter your full name"
               value={fullName}
-              onChangeText={setFullName}
+              onChangeText={handleNameChange}
               style={styles.input}
             />
           </View>
@@ -296,32 +469,57 @@ export default function NumerologyScreen() {
                   return undefined;
                 }
               })() : undefined}
-              onSelect={(date) => {
-                if (date) {
-                  const month = String(date.getMonth() + 1).padStart(2, "0");
-                  const day = String(date.getDate()).padStart(2, "0");
-                  const year = date.getFullYear();
-                  setBirthDate(`${month}/${day}/${year}`);
-                }
-              }}
+              onSelect={handleBirthDateChange}
               placeholder="Select your birth date"
             />
           </View>
 
+          {/* Usage Limit Warning */}
+          {!canUse("numerology") && (
+            <View style={styles.limitWarningContainer}>
+              <Ionicons name="lock-closed" size={20} color="#FF6B9D" />
+              <Text style={styles.limitWarningText}>
+                You've reached your numerology reading limit for this month.
+                Upgrade to Premium for 25 readings per month!
+              </Text>
+            </View>
+          )}
+
           <ShadcnButton
             onPress={generateNumerology}
-            disabled={loading || !fullName.trim() || !birthDate}
+            disabled={loading || !fullName.trim() || !birthDate || !canUse("numerology")}
             loading={loading}
             variant="default"
             size="lg"
             endIcon="arrow-forward"
-            style={styles.generateButton}
+            style={[
+              styles.generateButton,
+              !canUse("numerology") && styles.limitExceededButton
+            ]}
           >
-            {loading ? "Generating..." : "Generate Reading"}
+            {loading
+              ? "Generating..."
+              : !canUse("numerology")
+                ? "Limit Reached"
+                : "Generate Reading"
+            }
           </ShadcnButton>
         </View>
       </ScrollView>
       {AlertComponent}
+
+      {/* Upgrade Prompt Modal */}
+      {upgradePromptConfig && (
+        <UpgradePromptModal
+          visible={showUpgradePrompt}
+          onClose={() => setShowUpgradePrompt(false)}
+          title={upgradePromptConfig.title}
+          message={upgradePromptConfig.message}
+          featureName={upgradePromptConfig.featureName}
+          usedCount={upgradePromptConfig.usedCount}
+          limitCount={upgradePromptConfig.limitCount}
+        />
+      )}
     </SafeAreaView>
   );
 }
@@ -377,5 +575,25 @@ const styles = StyleSheet.create({
   },
   generateButton: {
     marginTop: 16,
+  },
+  limitExceededButton: {
+    backgroundColor: "#666666",
+    borderColor: "#666666",
+  },
+  limitWarningContainer: {
+    backgroundColor: "rgba(255, 107, 157, 0.1)",
+    borderRadius: 12,
+    padding: 16,
+    marginTop: 16,
+    flexDirection: "row",
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "rgba(255, 107, 157, 0.3)",
+  },
+  limitWarningText: {
+    color: "#FF6B9D",
+    fontSize: 14,
+    marginLeft: 8,
+    flex: 1,
   },
 });

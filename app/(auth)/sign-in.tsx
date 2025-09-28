@@ -8,17 +8,20 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
+  Linking,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useSignIn, useUser } from '@clerk/clerk-expo';
 import { Link, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { useSecureAuth } from '../../services/SecureAuthService';
 
 type SignInStep = 'identifier' | 'verification';
 
 export default function SignInScreen() {
   const { signIn, setActive, isLoaded } = useSignIn();
   const { isSignedIn, user } = useUser();
+  const { redirectToWebApp } = useSecureAuth();
   const router = useRouter();
   
   // Form state
@@ -95,12 +98,17 @@ export default function SignInScreen() {
     } catch (err: any) {
       console.error('🔴 Sign-in error:', err);
       console.error('🔴 Error details:', JSON.stringify(err, null, 2));
-      
+
       const errorMsg = err.errors?.[0]?.message || err.message || 'Sign in failed';
-      
+
+      // Handle invalid verification strategy - user likely doesn't exist
+      if (errorMsg.includes('Invalid verification strategy') ||
+          err.errors?.[0]?.code === 'verification_failed') {
+        setErrorMessage('Account doesn\'t exist');
+      }
       // Handle account not found - might be incomplete sign-up
-      if (err.errors?.[0]?.code === 'form_identifier_not_found') {
-        setErrorMessage('Account not found. If you recently signed up, try completing the sign-up process first.');
+      else if (err.errors?.[0]?.code === 'form_identifier_not_found') {
+        setErrorMessage('Account doesn\'t exist');
       } else {
         setErrorMessage(errorMsg);
       }
@@ -146,7 +154,15 @@ export default function SignInScreen() {
     } catch (err: any) {
       console.error('🔴 Verification error:', err);
       console.error('🔴 Error details:', JSON.stringify(err, null, 2));
-      
+
+      // Handle invalid verification strategy - user likely doesn't exist
+      if (err.errors?.[0]?.message?.includes('Invalid verification strategy') ||
+          err.errors?.[0]?.code === 'verification_failed' ||
+          err.message?.includes('Invalid verification strategy')) {
+        setCodeError('Account doesn\'t exist');
+        return;
+      }
+
       // Handle already verified error specifically
       if (err.errors?.[0]?.code === 'verification_already_verified') {
         console.log('✅ Already verified, attempting to set session');
@@ -175,6 +191,31 @@ export default function SignInScreen() {
       setIsLoading(false);
     }
   }, [isLoaded, signIn, setActive, code, router]);
+
+  // Handle forgot password redirect
+  const handleForgotPassword = useCallback(async () => {
+    try {
+      // Redirect to website's forgot password page
+      const forgotPasswordUrl = await redirectToWebApp('forgot-password');
+
+      const canOpen = await Linking.canOpenURL(forgotPasswordUrl);
+      if (canOpen) {
+        await Linking.openURL(forgotPasswordUrl);
+      } else {
+        // Fallback to main website
+        await Linking.openURL('https://lovelock.it.com');
+      }
+    } catch (error) {
+      console.error('Error opening forgot password page:', error);
+      // Fallback to main website
+      try {
+        await Linking.openURL('https://lovelock.it.com');
+      } catch (fallbackError) {
+        console.error('Error opening fallback URL:', fallbackError);
+      }
+    }
+  }, [redirectToWebApp]);
+
 
 
   // Email verification step
@@ -334,7 +375,7 @@ export default function SignInScreen() {
             </TouchableOpacity>
 
             {/* Forgot Password */}
-            <TouchableOpacity style={styles.forgotPasswordContainer}>
+            <TouchableOpacity style={styles.forgotPasswordContainer} onPress={handleForgotPassword}>
               <Text style={styles.forgotPasswordText}>Forgot password?</Text>
             </TouchableOpacity>
           </View>

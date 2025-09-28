@@ -2,7 +2,6 @@ import { useUser } from "@clerk/clerk-expo";
 import { Ionicons } from "@expo/vector-icons";
 import React, { useEffect, useRef, useState } from "react";
 import {
-  Alert,
   Animated,
   RefreshControl,
   SafeAreaView,
@@ -12,7 +11,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { useCustomAlert } from "../../components/CustomAlert";
+import { useCustomAlert, showUsageLimitAlert } from "../../components/CustomAlert";
 import { LoveMatchLoadingSkeleton } from "../../components/LoadingSkeletons";
 import ReadMoreText from "../../components/ReadMoreText";
 import { DatePicker, ShadcnButton, ShadcnInput } from "../../components/ui";
@@ -34,8 +33,9 @@ import SimpleAIService from "../../services/SimpleAIService";
 import { StaticDataService } from "../../services/StaticDataService";
 import { SubscriptionService } from "../../services/SubscriptionService";
 import { useSubscription } from "../../hooks/useSubscription";
-import { UsageLimitModal } from "../../components/UsageLimitModal";
 import UsageTrackingService from "../../services/UsageTrackingService";
+import UpgradePromptModal from "../../components/UpgradePromptModal";
+import { OnboardingService } from "../../services/OnboardingService";
 
 // Type guard for DeadlySinWarning
 const isDeadlySinWarning = (obj: any): obj is DeadlySinWarning => {
@@ -63,8 +63,8 @@ export default function LoveMatchScreen() {
     insights: false,
     celebrities: false,
   });
-  const [showUsageLimitModal, setShowUsageLimitModal] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const [userIsEditing, setUserIsEditing] = useState(false);
 
   // Shimmer animation
   const shimmerAnimation = useRef(new Animated.Value(0)).current;
@@ -106,6 +106,8 @@ export default function LoveMatchScreen() {
   const [incompatibleNumbers, setIncompatibleNumbers] =
     useState<IncompatibleNumbers | null>(null);
   const [usageStats, setUsageStats] = useState<any>(null);
+  const [showUpgradePrompt, setShowUpgradePrompt] = useState(false);
+  const [upgradePromptConfig, setUpgradePromptConfig] = useState<any>(null);
   const { showAlert, AlertComponent } = useCustomAlert();
 
   // Load usage statistics
@@ -135,6 +137,9 @@ export default function LoveMatchScreen() {
   }, [user?.id]);
 
   useEffect(() => {
+    // Only auto-populate from database if user is not actively editing
+    if (userIsEditing) return;
+
     // Auto-show input if user has name but no profile yet
     const profileFullName =
       profileData?.full_name ||
@@ -179,10 +184,12 @@ export default function LoveMatchScreen() {
       }
       setBirthDate(formattedBirthDate);
     }
-  }, [user, profile, profileData, fullName]);
+  }, [user, profile, profileData, fullName, userIsEditing]);
 
-  // Force update birthday when profile data changes
+  // Force update birthday when profile data changes (only if user is not editing)
   useEffect(() => {
+    if (userIsEditing) return;
+
     if (profileData?.birth_date) {
       console.log(
         "🔄 Love Match: Profile birth_date changed, updating local state:",
@@ -202,7 +209,25 @@ export default function LoveMatchScreen() {
       }
       setBirthDate(formattedBirthDate);
     }
-  }, [profileData?.birth_date]); // Watch specifically for birth_date changes
+  }, [profileData?.birth_date, userIsEditing]); // Watch specifically for birth_date changes
+
+  // Show feature introduction for new users
+  useEffect(() => {
+    const showIntroduction = async () => {
+      if (user?.id && showInput && !profile) {
+        try {
+          const { shouldShow, alertConfig } = await OnboardingService.getFeatureIntro(user.id, 'loveMatch');
+          if (shouldShow && alertConfig) {
+            showAlert(alertConfig);
+          }
+        } catch (error) {
+          console.error('Error showing love match introduction:', error);
+        }
+      }
+    };
+
+    showIntroduction();
+  }, [user?.id, showInput, profile]);
 
   // Reset loading state when switching to input mode
   useEffect(() => {
@@ -231,15 +256,44 @@ export default function LoveMatchScreen() {
   };
 
   const generateLoveMatch = async () => {
+    // Check usage limits first
+    if (!canUse("loveMatch")) {
+      showAlert({
+        type: "limit",
+        title: "💕 Love Match Limit Reached",
+        message: `You've used all your love match readings for this month.\n\nUpgrade to Premium for 15 matches per month, or upgrade to Unlimited for unlimited access!`,
+        buttons: [
+          {
+            text: "Maybe Later",
+            style: "cancel",
+          },
+          {
+            text: "Upgrade Now",
+            style: "upgrade",
+            onPress: openPricingPage,
+          },
+        ],
+      });
+      return;
+    }
+
     const fullUserName = fullName.trim();
 
     if (!fullUserName) {
-      Alert.alert("Error", "Please enter your full name");
+      showAlert({
+        type: "error",
+        title: "Name Required",
+        message: "Please enter your full name to find your love matches"
+      });
       return;
     }
 
     if (!birthDate) {
-      Alert.alert("Error", "Please enter your birth date");
+      showAlert({
+        type: "error",
+        title: "Birth Date Required",
+        message: "Please enter your birth date to calculate compatibility"
+      });
       return;
     }
 
@@ -247,7 +301,11 @@ export default function LoveMatchScreen() {
     const datePattern =
       /^(0[1-9]|1[0-2])\/(0[1-9]|[12]\d|3[01])\/(19|20)\d{2}$/;
     if (!datePattern.test(birthDate)) {
-      Alert.alert("Error", "Please enter date in MM/DD/YYYY format");
+      showAlert({
+        type: "warning",
+        title: "Invalid Date Format",
+        message: "Please enter your birth date in MM/DD/YYYY format (e.g., 03/15/1990)"
+      });
       return;
     }
 
@@ -260,11 +318,31 @@ export default function LoveMatchScreen() {
       });
     }
 
-    // Check usage limits
+    // Check usage limits first
     if (user?.id) {
-      if (!canUse('loveMatch')) {
-        setLoading(false);
-        setShowUsageLimitModal(true);
+      try {
+        const usageCheck = await SubscriptionService.checkUsageLimitWithPrompt(user.id, 'love_match');
+
+        if (!usageCheck.canUse) {
+          showUsageLimitAlert(
+            showAlert,
+            'love_match',
+            usageCheck.promptConfig?.usedCount || 0,
+            usageCheck.promptConfig?.limitCount || 2,
+            () => {
+              // Open pricing page or handle upgrade
+              console.log('Upgrade to premium clicked');
+            }
+          );
+          return;
+        }
+      } catch (error) {
+        console.error('Error checking usage limits:', error);
+        showAlert({
+          type: "error",
+          title: "Connection Error",
+          message: "Unable to verify usage limits. Please check your connection and try again."
+        });
         return;
       }
     }
@@ -437,52 +515,34 @@ export default function LoveMatchScreen() {
             setBackgroundLoading(false);
           });
 
-        // Track usage by recording in database (in background)
+        // Track usage after successful generation
         if (user?.id) {
-          const fullName =
-            fullUserName ||
-            profileData?.full_name ||
-            user?.fullName ||
-            `${user?.firstName || ""} ${user?.lastName || ""}`.trim();
-          Promise.all([
-            SubscriptionService.recordUsage(user.id, "loveMatch", {
-              user_name: fullName,
-              birth_date: birthDate,
-              life_path_number:
-                basicLoveMatch.lifePathNumber || quickProfile.lifePathNumber,
-              compatible_partners:
-                basicLoveMatch.compatiblePartners?.length || 0,
-              celebrity_matches: 0, // Will be updated when celebrities load
-            }),
-            SubscriptionService.getUsageStats(user.id),
-          ])
-            .then(([_, stats]) => {
-              const resetDate = new Date(stats.loveMatch.resetsAt);
-              const now = new Date();
-              const daysUntilReset = Math.ceil(
-                (resetDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)
-              );
-
-              setUsageStats({
-                loveMatchUsage: stats.loveMatch.totalUsed,
-                loveMatchRemaining: stats.loveMatch.remaining,
-                daysUntilReset: Math.max(0, daysUntilReset),
-                isPremium: stats.isPremium,
-              });
-            })
-            .catch((error) => {
-              console.error("Error tracking usage:", error);
+          try {
+            await SubscriptionService.trackUsage(user.id, 'love_match', {
+              readingType: 'love_match_analysis',
+              fullName: fullUserName,
+              birthDate,
+              lifePathNumber: basicLoveMatch.lifePathNumber || quickProfile.lifePathNumber,
+              destinyNumber: basicLoveMatch.destinyNumber || quickProfile.destinyNumber,
+              soulUrgeNumber: basicLoveMatch.soulUrgeNumber || quickProfile.soulUrgeNumber,
+              compatiblePartners: basicLoveMatch.compatiblePartners?.length || 0,
+              timestamp: new Date().toISOString()
             });
+            console.log('✅ Love Match usage tracked successfully');
+          } catch (error) {
+            console.error('Error tracking love match usage:', error);
+          }
         }
       }, 1000); // End setTimeout
     } catch (error) {
       setLoading(false);
       setShowingStaticData(false);
       setBackgroundLoading(false);
-      Alert.alert(
-        "Error",
-        "Failed to generate love match profile. Please check your information."
-      );
+      showAlert({
+        type: "error",
+        title: "Love Match Failed",
+        message: "We couldn't generate your love match profile right now. Please check your information and try again."
+      });
       console.error("Love match calculation error:", error);
     }
   };
@@ -497,6 +557,33 @@ export default function LoveMatchScreen() {
     setShowAllCelebrities(false);
     setIncompatibleNumbers(null);
     setLoading(false); // Reset loading state
+    setUserIsEditing(false);
+  };
+
+  const handleNameChange = (newName: string) => {
+    setUserIsEditing(true);
+    setFullName(newName);
+    // Clear profile if user changes name significantly
+    if (profile && newName.trim() !== profile.name?.trim()) {
+      resetCalculation();
+    }
+  };
+
+  const handleBirthDateChange = (date: Date | undefined) => {
+    setUserIsEditing(true);
+    if (date) {
+      const formattedDate = `${(date.getMonth() + 1).toString().padStart(2, "0")}/${date.getDate().toString().padStart(2, "0")}/${date.getFullYear()}`;
+      setBirthDate(formattedDate);
+      // Clear profile if user changes birth date
+      if (profile && profile.birthDate !== formattedDate) {
+        resetCalculation();
+      }
+    } else {
+      setBirthDate('');
+      if (profile) {
+        resetCalculation();
+      }
+    }
   };
 
   const togglePartner = (index: number) => {
@@ -530,7 +617,7 @@ export default function LoveMatchScreen() {
                 label="Your Full Name"
                 placeholder="Enter your full name"
                 value={fullName}
-                onChangeText={setFullName}
+                onChangeText={handleNameChange}
                 autoCapitalize="words"
                 leftIcon="person"
                 required
@@ -560,27 +647,41 @@ export default function LoveMatchScreen() {
                       })()
                     : undefined
                 }
-                onSelect={(date) => {
-                  if (date) {
-                    const formattedDate = `${(date.getMonth() + 1).toString().padStart(2, "0")}/${date.getDate().toString().padStart(2, "0")}/${date.getFullYear()}`;
-                    setBirthDate(formattedDate);
-                  }
-                }}
+                onSelect={handleBirthDateChange}
                 placeholder="MM/DD/YYYY"
                 maxDate={new Date()}
               />
             </View>
 
+            {/* Usage Limit Warning */}
+            {!canUse("loveMatch") && (
+              <View style={styles.limitWarningContainer}>
+                <Ionicons name="lock-closed" size={20} color="#FF6B9D" />
+                <Text style={styles.limitWarningText}>
+                  You've reached your love match limit for this month.
+                  Upgrade to Premium for 15 matches per month!
+                </Text>
+              </View>
+            )}
+
             <ShadcnButton
               onPress={generateLoveMatch}
               variant="default"
               size="lg"
-              disabled={loading}
+              disabled={loading || !fullName.trim() || !birthDate || !canUse("loveMatch")}
               loading={loading}
               startIcon="heart"
-              style={styles.calculateButton}
+              style={[
+                styles.calculateButton,
+                !canUse("loveMatch") && styles.limitExceededButton
+              ]}
             >
-              {loading ? "Finding Matches..." : "Find My Love Match"}
+              {loading
+                ? "Finding Matches..."
+                : !canUse("loveMatch")
+                  ? "Limit Reached"
+                  : "Find My Love Match"
+              }
             </ShadcnButton>
           </View>
         </ScrollView>
@@ -1037,13 +1138,18 @@ export default function LoveMatchScreen() {
       {/* Custom Alert Component */}
       {AlertComponent}
 
-      {/* Usage Limit Modal */}
-      <UsageLimitModal
-        visible={showUsageLimitModal}
-        onClose={() => setShowUsageLimitModal(false)}
-        onUpgrade={openPricingPage}
-        feature="loveMatch"
-      />
+      {/* Upgrade Prompt Modal */}
+      {upgradePromptConfig && (
+        <UpgradePromptModal
+          visible={showUpgradePrompt}
+          onClose={() => setShowUpgradePrompt(false)}
+          title={upgradePromptConfig.title}
+          message={upgradePromptConfig.message}
+          featureName={upgradePromptConfig.featureName}
+          usedCount={upgradePromptConfig.usedCount}
+          limitCount={upgradePromptConfig.limitCount}
+        />
+      )}
     </SafeAreaView>
   );
 }
@@ -1119,6 +1225,10 @@ const styles = StyleSheet.create({
   },
   calculateButton: {
     marginTop: DesignSystem.spacing.scale["2xl"],
+  },
+  limitExceededButton: {
+    backgroundColor: "#666666",
+    borderColor: "#666666",
   },
   disabledButton: {
     opacity: 0.6,
@@ -1644,5 +1754,21 @@ const styles = StyleSheet.create({
     flex: 1,
     marginLeft: 12,
     gap: 6,
+  },
+  limitWarningContainer: {
+    backgroundColor: "rgba(255, 107, 157, 0.1)",
+    borderRadius: 12,
+    padding: 16,
+    marginTop: 16,
+    flexDirection: "row",
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "rgba(255, 107, 157, 0.3)",
+  },
+  limitWarningText: {
+    color: "#FF6B9D",
+    fontSize: 14,
+    marginLeft: 8,
+    flex: 1,
   },
 });

@@ -15,7 +15,7 @@ const { width } = Dimensions.get("window");
 export interface CustomAlertButton {
   text: string;
   onPress?: () => void;
-  style?: "default" | "cancel" | "destructive" | "primary";
+  style?: "default" | "cancel" | "destructive" | "primary" | "upgrade";
 }
 
 interface CustomAlertProps {
@@ -26,7 +26,7 @@ interface CustomAlertProps {
   iconColor?: string;
   buttons?: CustomAlertButton[];
   onDismiss?: () => void;
-  type?: "success" | "error" | "warning" | "info";
+  type?: "success" | "error" | "warning" | "info" | "limit" | "premium";
 }
 
 export default function CustomAlert({
@@ -39,13 +39,17 @@ export default function CustomAlert({
   onDismiss,
   type = "info",
 }: CustomAlertProps) {
-  // Static theme colors for consistency
+  // Enhanced theme colors for consistency with app
   const theme = {
     surface: "#1C1C1E",
+    surfaceElevated: "#2C2C2E",
     text: "#FFFFFF",
     textSecondary: "rgba(255, 255, 255, 0.8)",
-    primary: "#667eea",
-    secondary: "#764ba2",
+    textTertiary: "rgba(255, 255, 255, 0.6)",
+    primary: "#9333EA",
+    secondary: "#FF6B9D",
+    accent: "#667eea",
+    border: "rgba(147, 51, 234, 0.2)",
   };
 
   const getTypeConfig = () => {
@@ -64,6 +68,16 @@ export default function CustomAlert({
         return {
           icon: icon || "warning",
           iconColor: iconColor || "#FF9800",
+        };
+      case "limit":
+        return {
+          icon: icon || "lock-closed",
+          iconColor: iconColor || "#FF6B9D",
+        };
+      case "premium":
+        return {
+          icon: icon || "diamond",
+          iconColor: iconColor || "#FFD700",
         };
       default:
         return {
@@ -93,10 +107,15 @@ export default function CustomAlert({
           backgroundColor: "#FF6B9D",
           colors: ["#FF6B9D", "#C44569"] as const,
         };
+      case "upgrade":
+        return {
+          backgroundColor: "#FFD700",
+          colors: ["#FFD700", "#FFA500"] as const,
+        };
       default:
         return {
           backgroundColor: theme.primary,
-          colors: [theme.primary, theme.secondary || theme.primary] as const,
+          colors: [theme.primary, theme.accent] as const,
         };
     }
   };
@@ -107,6 +126,8 @@ export default function CustomAlert({
         return theme.text;
       case "primary":
         return "white";
+      case "upgrade":
+        return "#000000";
       default:
         return "white";
     }
@@ -120,10 +141,19 @@ export default function CustomAlert({
       transparent={true}
       animationType="fade"
       onRequestClose={onDismiss}
+      statusBarTranslucent={true}
+      presentationStyle="overFullScreen"
     >
       <View style={styles.overlay}>
         <View
-          style={[styles.alertContainer, { backgroundColor: theme.surface }]}
+          style={[
+            styles.alertContainer,
+            {
+              backgroundColor: theme.surface,
+              borderWidth: 1,
+              borderColor: theme.border,
+            }
+          ]}
         >
           {/* Header */}
           <View style={styles.header}>
@@ -181,39 +211,44 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     padding: 20,
+    zIndex: 9999,
+    elevation: 9999,
   },
   alertContainer: {
     width: width - 40,
     maxWidth: 400,
-    borderRadius: 20,
-    padding: 24,
-    shadowColor: "#000",
+    borderRadius: 24,
+    padding: 28,
+    shadowColor: "#9333EA",
     shadowOffset: {
       width: 0,
-      height: 10,
+      height: 12,
     },
-    shadowOpacity: 0.25,
-    shadowRadius: 20,
-    elevation: 15,
+    shadowOpacity: 0.3,
+    shadowRadius: 24,
+    elevation: 30,
+    zIndex: 10000,
   },
   header: {
     alignItems: "center",
-    marginBottom: 16,
+    marginBottom: 20,
   },
   title: {
-    fontSize: 20,
+    fontSize: 22,
     fontWeight: "bold",
     textAlign: "center",
-    marginTop: 8,
-    textShadowColor: "rgba(0, 0, 0, 0.1)",
+    marginTop: 12,
+    textShadowColor: "rgba(0, 0, 0, 0.2)",
     textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 2,
+    textShadowRadius: 3,
+    letterSpacing: 0.5,
   },
   message: {
     fontSize: 16,
-    lineHeight: 22,
+    lineHeight: 24,
     textAlign: "center",
-    marginBottom: 24,
+    marginBottom: 28,
+    opacity: 0.9,
   },
   buttonsContainer: {
     flexDirection: "row",
@@ -221,24 +256,30 @@ const styles = StyleSheet.create({
   },
   button: {
     flex: 1,
-    borderRadius: 12,
+    borderRadius: 16,
     overflow: "hidden",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
   singleButton: {
     flex: 1,
   },
   buttonGradient: {
-    paddingVertical: 12,
-    paddingHorizontal: 20,
+    paddingVertical: 14,
+    paddingHorizontal: 24,
     alignItems: "center",
     justifyContent: "center",
   },
   buttonText: {
     fontSize: 16,
-    fontWeight: "600",
+    fontWeight: "700",
     textShadowColor: "rgba(0, 0, 0, 0.2)",
     textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 1,
+    textShadowRadius: 2,
+    letterSpacing: 0.3,
   },
 });
 
@@ -277,4 +318,58 @@ export const useCustomAlert = () => {
     hideAlert,
     AlertComponent,
   };
+};
+
+// Helper function for usage limit alerts
+export const showUsageLimitAlert = (
+  showAlert: (config: any) => void,
+  featureName: string,
+  usedCount: number,
+  limitCount: number,
+  onUpgrade?: () => void
+) => {
+  const featureConfig: { [key: string]: { emoji: string, name: string, description: string } } = {
+    numerology: {
+      emoji: "🔮",
+      name: "Numerology Reading",
+      description: "Discover your life path, destiny, and soul purpose through numbers"
+    },
+    love_match: {
+      emoji: "💕",
+      name: "Love Match Analysis",
+      description: "Find your perfect romantic compatibility and soulmate connections"
+    },
+    trust_assessment: {
+      emoji: "🛡️",
+      name: "Trust Assessment",
+      description: "Analyze relationship trust and compatibility through numerology"
+    },
+  };
+
+  const config = featureConfig[featureName] || {
+    emoji: "✨",
+    name: featureName.replace('_', ' '),
+    description: "Unlock more insights"
+  };
+
+  showAlert({
+    type: "limit",
+    title: `${config.emoji} ${config.name} Limit Reached`,
+    message: `You've used ${usedCount}/${limitCount} ${config.name.toLowerCase()} readings this month.\n\n${config.description}\n\nUpgrade to Premium for 25 numerology, 15 love match, and 10 trust assessments per month, or upgrade to Unlimited for unlimited access!`,
+    buttons: [
+      {
+        text: "Maybe Later",
+        style: "cancel",
+      },
+      ...(onUpgrade
+        ? [
+            {
+              text: "Upgrade Now",
+              style: "upgrade" as const,
+              onPress: onUpgrade,
+            },
+          ]
+        : []),
+    ],
+  });
 };

@@ -32,6 +32,7 @@ import {
 } from "../../services/DailyInsightsService";
 import SimpleAIService from "../../services/SimpleAIService";
 import { SubscriptionService } from "../../services/SubscriptionService";
+import { DailyVibeService, DailyVibe, AIInsight } from "../../services/DailyVibeService";
 
 const { height, width } = Dimensions.get("window");
 
@@ -49,10 +50,13 @@ export default function HomeScreen() {
   const [heartAnimation] = useState(new Animated.Value(1));
   const [sparkleAnimation] = useState(new Animated.Value(0));
   const [dailyInsight, setDailyInsight] = useState<DailyInsight | null>(null);
+  const [dailyVibe, setDailyVibe] = useState<DailyVibe | null>(null);
+  const [aiInsight, setAIInsight] = useState<AIInsight | null>(null);
   const [showDailyVibe, setShowDailyVibe] = useState(false);
   const [showAIInsights, setShowAIInsights] = useState(false);
   const [aiInsights, setAIInsights] = useState<string | null>(null);
   const [loadingAIInsights, setLoadingAIInsights] = useState(false);
+  const [loadingDailyFeatures, setLoadingDailyFeatures] = useState(false);
   const [pulseAnimation] = useState(new Animated.Value(1));
   const [floatingAnimation] = useState(new Animated.Value(0));
   const scrollY = useRef(new Animated.Value(0)).current;
@@ -63,13 +67,13 @@ export default function HomeScreen() {
   const { showAlert, AlertComponent } = useCustomAlert();
 
   const userName = React.useMemo(() => {
-    if (profileData?.full_name) {
+    if (profileData?.full_name && !profileData.full_name.includes('Unknown')) {
       return profileData.full_name.split(" ")[0] || "Beautiful Soul";
     }
     if (user?.firstName) {
       return user.firstName;
     }
-    if (user?.fullName) {
+    if (user?.fullName && !user.fullName.includes('Unknown')) {
       return user.fullName.split(" ")[0] || "Beautiful Soul";
     }
     return "Beautiful Soul";
@@ -146,15 +150,75 @@ export default function HomeScreen() {
     }
   };
 
+  // Load daily features for premium users
+  const loadDailyFeatures = async () => {
+    if (!user?.id || !profileData?.full_name || !profileData?.birth_date) {
+      return;
+    }
+
+    try {
+      setLoadingDailyFeatures(true);
+
+      // Check subscription status first
+      const subscriptionStatus = await SubscriptionService.getSubscriptionStatus(user.id);
+
+      if (subscriptionStatus.isPremium || subscriptionStatus.isUnlimited) {
+        console.log('🌟 Loading daily features for premium user');
+
+        // Generate daily vibe using Roxy API
+        const dailyVibeData = await DailyVibeService.generateDailyVibe(
+          profileData.full_name!.split(' ')[0] || 'User',
+          profileData.full_name!.split(' ').slice(1).join(' ') || '',
+          profileData.birth_date!,
+          user.id
+        );
+
+        if (dailyVibeData) {
+          setDailyVibe(dailyVibeData);
+
+          // Generate AI insight with daily vibe reference
+          try {
+            const numerologyProfile = {
+              life_path_number: Math.floor(Math.random() * 9) + 1,
+              strengths: ['Leadership', 'Intuition'],
+              challenges: ['Perfectionism', 'Impatience']
+            };
+
+            const aiInsightData = await DailyVibeService.generateAIInsight(
+              dailyVibeData,
+              numerologyProfile,
+              profileData.full_name!.split(' ')[0] || 'User'
+            );
+
+            setAIInsight(aiInsightData);
+            console.log('✅ Daily features loaded successfully');
+          } catch (error) {
+            console.error('Error generating AI insight:', error);
+          }
+        }
+      } else {
+        console.log('ℹ️ Free user - daily features not loaded automatically');
+      }
+    } catch (error) {
+      console.error('Error loading daily features:', error);
+    } finally {
+      setLoadingDailyFeatures(false);
+    }
+  };
+
   useEffect(() => {
     // Simulate initial loading
     const loadingTimer = setTimeout(() => {
       setHomeLoading(false);
     }, 2000);
 
+    // Load daily features for premium users after profile is loaded
+    if (profileData?.full_name && profileData?.birth_date && user?.id) {
+      loadDailyFeatures();
+    }
 
     return () => clearTimeout(loadingTimer);
-  }, [profileData]);
+  }, [profileData, user?.id]);
 
 
   useEffect(() => {
@@ -759,16 +823,16 @@ Use "you" language. Be specific. Stay positive. Include emojis.`;
               style={styles.modalContent}
               showsVerticalScrollIndicator={false}
             >
-              {dailyInsight ? (
+              {dailyVibe ? (
                 <>
                   {/* Personal Day Number & Energy */}
                   <View style={styles.insightCard}>
                     <Text style={styles.insightLabel}>Personal Day Number</Text>
                     <Text style={styles.insightNumber}>
-                      {dailyInsight.personalDayNumber}
+                      {dailyVibe.personalDayNumber}
                     </Text>
                     <Text style={styles.insightTheme}>
-                      {dailyInsight.overallTheme}
+                      {dailyVibe.overallTheme}
                     </Text>
                   </View>
 
@@ -779,30 +843,22 @@ Use "you" language. Be specific. Stay positive. Include emojis.`;
                       <View
                         style={[
                           styles.energyFill,
-                          { width: `${dailyInsight.energyLevel}%` },
+                          { width: `${dailyVibe.energyLevel}%` },
                         ]}
                       />
                     </View>
                     <Text style={styles.energyText}>
-                      {dailyInsight.energyLevel}%
+                      {dailyVibe.energyLevel}%
                     </Text>
                   </View>
 
-                  {/* Daily Advice */}
+                  {/* Spiritual Message */}
                   <View style={styles.insightCard}>
                     <Text style={styles.insightLabel}>
-                      Today&apos;s Guidance
+                      Today&apos;s Spiritual Message
                     </Text>
-                    <Text style={styles.insightText}>
-                      {dailyInsight.advice}
-                    </Text>
-                  </View>
-
-                  {/* Affirmation */}
-                  <View style={styles.insightCard}>
-                    <Text style={styles.insightLabel}>Affirmation</Text>
                     <Text style={styles.affirmationText}>
-                      {dailyInsight.affirmation}
+                      {dailyVibe.spiritualMessage}
                     </Text>
                   </View>
 
@@ -812,7 +868,7 @@ Use "you" language. Be specific. Stay positive. Include emojis.`;
                       <Ionicons name="heart" size={20} color="#E91E63" />
                       <Text style={styles.lifeAreaLabel}>Love</Text>
                       <Text style={styles.lifeAreaText}>
-                        {dailyInsight.love}
+                        {dailyVibe.loveInsight}
                       </Text>
                     </View>
 
@@ -820,7 +876,7 @@ Use "you" language. Be specific. Stay positive. Include emojis.`;
                       <Ionicons name="briefcase" size={20} color="#2196F3" />
                       <Text style={styles.lifeAreaLabel}>Career</Text>
                       <Text style={styles.lifeAreaText}>
-                        {dailyInsight.career}
+                        {dailyVibe.careerGuidance}
                       </Text>
                     </View>
 
@@ -828,15 +884,26 @@ Use "you" language. Be specific. Stay positive. Include emojis.`;
                       <Ionicons name="fitness" size={20} color="#4CAF50" />
                       <Text style={styles.lifeAreaLabel}>Health</Text>
                       <Text style={styles.lifeAreaText}>
-                        {dailyInsight.health}
+                        {dailyVibe.healthFocus}
+                      </Text>
+                    </View>
+                  </View>
+
+                  {/* Challenges & Opportunities */}
+                  <View style={styles.lifeAreasContainer}>
+                    <View style={styles.lifeAreaCard}>
+                      <Ionicons name="warning" size={20} color="#FF9500" />
+                      <Text style={styles.lifeAreaLabel}>Challenges</Text>
+                      <Text style={styles.lifeAreaText}>
+                        {dailyVibe.challenges.join(', ')}
                       </Text>
                     </View>
 
                     <View style={styles.lifeAreaCard}>
-                      <Ionicons name="sparkles" size={20} color="#9C27B0" />
-                      <Text style={styles.lifeAreaLabel}>Spiritual</Text>
+                      <Ionicons name="star" size={20} color="#FFD700" />
+                      <Text style={styles.lifeAreaLabel}>Opportunities</Text>
                       <Text style={styles.lifeAreaText}>
-                        {dailyInsight.spiritual}
+                        {dailyVibe.opportunities.join(', ')}
                       </Text>
                     </View>
                   </View>
@@ -846,7 +913,7 @@ Use "you" language. Be specific. Stay positive. Include emojis.`;
                     <View style={styles.luckySection}>
                       <Text style={styles.luckyLabel}>Lucky Numbers</Text>
                       <View style={styles.luckyNumbers}>
-                        {dailyInsight.luckyNumbers.map((number, index) => (
+                        {dailyVibe.luckyNumbers.map((number, index) => (
                           <View key={index} style={styles.luckyNumber}>
                             <Text style={styles.luckyNumberText}>{number}</Text>
                           </View>
@@ -857,7 +924,7 @@ Use "you" language. Be specific. Stay positive. Include emojis.`;
                     <View style={styles.luckySection}>
                       <Text style={styles.luckyLabel}>Lucky Colors</Text>
                       <View style={styles.luckyColors}>
-                        {dailyInsight.luckyColors.map((color, index) => (
+                        {dailyVibe.luckyColors.map((color, index) => (
                           <View key={index} style={styles.luckyColor}>
                             <Text style={styles.luckyColorText}>{color}</Text>
                           </View>
@@ -936,7 +1003,55 @@ Use "you" language. Be specific. Stay positive. Include emojis.`;
             >
               {profileData?.full_name && profileData?.birth_date ? (
                 <View style={styles.aiInsightsContainer}>
-                  {!aiInsights && !loadingAIInsights ? (
+                  {aiInsight ? (
+                    <View style={styles.insightsContent}>
+                      {/* Improvement Area */}
+                      <View style={styles.insightCard}>
+                        <Text style={styles.insightLabel}>Focus Area for Today</Text>
+                        <Text style={styles.insightNumber}>
+                          {aiInsight.improvementArea}
+                        </Text>
+                      </View>
+
+                      {/* Specific Guidance */}
+                      <View style={styles.insightCard}>
+                        <Text style={styles.insightLabel}>Guidance</Text>
+                        <Text style={styles.insightText}>
+                          {aiInsight.specificGuidance}
+                        </Text>
+                      </View>
+
+                      {/* Action Steps */}
+                      <View style={styles.insightCard}>
+                        <Text style={styles.insightLabel}>Action Steps</Text>
+                        {aiInsight.actionSteps.map((step, index) => (
+                          <View key={index} style={styles.actionStep}>
+                            <Text style={styles.actionStepNumber}>{index + 1}</Text>
+                            <Text style={styles.actionStepText}>{step}</Text>
+                          </View>
+                        ))}
+                      </View>
+
+                      {/* Cosmic Wisdom */}
+                      <View style={styles.insightCard}>
+                        <Text style={styles.insightLabel}>Cosmic Wisdom</Text>
+                        <Text style={styles.affirmationText}>
+                          {aiInsight.cosmicWisdom}
+                        </Text>
+                      </View>
+
+                      <TouchableOpacity
+                        style={styles.refreshButton}
+                        onPress={loadDailyFeatures}
+                        disabled={loadingDailyFeatures}
+                      >
+                        <Ionicons name="refresh" size={16} color="#007AFF" />
+                        <Text style={styles.refreshButtonText}>
+                          Refresh Daily Insights
+                        </Text>
+                      </TouchableOpacity>
+                    </View>
+                  ) : !loadingDailyFeatures ? (
                     <View style={styles.generateContainer}>
                       <Ionicons name="bulb" size={48} color="#FF9500" />
                       <Text style={styles.generateTitle}>
@@ -944,12 +1059,11 @@ Use "you" language. Be specific. Stay positive. Include emojis.`;
                       </Text>
                       <Text style={styles.generateDescription}>
                         Get personalized insights powered by advanced AI
-                        analysis of your numerological profile, personality
-                        traits, and life path.
+                        analysis of your numerological profile and today's cosmic energy.
                       </Text>
                       <TouchableOpacity
                         style={styles.generateButton}
-                        onPress={generateAIInsights}
+                        onPress={loadDailyFeatures}
                       >
                         <Ionicons name="sparkles" size={20} color="white" />
                         <Text style={styles.generateButtonText}>
@@ -957,7 +1071,7 @@ Use "you" language. Be specific. Stay positive. Include emojis.`;
                         </Text>
                       </TouchableOpacity>
                     </View>
-                  ) : loadingAIInsights ? (
+                  ) : (
                     <View style={styles.loadingInsights}>
                       <View style={styles.aiLoadingAnimation}>
                         <Ionicons name="sparkles" size={32} color="#FF9500" />
@@ -969,20 +1083,6 @@ Use "you" language. Be specific. Stay positive. Include emojis.`;
                         Our AI is analyzing your numerological profile and
                         creating personalized insights just for you...
                       </Text>
-                    </View>
-                  ) : (
-                    <View style={styles.insightsContent}>
-                      <TouchableOpacity
-                        style={styles.refreshButton}
-                        onPress={generateAIInsights}
-                        disabled={loadingAIInsights}
-                      >
-                        <Ionicons name="refresh" size={16} color="#007AFF" />
-                        <Text style={styles.refreshButtonText}>
-                          Refresh Insights
-                        </Text>
-                      </TouchableOpacity>
-                      <Text style={styles.aiInsightsText}>{aiInsights}</Text>
                     </View>
                   )}
                 </View>
@@ -1769,6 +1869,29 @@ const styles = StyleSheet.create({
   aiInsightsText: {
     fontSize: 16,
     lineHeight: 24,
+    color: "#333",
+  },
+  actionStep: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    marginBottom: 12,
+    gap: 12,
+  },
+  actionStepNumber: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: "#007AFF",
+    color: "#FFFFFF",
+    fontSize: 12,
+    fontWeight: "bold",
+    textAlign: "center",
+    lineHeight: 24,
+  },
+  actionStepText: {
+    flex: 1,
+    fontSize: 14,
+    lineHeight: 20,
     color: "#333",
   },
 
