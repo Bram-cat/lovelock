@@ -39,15 +39,24 @@ jobs:
           rm -rf node_modules
           npm install --legacy-peer-deps
 
-      - name: Verify CLI tools
+      - name: Setup CLI tools
         run: |
-          echo "Checking project dependencies..."
-          echo "Expo CLI version:"
-          npx @expo/cli --version
-          echo "Installing EAS CLI globally..."
-          npm install -g eas-cli@latest
-          echo "EAS CLI version:"
-          npx eas --version
+          echo "Setting up CLI tools..."
+          echo "Installing global CLI tools..."
+          npm install -g @expo/cli@latest eas-cli@latest
+
+          echo "Creating expo command alias..."
+          ln -sf $(which npx) /usr/local/bin/expo || true
+          echo '#!/bin/bash' > /tmp/expo
+          echo 'npx @expo/cli "$@"' >> /tmp/expo
+          chmod +x /tmp/expo
+          sudo mv /tmp/expo /usr/local/bin/expo || cp /tmp/expo /usr/local/bin/expo
+
+          echo "Verifying CLI tools..."
+          which expo || echo "expo not in PATH"
+          expo --version || npx @expo/cli --version
+          which eas || echo "eas not in PATH"
+          eas --version || npx eas --version
 
       - name: Authenticate with Expo
         run: |
@@ -62,8 +71,10 @@ jobs:
           PACKAGE_MANAGER: npm
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
         run: |
-          echo "Building with EAS using npm..."
+          echo "Building with EAS..."
           echo "Current directory: $(pwd)"
-          echo "Node modules EAS CLI:"
-          ls -la node_modules/.bin/ | grep eas || echo "EAS not in node_modules"
-          npx eas build --platform android --profile preview --non-interactive
+          echo "Available commands:"
+          which expo eas || echo "Commands not in PATH, using npx"
+
+          echo "Starting EAS build..."
+          eas build --platform android --profile preview --non-interactive
