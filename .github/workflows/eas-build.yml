@@ -39,18 +39,18 @@ jobs:
           rm -rf node_modules
           npm install --legacy-peer-deps
 
-      - name: Install Expo CLI and EAS CLI manually
+      - name: Install EAS CLI and check Expo
         run: |
-          echo "Installing Expo and EAS CLI with npm..."
-          npm install -g @expo/cli@latest
+          echo "Installing EAS CLI..."
           npm install -g eas-cli@latest
-          expo --version
-          eas --version
+          echo "Checking if expo is available in project..."
+          npx expo --version || echo "Expo not available globally, will use npx"
+          npx eas --version
 
-      - name: Login to Expo
+      - name: Authenticate with Expo
         run: |
-          echo "Logging into Expo..."
-          expo login --non-interactive
+          echo "Setting up Expo authentication..."
+          echo "EXPO_TOKEN is set: $([[ -n "$EXPO_TOKEN" ]] && echo "Yes" || echo "No")"
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
 
@@ -58,6 +58,7 @@ jobs:
         env:
           npm_config_package_manager: npm
           PACKAGE_MANAGER: npm
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
         run: |
           echo "Building with EAS using npm..."
-          eas build --platform android --profile preview --non-interactive
+          npx eas build --platform android --profile preview --non-interactive
