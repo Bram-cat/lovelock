@@ -77,4 +77,4 @@ jobs:
           which expo eas || echo "Commands not in PATH, using npx"
 
           echo "Starting EAS build..."
-          eas build --platform android --profile preview --non-interactive
+          eas build --platform android --profile development --non-interactive
