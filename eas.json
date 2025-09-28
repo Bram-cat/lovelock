@@ -25,7 +25,11 @@
       "distribution": "internal",
       "env": {
         "NODE_ENV": "production"
-      }
+      },
+      "cache": {
+        "disabled": true
+      },
+      "node": "18.20.0"
     },
     "production": {
       "android": {
