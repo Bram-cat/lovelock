@@ -25,6 +25,13 @@ jobs:
           node-version: 18.x
           cache: npm
 
+      - name: Force npm usage
+        run: |
+          echo "Removing yarn.lock if it exists..."
+          rm -f yarn.lock
+          echo "Setting npm as package manager..."
+          echo "packageManager=npm" >> .npmrc
+
       - name: Setup EAS
         uses: expo/expo-github-action@v8
         with:
@@ -32,13 +39,17 @@ jobs:
           eas-version: latest
           token: ${{ secrets.EXPO_TOKEN }}
 
-      - name: Clear npm cache
-        run: npm cache clean --force
-
-      - name: Install dependencies
+      - name: Install dependencies with npm
         run: |
+          echo "Using npm to install dependencies..."
+          npm cache clean --force
           rm -rf node_modules
-          npm install
+          npm install --legacy-peer-deps
 
       - name: Build Android APK
-        run: eas build --platform android --profile preview --non-interactive
+        env:
+          npm_config_package_manager: npm
+          PACKAGE_MANAGER: npm
+        run: |
+          echo "Building with EAS using npm..."
+          eas build --platform android --profile preview --non-interactive
