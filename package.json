@@ -8,12 +8,16 @@
     "android": "expo run:android",
     "ios": "expo run:ios",
     "web": "expo start --web",
-    "lint": "expo lint"
+    "lint": "expo lint",
+    "build:android": "powershell -ExecutionPolicy Bypass -File ./scripts/simple-eas-build.ps1",
+    "build:android:alt": "powershell -ExecutionPolicy Bypass -File ./scripts/eas-build-custom-temp.ps1",
+    "cleanup:eas": "powershell -ExecutionPolicy Bypass -File ./scripts/cleanup-eas-temp.ps1"
   },
   "dependencies": {
     "@clerk/clerk-expo": "^2.14.25",
     "@convex-dev/auth": "^0.0.88",
     "@expo/cli": "^0.24.20",
+    "eas-cli": "^13.3.0",
     "@expo/vector-icons": "^14.1.0",
     "@react-native-async-storage/async-storage": "2.1.2",
     "@react-native-google-signin/google-signin": "^15.0.0",
