@@ -9,8 +9,8 @@ import {
   Platform,
   ScrollView,
   Linking,
+  SafeAreaView,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { useSignIn, useUser } from '@clerk/clerk-expo';
 import { Link, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';

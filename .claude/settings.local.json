@@ -140,7 +140,18 @@
       "Bash(node:*)",
       "WebFetch(domain:ai.google.dev)",
       "Bash(npx expo export:*)",
-      "Bash(rg:*)"
+      "Bash(rg:*)",
+      "Bash(cd:*)",
+      "Bash(npx eas build:*)",
+      "Bash(set TMPDIR=./temp)",
+      "Bash(tasklist)",
+      "Bash(findstr:*)",
+      "Bash(npx eas build:list:*)",
+      "Read(//tmp/**)",
+      "WebFetch(domain:docs.expo.dev)",
+      "Bash(wsl:*)",
+      "Bash(gh api:*)",
+      "WebFetch(domain:stackoverflow.com)"
     ],
     "deny": [],
     "ask": []
