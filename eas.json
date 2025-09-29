@@ -28,8 +28,7 @@
         "NODE_ENV": "production"
       },
       "cache": {
-        "disabled": true,
-        "clear": true
+        "disabled": true
       },
       "node": "18.20.0"
     },
