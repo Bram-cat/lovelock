@@ -25,7 +25,9 @@
       },
       "distribution": "internal",
       "env": {
-        "NODE_ENV": "production"
+        "NODE_ENV": "production",
+        "EXPO_USE_FABRIC": "0",
+        "RCT_NEW_ARCH_ENABLED": "0"
       },
       "cache": {
         "disabled": true
@@ -35,10 +37,18 @@
     "production": {
       "android": {
         "buildType": "app-bundle",
-        "gradleCommand": ":app:bundleRelease"
+        "gradleCommand": ":app:bundleRelease",
+        "env": {
+          "EXPO_USE_FABRIC": "0",
+          "RCT_NEW_ARCH_ENABLED": "0"
+        }
       },
       "ios": {
-        "buildConfiguration": "Release"
+        "buildConfiguration": "Release",
+        "env": {
+          "EXPO_USE_FABRIC": "0",
+          "RCT_NEW_ARCH_ENABLED": "0"
+        }
       }
     }
   },
