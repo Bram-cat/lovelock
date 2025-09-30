@@ -548,11 +548,10 @@ export default function NumerologyScreen() {
             variant="default"
             size="lg"
             endIcon="arrow-forward"
-            style={
-              !canUse("numerology")
-                ? [styles.generateButton, styles.limitExceededButton]
-                : styles.generateButton
-            }
+            style={[
+              styles.generateButton,
+              !canUse("numerology") && styles.limitExceededButton,
+            ].filter(Boolean)}
           >
             {loading
               ? "Generating..."
