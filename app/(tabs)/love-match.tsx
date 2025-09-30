@@ -11,12 +11,17 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { useCustomAlert, showUsageLimitAlert } from "../../components/CustomAlert";
+import {
+  showUsageLimitAlert,
+  useCustomAlert,
+} from "../../components/CustomAlert";
 import { LoveMatchLoadingSkeleton } from "../../components/LoadingSkeletons";
 import ReadMoreText from "../../components/ReadMoreText";
 import { DatePicker, ShadcnButton, ShadcnInput } from "../../components/ui";
+import UpgradePromptModal from "../../components/UpgradePromptModal";
 import { DesignSystem } from "../../constants/DesignSystem";
 import { useProfile } from "../../contexts/ProfileContext";
+import { useSubscription } from "../../hooks/useSubscription";
 import {
   CelebrityMatch,
   CelebrityMatchService,
@@ -28,14 +33,12 @@ import {
   LoveMatchService,
 } from "../../services/LoveMatchService";
 import NumerologyService from "../../services/NumerologyService";
+import { OnboardingService } from "../../services/OnboardingService";
 import { RoxyNumerologyService } from "../../services/ProkeralaNumerologyService";
 import { SimpleAIService } from "../../services/SimpleAIService";
 import { StaticDataService } from "../../services/StaticDataService";
 import { SubscriptionService } from "../../services/SubscriptionService";
-import { useSubscription } from "../../hooks/useSubscription";
 import { UsageTrackingService } from "../../services/UsageTrackingService";
-import UpgradePromptModal from "../../components/UpgradePromptModal";
-import { OnboardingService } from "../../services/OnboardingService";
 
 // Type guard for DeadlySinWarning
 const isDeadlySinWarning = (obj: any): obj is DeadlySinWarning => {
@@ -211,12 +214,13 @@ export default function LoveMatchScreen() {
     const showIntroduction = async () => {
       if (user?.id && showInput && !profile) {
         try {
-          const { shouldShow, alertConfig } = await OnboardingService.getFeatureIntro(user.id, 'loveMatch');
+          const { shouldShow, alertConfig } =
+            await OnboardingService.getFeatureIntro(user.id, "loveMatch");
           if (shouldShow && alertConfig) {
             showAlert(alertConfig);
           }
         } catch (error) {
-          console.error('Error showing love match introduction:', error);
+          console.error("Error showing love match introduction:", error);
         }
       }
     };
@@ -240,9 +244,9 @@ export default function LoveMatchScreen() {
         setProfile(null);
         setShowInput(true);
       }
-      
+
       // Simulate some loading time for smooth UX
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      await new Promise((resolve) => setTimeout(resolve, 1000));
     } catch (error) {
       console.error("Failed to refresh:", error);
     } finally {
@@ -278,7 +282,7 @@ export default function LoveMatchScreen() {
       showAlert({
         type: "error",
         title: "Name Required",
-        message: "Please enter your full name to find your love matches"
+        message: "Please enter your full name to find your love matches",
       });
       return;
     }
@@ -287,7 +291,7 @@ export default function LoveMatchScreen() {
       showAlert({
         type: "error",
         title: "Birth Date Required",
-        message: "Please enter your birth date to calculate compatibility"
+        message: "Please enter your birth date to calculate compatibility",
       });
       return;
     }
@@ -299,7 +303,8 @@ export default function LoveMatchScreen() {
       showAlert({
         type: "warning",
         title: "Invalid Date Format",
-        message: "Please enter your birth date in MM/DD/YYYY format (e.g., 03/15/1990)"
+        message:
+          "Please enter your birth date in MM/DD/YYYY format (e.g., 03/15/1990)",
       });
       return;
     }
@@ -316,27 +321,31 @@ export default function LoveMatchScreen() {
     // Check usage limits first
     if (user?.id) {
       try {
-        const usageCheck = await SubscriptionService.checkUsageLimitWithPrompt(user.id, 'love_match');
+        const usageCheck = await SubscriptionService.checkUsageLimitWithPrompt(
+          user.id,
+          "love_match"
+        );
 
         if (!usageCheck.canUse) {
           showUsageLimitAlert(
             showAlert,
-            'love_match',
+            "love_match",
             usageCheck.promptConfig?.usedCount || 0,
             usageCheck.promptConfig?.limitCount || 2,
             () => {
               // Open pricing page or handle upgrade
-              console.log('Upgrade to premium clicked');
+              console.log("Upgrade to premium clicked");
             }
           );
           return;
         }
       } catch (error) {
-        console.error('Error checking usage limits:', error);
+        console.error("Error checking usage limits:", error);
         showAlert({
           type: "error",
           title: "Connection Error",
-          message: "Unable to verify usage limits. Please check your connection and try again."
+          message:
+            "Unable to verify usage limits. Please check your connection and try again.",
         });
         return;
       }
@@ -513,19 +522,23 @@ export default function LoveMatchScreen() {
         // Track usage after successful generation
         if (user?.id) {
           try {
-            await SubscriptionService.trackUsage(user.id, 'love_match', {
-              readingType: 'love_match_analysis',
+            await SubscriptionService.trackUsage(user.id, "love_match", {
+              readingType: "love_match_analysis",
               fullName: fullUserName,
               birthDate,
-              lifePathNumber: basicLoveMatch.lifePathNumber || quickProfile.lifePathNumber,
-              destinyNumber: basicLoveMatch.destinyNumber || quickProfile.destinyNumber,
-              soulUrgeNumber: basicLoveMatch.soulUrgeNumber || quickProfile.soulUrgeNumber,
-              compatiblePartners: basicLoveMatch.compatiblePartners?.length || 0,
-              timestamp: new Date().toISOString()
+              lifePathNumber:
+                basicLoveMatch.lifePathNumber || quickProfile.lifePathNumber,
+              destinyNumber:
+                basicLoveMatch.destinyNumber || quickProfile.destinyNumber,
+              soulUrgeNumber:
+                basicLoveMatch.soulUrgeNumber || quickProfile.soulUrgeNumber,
+              compatiblePartners:
+                basicLoveMatch.compatiblePartners?.length || 0,
+              timestamp: new Date().toISOString(),
             });
-            console.log('✅ Love Match usage tracked successfully');
+            console.log("✅ Love Match usage tracked successfully");
           } catch (error) {
-            console.error('Error tracking love match usage:', error);
+            console.error("Error tracking love match usage:", error);
           }
         }
       }, 1000); // End setTimeout
@@ -536,7 +549,8 @@ export default function LoveMatchScreen() {
       showAlert({
         type: "error",
         title: "Love Match Failed",
-        message: "We couldn't generate your love match profile right now. Please check your information and try again."
+        message:
+          "We couldn't generate your love match profile right now. Please check your information and try again.",
       });
       console.error("Love match calculation error:", error);
     }
@@ -574,7 +588,7 @@ export default function LoveMatchScreen() {
         resetCalculation();
       }
     } else {
-      setBirthDate('');
+      setBirthDate("");
       if (profile) {
         resetCalculation();
       }
@@ -653,7 +667,7 @@ export default function LoveMatchScreen() {
               <View style={styles.limitWarningContainer}>
                 <Ionicons name="lock-closed" size={20} color="#FF6B9D" />
                 <Text style={styles.limitWarningText}>
-                  You've reached your love match limit for this month.
+                  You&apos;ve reached your love match limit for this month.
                   Upgrade to Premium for 15 matches per month!
                 </Text>
               </View>
@@ -663,20 +677,24 @@ export default function LoveMatchScreen() {
               onPress={generateLoveMatch}
               variant="default"
               size="lg"
-              disabled={loading || !fullName.trim() || !birthDate || !canUse("loveMatch")}
+              disabled={
+                loading ||
+                !fullName.trim() ||
+                !birthDate ||
+                !canUse("loveMatch")
+              }
               loading={loading}
               startIcon="heart"
               style={StyleSheet.flatten([
                 styles.calculateButton,
-                !canUse("loveMatch") && styles.limitExceededButton
+                !canUse("loveMatch") && styles.limitExceededButton,
               ])}
             >
               {loading
                 ? "Finding Matches..."
                 : !canUse("loveMatch")
                   ? "Limit Reached"
-                  : "Find My Love Match"
-              }
+                  : "Find My Love Match"}
             </ShadcnButton>
           </View>
         </ScrollView>
