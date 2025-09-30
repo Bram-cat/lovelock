@@ -32,7 +32,11 @@ import {
 } from "../../services/DailyInsightsService";
 import SimpleAIService from "../../services/SimpleAIService";
 import { SubscriptionService } from "../../services/SubscriptionService";
-import { DailyVibeService, DailyVibe, AIInsight } from "../../services/DailyVibeService";
+import {
+  DailyVibeService,
+  DailyVibe,
+  AIInsight,
+} from "../../services/DailyVibeService";
 
 const { height, width } = Dimensions.get("window");
 
@@ -67,13 +71,13 @@ export default function HomeScreen() {
   const { showAlert, AlertComponent } = useCustomAlert();
 
   const userName = React.useMemo(() => {
-    if (profileData?.full_name && !profileData.full_name.includes('Unknown')) {
+    if (profileData?.full_name && !profileData.full_name.includes("Unknown")) {
       return profileData.full_name.split(" ")[0] || "Beautiful Soul";
     }
     if (user?.firstName) {
       return user.firstName;
     }
-    if (user?.fullName && !user.fullName.includes('Unknown')) {
+    if (user?.fullName && !user.fullName.includes("Unknown")) {
       return user.fullName.split(" ")[0] || "Beautiful Soul";
     }
     return "Beautiful Soul";
@@ -160,15 +164,16 @@ export default function HomeScreen() {
       setLoadingDailyFeatures(true);
 
       // Check subscription status first
-      const subscriptionStatus = await SubscriptionService.getSubscriptionStatus(user.id);
+      const subscriptionStatus =
+        await SubscriptionService.getSubscriptionStatus(user.id);
 
       if (subscriptionStatus.isPremium || subscriptionStatus.isUnlimited) {
-        console.log('🌟 Loading daily features for premium user');
+        console.log("🌟 Loading daily features for premium user");
 
         // Generate daily vibe using Roxy API
         const dailyVibeData = await DailyVibeService.generateDailyVibe(
-          profileData.full_name!.split(' ')[0] || 'User',
-          profileData.full_name!.split(' ').slice(1).join(' ') || '',
+          profileData.full_name!.split(" ")[0] || "User",
+          profileData.full_name!.split(" ").slice(1).join(" ") || "",
           profileData.birth_date!,
           user.id
         );
@@ -180,27 +185,27 @@ export default function HomeScreen() {
           try {
             const numerologyProfile = {
               life_path_number: Math.floor(Math.random() * 9) + 1,
-              strengths: ['Leadership', 'Intuition'],
-              challenges: ['Perfectionism', 'Impatience']
+              strengths: ["Leadership", "Intuition"],
+              challenges: ["Perfectionism", "Impatience"],
             };
 
             const aiInsightData = await DailyVibeService.generateAIInsight(
               dailyVibeData,
               numerologyProfile,
-              profileData.full_name!.split(' ')[0] || 'User'
+              profileData.full_name!.split(" ")[0] || "User"
             );
 
             setAIInsight(aiInsightData);
-            console.log('✅ Daily features loaded successfully');
+            console.log("✅ Daily features loaded successfully");
           } catch (error) {
-            console.error('Error generating AI insight:', error);
+            console.error("Error generating AI insight:", error);
           }
         }
       } else {
-        console.log('ℹ️ Free user - daily features not loaded automatically');
+        console.log("ℹ️ Free user - daily features not loaded automatically");
       }
     } catch (error) {
-      console.error('Error loading daily features:', error);
+      console.error("Error loading daily features:", error);
     } finally {
       setLoadingDailyFeatures(false);
     }
@@ -219,7 +224,6 @@ export default function HomeScreen() {
 
     return () => clearTimeout(loadingTimer);
   }, [profileData, user?.id]);
-
 
   useEffect(() => {
     // Animated heart beating effect
@@ -353,7 +357,6 @@ export default function HomeScreen() {
     outputRange: [1, 0],
     extrapolate: "clamp",
   });
-
 
   const generateAIInsights = async () => {
     if (!profileData?.full_name || !profileData?.birth_date) {
@@ -595,8 +598,6 @@ Use "you" language. Be specific. Stay positive. Include emojis.`;
           hasProfile={!!hasProfile}
           hasPremium={subscription?.hasPremiumPlan || false}
         />
-
-
 
         {/* Profile Status */}
         <View style={styles.profileStatus}>
@@ -895,7 +896,7 @@ Use "you" language. Be specific. Stay positive. Include emojis.`;
                       <Ionicons name="warning" size={20} color="#FF9500" />
                       <Text style={styles.lifeAreaLabel}>Challenges</Text>
                       <Text style={styles.lifeAreaText}>
-                        {dailyVibe.challenges.join(', ')}
+                        {dailyVibe.challenges.join(", ")}
                       </Text>
                     </View>
 
@@ -903,7 +904,7 @@ Use "you" language. Be specific. Stay positive. Include emojis.`;
                       <Ionicons name="star" size={20} color="#FFD700" />
                       <Text style={styles.lifeAreaLabel}>Opportunities</Text>
                       <Text style={styles.lifeAreaText}>
-                        {dailyVibe.opportunities.join(', ')}
+                        {dailyVibe.opportunities.join(", ")}
                       </Text>
                     </View>
                   </View>
@@ -1007,7 +1008,9 @@ Use "you" language. Be specific. Stay positive. Include emojis.`;
                     <View style={styles.insightsContent}>
                       {/* Improvement Area */}
                       <View style={styles.insightCard}>
-                        <Text style={styles.insightLabel}>Focus Area for Today</Text>
+                        <Text style={styles.insightLabel}>
+                          Focus Area for Today
+                        </Text>
                         <Text style={styles.insightNumber}>
                           {aiInsight.improvementArea}
                         </Text>
@@ -1026,7 +1029,9 @@ Use "you" language. Be specific. Stay positive. Include emojis.`;
                         <Text style={styles.insightLabel}>Action Steps</Text>
                         {aiInsight.actionSteps.map((step, index) => (
                           <View key={index} style={styles.actionStep}>
-                            <Text style={styles.actionStepNumber}>{index + 1}</Text>
+                            <Text style={styles.actionStepNumber}>
+                              {index + 1}
+                            </Text>
                             <Text style={styles.actionStepText}>{step}</Text>
                           </View>
                         ))}
@@ -1059,7 +1064,8 @@ Use "you" language. Be specific. Stay positive. Include emojis.`;
                       </Text>
                       <Text style={styles.generateDescription}>
                         Get personalized insights powered by advanced AI
-                        analysis of your numerological profile and today's cosmic energy.
+                        analysis of your numerological profile and todays cosmic
+                        energy.
                       </Text>
                       <TouchableOpacity
                         style={styles.generateButton}
