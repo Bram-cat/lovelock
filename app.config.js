@@ -28,7 +28,7 @@ export default {
     ],
     "extra": {
       "eas": {
-        "projectId": "980b5e8d-2119-4386-ae31-7e8b4d45ed3e"
+        "projectId": "00fb2f0c-903d-4057-9bb7-0c48b76bbccb"
       },
       "EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY": process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY,
       "EXPO_PUBLIC_CLERK_SECRET_KEY": process.env.EXPO_PUBLIC_CLERK_SECRET_KEY,
