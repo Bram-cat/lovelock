@@ -1,13 +1,10 @@
 import { SignedIn, SignedOut, useUser } from "@clerk/clerk-expo";
 import { Ionicons } from "@expo/vector-icons";
-import { BottomTabBar } from "@react-navigation/bottom-tabs";
-import { BlurView } from "expo-blur";
 import { Redirect, Tabs } from "expo-router";
 import React, { useEffect, useState } from "react";
 import { View, TouchableOpacity, Text } from "react-native";
 import OnboardingScreen from "../../components/OnboardingScreen";
-import CustomAlert, { useCustomAlert } from "../../components/CustomAlert";
-import { DesignSystem } from "../../constants/DesignSystem";
+import { useCustomAlert } from "../../components/CustomAlert";
 import {
   AlertProvider,
   setGlobalAlertInstance,
@@ -21,12 +18,11 @@ import { OnboardingService } from "../../services/OnboardingService";
 
 // Wrapper component that uses the profile context
 function TabsWithOnboarding() {
-  const { profileData, loading, markOnboardingCompleted, refreshProfile } = useProfile();
+  const { profileData, loading, markOnboardingCompleted } = useProfile();
   const { user } = useUser();
   const alertContext = useAlert();
   const { showAlert, AlertComponent } = useCustomAlert();
   const [showOnboarding, setShowOnboarding] = useState(false);
-  const [paymentStatus, setPaymentStatus] = useState<{isPremium: boolean} | null>(null);
 
   // Initialize deep linking for payment callbacks
   useDeepLinking();
@@ -134,11 +130,12 @@ function TabsWithOnboarding() {
             }}>
               {state.routes.map((route, index) => {
                 const { options } = descriptors[route.key];
-                const label = options.tabBarLabel !== undefined
-                  ? options.tabBarLabel
-                  : options.title !== undefined
-                  ? options.title
-                  : route.name;
+                const label =
+                  typeof options.tabBarLabel === 'string'
+                    ? options.tabBarLabel
+                    : options.title !== undefined
+                    ? options.title
+                    : route.name;
 
                 const isFocused = state.index === index;
 
