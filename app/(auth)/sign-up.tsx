@@ -22,20 +22,14 @@ export default function SignUpScreen() {
   const { isSignedIn, user } = useUser();
   const router = useRouter();
 
-  // Debug function to log all signUp properties
+  // Production-safe debug function
   const debugSignUpState = () => {
-    if (signUp) {
-      console.log('🐛 SignUp Debug Info:');
-      console.log('  Status:', signUp.status);
-      console.log('  Missing fields:', signUp.missingFields);
-      console.log('  Unverified fields:', signUp.unverifiedFields);
-      console.log('  Email verified:', signUp.emailAddress);
-      console.log('  First name:', signUp.firstName);
-      console.log('  Last name:', signUp.lastName);
-      console.log('  Username:', signUp.username);
-      console.log('  Created session ID:', signUp.createdSessionId);
-      console.log('  Created user ID:', signUp.createdUserId);
-    }
+    // Debug logging disabled for production
+  };
+
+  // Production-safe logging function
+  const debugLog = (message: string, ...args: any[]) => {
+    // Logging disabled for production
   };
 
   // Form state
@@ -56,7 +50,7 @@ export default function SignUpScreen() {
   // Redirect if user is already signed in
   useEffect(() => {
     if (isSignedIn && user) {
-      console.log('✅ User already signed in, redirecting to app');
+      debugLog('✅ User already signed in, redirecting to app');
       router.replace('/(tabs)');
     }
   }, [isSignedIn, user, router]);
@@ -64,7 +58,7 @@ export default function SignUpScreen() {
   // Create account and prepare email verification
   const handleSignUp = useCallback(async () => {
     if (!isLoaded || !signUp) {
-      console.log('⚠️ Clerk not loaded yet');
+      debugLog('⚠️ Clerk not loaded yet');
       return;
     }
 
@@ -75,11 +69,11 @@ export default function SignUpScreen() {
 
     setIsLoading(true);
     setErrorMessage('');
-    console.log('🔄 Starting sign-up process...');
+    debugLog('🔄 Starting sign-up process...');
 
     try {
       // Create the sign-up - using minimal required fields first
-      console.log('🔄 Creating sign-up with email:', emailAddress);
+      debugLog('🔄 Creating sign-up with email:', emailAddress);
       // Generate a unique username from email (remove special characters)
       const baseUsername = emailAddress.split('@')[0].replace(/[^a-zA-Z0-9]/g, '');
       const username = baseUsername + Math.floor(Math.random() * 1000).toString().padStart(3, '0');
@@ -90,41 +84,41 @@ export default function SignUpScreen() {
         username, // Add unique username
       });
 
-      console.log('✅ Sign-up created:', result.status);
-      console.log('📋 Missing fields after creation:', result.missingFields);
-      console.log('📋 Unverified fields after creation:', result.unverifiedFields);
+      debugLog('✅ Sign-up created:', result.status);
+      debugLog('📋 Missing fields after creation:', result.missingFields);
+      debugLog('📋 Unverified fields after creation:', result.unverifiedFields);
       
       debugSignUpState();
 
       // Update user profile with name information if provided
       if (firstName || lastName) {
         try {
-          console.log('🔄 Updating user profile with name...');
+          debugLog('🔄 Updating user profile with name...');
           await signUp.update({
             firstName: firstName || undefined,
             lastName: lastName || undefined,
           });
-          console.log('✅ User profile updated with name');
+          debugLog('✅ User profile updated with name');
         } catch (updateError) {
-          console.log('⚠️ Could not update name, continuing without it:', updateError);
+          debugLog('⚠️ Could not update name, continuing without it:', updateError);
         }
       }
 
       // Prepare email address verification with retry logic
-      console.log('🔄 Preparing email verification...');
+      debugLog('🔄 Preparing email verification...');
       try {
         await signUp.prepareEmailAddressVerification({ 
           strategy: 'email_code'
         });
       } catch (emailError) {
-        console.log('🔄 Retrying email verification...');
+        debugLog('🔄 Retrying email verification...');
         // Retry once more with shorter delay
         await new Promise(resolve => setTimeout(resolve, 2000));
         await signUp.prepareEmailAddressVerification({ strategy: 'email_code' });
       }
       
-      console.log('✅ Email verification prepared');
-      console.log('📧 Check your email for the verification code');
+      debugLog('✅ Email verification prepared');
+      debugLog('📧 Check your email for the verification code');
       setCurrentStep('verification');
       
     } catch (err: any) {
@@ -136,7 +130,7 @@ export default function SignUpScreen() {
         // Try again with a different username
         try {
           const newUsername = emailAddress.split('@')[0] + Date.now().toString().slice(-4);
-          console.log('🔄 Retrying with new username:', newUsername);
+          debugLog('🔄 Retrying with new username:', newUsername);
           
           const retryResult = await signUp.create({
             emailAddress,
@@ -144,7 +138,7 @@ export default function SignUpScreen() {
             username: newUsername,
           });
           
-          console.log('✅ Retry sign-up created:', retryResult.status);
+          debugLog('✅ Retry sign-up created:', retryResult.status);
           debugSignUpState();
           
           // Continue with name update if needed
@@ -155,7 +149,7 @@ export default function SignUpScreen() {
                 lastName: lastName || undefined,
               });
             } catch (updateError) {
-              console.log('⚠️ Name update failed on retry, continuing...');
+              debugLog('⚠️ Name update failed on retry, continuing...');
             }
           }
           
@@ -187,9 +181,9 @@ export default function SignUpScreen() {
     setCodeError('');
 
     try {
-      console.log('🔄 Resending verification code...');
+      debugLog('🔄 Resending verification code...');
       await signUp.prepareEmailAddressVerification({ strategy: 'email_code' });
-      console.log('✅ Verification code resent');
+      debugLog('✅ Verification code resent');
       
       // Set cooldown to prevent spam
       setResendCooldown(60);
@@ -219,7 +213,7 @@ export default function SignUpScreen() {
   // Verify email code
   const handleVerifyEmail = useCallback(async () => {
     if (!isLoaded || !signUp) {
-      console.log('⚠️ Clerk not loaded yet');
+      debugLog('⚠️ Clerk not loaded yet');
       return;
     }
 
@@ -230,31 +224,31 @@ export default function SignUpScreen() {
 
     setIsLoading(true);
     setCodeError('');
-    console.log('🔄 Verifying email with code:', code);
+    debugLog('🔄 Verifying email with code:', code);
 
     try {
       const result = await signUp.attemptEmailAddressVerification({
         code,
       });
 
-      console.log('✅ Email verification result:', result.status);
+      debugLog('✅ Email verification result:', result.status);
       
       debugSignUpState();
 
       if (result.status === 'complete') {
-        console.log('🔄 Setting active session...');
+        debugLog('🔄 Setting active session...');
         await setActive({ session: result.createdSessionId });
         
-        console.log('✅ Session set, navigating to app');
+        debugLog('✅ Session set, navigating to app');
         router.replace('/(tabs)');
       } else {
-        console.log('⚠️ Verification incomplete:', result.status);
-        console.log('📋 Missing fields after verification:', signUp.missingFields);
-        console.log('📋 Unverified fields:', signUp.unverifiedFields);
+        debugLog('⚠️ Verification incomplete:', result.status);
+        debugLog('📋 Missing fields after verification:', signUp.missingFields);
+        debugLog('📋 Unverified fields:', signUp.unverifiedFields);
         
         // Check if we can provide missing fields
         if (signUp.missingFields && signUp.missingFields.length > 0) {
-          console.log('🔄 Attempting to provide missing fields...');
+          debugLog('🔄 Attempting to provide missing fields...');
           try {
             const updateData: any = {};
             
@@ -266,20 +260,20 @@ export default function SignUpScreen() {
               updateData.lastName = lastName || '';
             }
             
-            console.log('🔄 Updating with missing data:', updateData);
+            debugLog('🔄 Updating with missing data:', updateData);
             
             const updatedResult = await signUp.update(updateData);
-            console.log('✅ Updated result status:', updatedResult.status);
+            debugLog('✅ Updated result status:', updatedResult.status);
             
             if (updatedResult.status === 'complete') {
               if (updatedResult.createdSessionId) {
                 await setActive({ session: updatedResult.createdSessionId });
-                console.log('✅ Session set after providing missing fields');
+                debugLog('✅ Session set after providing missing fields');
                 router.replace('/(tabs)');
                 return;
               }
             } else {
-              console.log('📋 Still missing fields after update:', updatedResult.missingFields);
+              debugLog('📋 Still missing fields after update:', updatedResult.missingFields);
               setCodeError(`Account setup incomplete. Missing: ${updatedResult.missingFields?.join(', ') || 'unknown fields'}`);
             }
           } catch (updateError) {
@@ -296,24 +290,24 @@ export default function SignUpScreen() {
       
       // Handle already verified error specifically
       if (err.errors?.[0]?.code === 'verification_already_verified') {
-        console.log('✅ Email already verified, attempting to set session');
+        debugLog('✅ Email already verified, attempting to set session');
         try {
           // Try to complete the sign-up and set session
           if (signUp.createdSessionId) {
             await setActive({ session: signUp.createdSessionId });
-            console.log('✅ Session set, navigating to app');
+            debugLog('✅ Session set, navigating to app');
             // Small delay to ensure session is set
             setTimeout(() => router.replace('/(tabs)'), 100);
           } else {
             // Check if signUp is complete and create session
-            console.log('⚠️ No session found, checking sign-up status:', signUp.status);
-            console.log('📋 Current missing fields:', signUp.missingFields);
-            console.log('📋 Current unverified fields:', signUp.unverifiedFields);
+            debugLog('⚠️ No session found, checking sign-up status:', signUp.status);
+            debugLog('📋 Current missing fields:', signUp.missingFields);
+            debugLog('📋 Current unverified fields:', signUp.unverifiedFields);
             if (signUp.status === 'complete') {
-              console.log('✅ Sign-up complete, navigating to app');
+              debugLog('✅ Sign-up complete, navigating to app');
               setTimeout(() => router.replace('/(tabs)'), 100);
             } else if (signUp.status === 'missing_requirements') {
-              console.log('⚠️ Sign-up has missing requirements, attempting to complete...');
+              debugLog('⚠️ Sign-up has missing requirements, attempting to complete...');
               try {
                 // Determine what fields we need to update
                 const updateData: any = {};
@@ -332,26 +326,26 @@ export default function SignUpScreen() {
                   updateData.username = baseUsername + Math.floor(Math.random() * 1000).toString().padStart(3, '0');
                 }
                 
-                console.log('🔄 Updating sign-up with fields:', Object.keys(updateData));
-                console.log('🔄 Update data:', updateData);
+                debugLog('🔄 Updating sign-up with fields:', Object.keys(updateData));
+                debugLog('🔄 Update data:', updateData);
                 
                 // Try to update sign-up with any missing info
                 const updatedSignUp = await signUp.update(updateData);
-                console.log('✅ Updated sign-up, new status:', updatedSignUp.status);
-                console.log('📋 Remaining missing fields:', updatedSignUp.missingFields);
+                debugLog('✅ Updated sign-up, new status:', updatedSignUp.status);
+                debugLog('📋 Remaining missing fields:', updatedSignUp.missingFields);
                 
                 // If still missing requirements, try to complete the sign-up
                 if (updatedSignUp.status === 'complete') {
                   if (updatedSignUp.createdSessionId) {
                     await setActive({ session: updatedSignUp.createdSessionId });
-                    console.log('✅ Session set after update, navigating to app');
+                    debugLog('✅ Session set after update, navigating to app');
                     setTimeout(() => router.replace('/(tabs)'), 100);
                   } else {
-                    console.log('✅ Sign-up complete but no session, navigating to app anyway');
+                    debugLog('✅ Sign-up complete but no session, navigating to app anyway');
                     setTimeout(() => router.replace('/(tabs)'), 100);
                   }
                 } else {
-                  console.log('⚠️ Sign-up still incomplete after update, showing account issue...');
+                  debugLog('⚠️ Sign-up still incomplete after update, showing account issue...');
                   setCodeError('Account setup incomplete. Your email is verified but there was an issue completing your account.');
                   setShowAccountIssue(true);
                 }
@@ -362,7 +356,7 @@ export default function SignUpScreen() {
               }
             } else {
               // Force reload the page to check authentication state
-              console.log('⚠️ Reloading to check auth state...');
+              debugLog('⚠️ Reloading to check auth state...');
               setTimeout(() => router.replace('/'), 100);
             }
           }

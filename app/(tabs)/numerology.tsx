@@ -25,7 +25,7 @@ import NumerologyReadingScreen from "../../screens/NumerologyReadingScreen";
 import NumerologyService from "../../services/NumerologyService";
 import { OnboardingService } from "../../services/OnboardingService";
 import { RoxyNumerologyService } from "../../services/ProkeralaNumerologyService";
-import SimpleAIService from "../../services/SimpleAIService";
+import { SimpleAIService } from "../../services/SimpleAIService";
 import { SubscriptionService } from "../../services/SubscriptionService";
 
 export default function NumerologyScreen() {
@@ -112,7 +112,7 @@ export default function NumerologyScreen() {
             showAlert(alertConfig);
           }
         } catch (error) {
-          console.error("Error showing numerology introduction:", error);
+          // Silent error handling for production
         }
       }
     };
@@ -550,7 +550,7 @@ export default function NumerologyScreen() {
             endIcon="arrow-forward"
             style={[
               styles.generateButton,
-              !canUse("numerology") && styles.limitExceededButton,
+              ...(!canUse("numerology") ? [styles.limitExceededButton] : []),
             ]}
           >
             {loading

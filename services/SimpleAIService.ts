@@ -9,11 +9,7 @@ const OPENAI_KEY = process.env.EXPO_PUBLIC_OPENAI_API_SECRET_KEY || process.env.
 const GEMINI_URL =
   "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent";
 
-// Debug: Log key availability at startup
-console.log("🔧 AI Service Initialization:");
-console.log(`📍 GEMINI_KEY_1: ${GEMINI_KEY_1 ? `${GEMINI_KEY_1.substring(0, 10)}...` : 'NOT FOUND'}`);
-console.log(`📍 GEMINI_KEY_2: ${GEMINI_KEY_2 ? `${GEMINI_KEY_2.substring(0, 10)}...` : 'NOT FOUND'}`);
-console.log(`📍 OPENAI_KEY: ${OPENAI_KEY ? `${OPENAI_KEY.substring(0, 10)}...` : 'NOT FOUND'}`);
+// Environment keys loaded for production use
 
 interface AIResponse {
   content: string;
