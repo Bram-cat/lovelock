@@ -5,7 +5,7 @@ export default {
     "name": "Lovelock",
     "slug": "lovelock",
     "description": "Unlock hidden secrets about yourself and others. Discover personality patterns, predict behavior, and master the art of reading people using ancient numerology and modern psychology.",
-    "version": "2.0.0",
+    "version": "2.1.0",
     "scheme": "lovelock",
     "platforms": ["ios", "android", "web"],
     "keywords": ["personality", "numerology", "astrology", "self-discovery", "character analysis", "psychology", "mind reading", "prediction", "life insights"],
@@ -42,7 +42,7 @@ export default {
     },
     "android": {
       "package": "com.cowman.lovelock",
-      "versionCode": 2,
+      "versionCode": 3,
       "permissions": [
         "android.permission.RECORD_AUDIO",
         "android.permission.NOTIFICATIONS"
@@ -76,7 +76,7 @@ export default {
     },
     "ios": {
       "bundleIdentifier": "com.cowman.lovelock",
-      "buildNumber": "2",
+      "buildNumber": "3",
       "associatedDomains": [
         "applinks:lovelock.app",
         "applinks:auth.lovelock.app"
