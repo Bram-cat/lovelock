@@ -41,7 +41,8 @@
         "env": {
           "EXPO_USE_FABRIC": "0",
           "RCT_NEW_ARCH_ENABLED": "0"
-        }
+        },
+        "enableProguardInReleaseBuilds": true
       },
       "ios": {
         "buildConfiguration": "Release",

@@ -1,3 +1,32 @@
+# Lovelock Project Documentation
+
+## Recent Fixes
+
+### Android ProGuard/R8 Deobfuscation Configuration (2025-09-30)
+
+Fixed the deobfuscation warning that appeared during EAS builds by:
+
+1. **Enhanced ProGuard Rules** (`android/app/proguard-rules.pro`):
+   - Added source file and line number preservation for better crash reports
+   - Added rules to keep React Native classes and native methods
+   - Added Hermes engine class preservation rules
+
+2. **Build Configuration** (`android/app/build.gradle`):
+   - Enabled debug symbol generation for release builds
+   - Added NDK debug symbol level configuration
+   - Ensures mapping.txt file is generated at: `android/app/build/outputs/mapping/release/mapping.txt`
+
+3. **EAS Build Configuration** (`eas.json`):
+   - Enabled ProGuard in production builds via `enableProguardInReleaseBuilds: true`
+   - This ensures R8/ProGuard mapping files are automatically uploaded to EAS for crash analysis
+
+4. **Updated .gitignore**:
+   - Added Android build artifact paths to prevent committing build outputs
+
+**Result**: ANRs and crashes will now be easier to analyze and debug with proper stack trace deobfuscation.
+
+---
+
 # Lovelock AI Service Rework
 
 ## Issue
