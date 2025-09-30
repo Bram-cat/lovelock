@@ -35,4 +35,11 @@
 -keep class com.facebook.hermes.unicode.** { *; }
 -keep class com.facebook.hermes.intl.** { *; }
 
+# Stripe React Native SDK
+-keep class com.stripe.android.** { *; }
+-keep class com.stripe.android.pushProvisioning.** { *; }
+-keep interface com.stripe.android.** { *; }
+-keepclassmembers class com.stripe.android.** { *; }
+-dontwarn com.stripe.android.pushProvisioning.**
+
 # Add any project specific keep options here:
