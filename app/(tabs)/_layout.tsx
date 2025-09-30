@@ -2,19 +2,19 @@ import { SignedIn, SignedOut, useUser } from "@clerk/clerk-expo";
 import { Ionicons } from "@expo/vector-icons";
 import { Redirect, Tabs } from "expo-router";
 import React, { useEffect, useState } from "react";
-import { View, TouchableOpacity, Text } from "react-native";
-import OnboardingScreen from "../../components/OnboardingScreen";
+import { Text, TouchableOpacity, View } from "react-native";
 import { useCustomAlert } from "../../components/CustomAlert";
+import OnboardingScreen from "../../components/OnboardingScreen";
 import {
   AlertProvider,
   setGlobalAlertInstance,
   useAlert,
 } from "../../contexts/AlertContext";
 import { ProfileProvider, useProfile } from "../../contexts/ProfileContext";
-import { useUserSync } from "../../lib/user-sync";
-import { SubscriptionService } from "../../services/SubscriptionService";
 import { useDeepLinking } from "../../hooks/useDeepLinking";
+import { useUserSync } from "../../lib/user-sync";
 import { OnboardingService } from "../../services/OnboardingService";
+import { SubscriptionService } from "../../services/SubscriptionService";
 
 // Wrapper component that uses the profile context
 function TabsWithOnboarding() {
@@ -33,12 +33,6 @@ function TabsWithOnboarding() {
   }, [alertContext]);
 
   // Payment status is now handled by the Clerk subscription hook
-  // No need for separate payment status checking
-  React.useEffect(() => {
-    // Default to free plan - subscription status is handled by useSubscription hook
-    setPaymentStatus({ isPremium: false });
-  }, [user?.id]);
-
   useEffect(() => {
     // Show welcome message for new users and check billing cycle
     const showWelcomeForNewUsers = async () => {
@@ -48,12 +42,13 @@ function TabsWithOnboarding() {
           await SubscriptionService.checkAndResetBillingCycle(user.id);
 
           // Show welcome message for new users using CustomAlert
-          const { shouldShow, alertConfig } = await OnboardingService.getWelcomeMessage(user.id);
+          const { shouldShow, alertConfig } =
+            await OnboardingService.getWelcomeMessage(user.id);
           if (shouldShow && alertConfig) {
             showAlert(alertConfig);
           }
         } catch (error) {
-          console.error('Error showing welcome message:', error);
+          // Silent error handling for production
         }
       }
     };
@@ -84,7 +79,7 @@ function TabsWithOnboarding() {
         "🌐 Web Upgrade Required",
         "Premium upgrades are available through our web app.\n\nTo upgrade:\n1. Visit our website\n2. Sign in with the same account\n3. Choose your plan\n\nYour subscription will sync automatically!"
       );
-      
+
       // Complete onboarding anyway
       await markOnboardingCompleted();
       setShowOnboarding(false);
@@ -122,26 +117,28 @@ function TabsWithOnboarding() {
               height: 80,
             }}
           >
-            <View style={{
-              flexDirection: 'row',
-              justifyContent: 'space-around',
-              alignItems: 'center',
-              height: 50,
-            }}>
+            <View
+              style={{
+                flexDirection: "row",
+                justifyContent: "space-around",
+                alignItems: "center",
+                height: 50,
+              }}
+            >
               {state.routes.map((route, index) => {
                 const { options } = descriptors[route.key];
                 const label =
-                  typeof options.tabBarLabel === 'string'
+                  typeof options.tabBarLabel === "string"
                     ? options.tabBarLabel
                     : options.title !== undefined
-                    ? options.title
-                    : route.name;
+                      ? options.title
+                      : route.name;
 
                 const isFocused = state.index === index;
 
                 const onPress = () => {
                   const event = navigation.emit({
-                    type: 'tabPress',
+                    type: "tabPress",
                     target: route.key,
                     canPreventDefault: true,
                   });
@@ -157,35 +154,44 @@ function TabsWithOnboarding() {
                     onPress={onPress}
                     style={{
                       flex: 1,
-                      alignItems: 'center',
-                      justifyContent: 'center',
+                      alignItems: "center",
+                      justifyContent: "center",
                       paddingVertical: 6,
-                      position: 'relative',
+                      position: "relative",
                     }}
                   >
                     {isFocused && (
-                      <View style={{
-                        position: 'absolute',
-                        top: -2,
-                        left: 12,
-                        right: 12,
-                        height: 3,
-                        backgroundColor: '#9333EA',
-                        borderRadius: 2,
-                      }} />
+                      <View
+                        style={{
+                          position: "absolute",
+                          top: -2,
+                          left: 12,
+                          right: 12,
+                          height: 3,
+                          backgroundColor: "#9333EA",
+                          borderRadius: 2,
+                        }}
+                      />
                     )}
-                    <View style={{ alignItems: 'center' }}>
-                      {options.tabBarIcon && options.tabBarIcon({
-                        focused: isFocused,
-                        color: isFocused ? '#9333EA' : 'rgba(255, 255, 255, 0.6)',
-                        size: 24,
-                      })}
-                      <Text style={{
-                        color: isFocused ? '#9333EA' : 'rgba(255, 255, 255, 0.6)',
-                        fontSize: 11,
-                        fontWeight: '500',
-                        marginTop: 4,
-                      }}>
+                    <View style={{ alignItems: "center" }}>
+                      {options.tabBarIcon &&
+                        options.tabBarIcon({
+                          focused: isFocused,
+                          color: isFocused
+                            ? "#9333EA"
+                            : "rgba(255, 255, 255, 0.6)",
+                          size: 24,
+                        })}
+                      <Text
+                        style={{
+                          color: isFocused
+                            ? "#9333EA"
+                            : "rgba(255, 255, 255, 0.6)",
+                          fontSize: 11,
+                          fontWeight: "500",
+                          marginTop: 4,
+                        }}
+                      >
                         {label}
                       </Text>
                     </View>
@@ -235,12 +241,12 @@ function TabsWithOnboarding() {
           tabBarItemStyle: {
             paddingVertical: 8,
             marginHorizontal: 6,
-            position: 'relative',
+            position: "relative",
             height: 60,
-            justifyContent: 'center',
-            alignItems: 'center',
+            justifyContent: "center",
+            alignItems: "center",
             borderRadius: 18,
-            overflow: 'hidden',
+            overflow: "hidden",
           },
           tabBarBackground: () => null,
         }}
