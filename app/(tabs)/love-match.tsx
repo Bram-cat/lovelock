@@ -29,11 +29,11 @@ import {
 } from "../../services/LoveMatchService";
 import NumerologyService from "../../services/NumerologyService";
 import { RoxyNumerologyService } from "../../services/ProkeralaNumerologyService";
-import SimpleAIService from "../../services/SimpleAIService";
+import { SimpleAIService } from "../../services/SimpleAIService";
 import { StaticDataService } from "../../services/StaticDataService";
 import { SubscriptionService } from "../../services/SubscriptionService";
 import { useSubscription } from "../../hooks/useSubscription";
-import UsageTrackingService from "../../services/UsageTrackingService";
+import { UsageTrackingService } from "../../services/UsageTrackingService";
 import UpgradePromptModal from "../../components/UpgradePromptModal";
 import { OnboardingService } from "../../services/OnboardingService";
 
@@ -116,20 +116,15 @@ export default function LoveMatchScreen() {
       if (user?.id) {
         try {
           const stats = await SubscriptionService.getUsageStats(user.id);
-          const resetDate = new Date(stats.loveMatch.resetsAt);
-          const now = new Date();
-          const daysUntilReset = Math.ceil(
-            (resetDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)
-          );
 
           setUsageStats({
-            loveMatchUsage: stats.loveMatch.totalUsed,
-            loveMatchRemaining: stats.loveMatch.remaining,
-            daysUntilReset: Math.max(0, daysUntilReset),
-            isPremium: stats.isPremium,
+            loveMatchUsage: stats.loveMatch.used,
+            loveMatchRemaining: stats.loveMatch.limit - stats.loveMatch.used,
+            daysUntilReset: 30, // Default reset period
+            isPremium: false,
           });
         } catch (error) {
-          console.error("Error loading usage stats:", error);
+          // Silent error handling for production
         }
       }
     };
@@ -671,10 +666,10 @@ export default function LoveMatchScreen() {
               disabled={loading || !fullName.trim() || !birthDate || !canUse("loveMatch")}
               loading={loading}
               startIcon="heart"
-              style={[
+              style={StyleSheet.flatten([
                 styles.calculateButton,
                 !canUse("loveMatch") && styles.limitExceededButton
-              ]}
+              ])}
             >
               {loading
                 ? "Finding Matches..."
