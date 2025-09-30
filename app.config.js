@@ -42,7 +42,7 @@ export default {
     },
     "android": {
       "package": "com.cowman.lovelock",
-      "versionCode": 1,
+      "versionCode": 2,
       "permissions": [
         "android.permission.RECORD_AUDIO",
         "android.permission.NOTIFICATIONS"
