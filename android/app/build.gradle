@@ -92,7 +92,7 @@ android {
         applicationId 'com.cowman.lovelock'
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 6
+        versionCode 7
         versionName "2.4.0"
     }
     signingConfigs {
