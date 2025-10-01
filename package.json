@@ -1,7 +1,7 @@
 {
   "name": "lovelock",
   "main": "expo-router/entry",
-  "version": "2.3.0",
+  "version": "2.4.0",
   "scripts": {
     "start": "expo start",
     "reset-project": "node ./scripts/reset-project.js",
@@ -17,7 +17,6 @@
     "@clerk/clerk-expo": "^2.14.25",
     "@convex-dev/auth": "^0.0.88",
     "@expo/cli": "^0.24.20",
-    "eas-cli": "^13.3.0",
     "@expo/vector-icons": "^14.1.0",
     "@react-native-async-storage/async-storage": "2.1.2",
     "@react-native-google-signin/google-signin": "^15.0.0",
@@ -34,6 +33,7 @@
     "convex": "^1.25.4",
     "cosmiconfig": "^9.0.0",
     "dotenv": "^17.2.1",
+    "eas-cli": "^13.3.0",
     "expo": "~53.0.17",
     "expo-auth-session": "~6.2.1",
     "expo-blur": "~14.1.5",
@@ -71,6 +71,7 @@
     "react-native-url-polyfill": "^2.0.0",
     "react-native-web": "~0.20.0",
     "react-native-webview": "13.13.5",
+    "sharp": "^0.34.4",
     "stripe": "^18.5.0",
     "tailwind-merge": "^3.3.1",
     "tailwindcss": "^3.3.2",
