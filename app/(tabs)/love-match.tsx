@@ -1019,14 +1019,14 @@ export default function LoveMatchScreen() {
               <View style={styles.aiLoadingCard}>
                 <View style={styles.aiLoadingHeader}>
                   <Text style={styles.aiLoadingText}>
-                    ✨ Finding your celebrity soulmates...
+                    🤖 AI is analyzing celebrity compatibility...
                   </Text>
                   <Text style={styles.aiLoadingSubtext}>
                     Did you know? Life Path {profile.lifePathNumber} shares
-                    cosmic energy with many famous personalities! We are
-                    scanning our database of over 500 celebrities to find your
-                    perfect matches based on numerological compatibility
-                    algorithms.
+                    cosmic energy with many famous personalities! Our AI is
+                    scanning over 500 celebrities and generating personalized
+                    compatibility explanations based on your unique numerological
+                    profile.
                   </Text>
                 </View>
                 <View style={styles.celebrityLoadingContainer}>
