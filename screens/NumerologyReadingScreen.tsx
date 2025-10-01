@@ -11,6 +11,8 @@ import {
   ActivityIndicator,
   Text,
   Dimensions,
+  Share,
+  Alert,
 } from "react-native";
 import SimpleAIService from "../services/SimpleAIService";
 
@@ -75,6 +77,22 @@ export default function NumerologyReadingScreen({
     }
   };
 
+  const handleShare = async () => {
+    try {
+      const shareMessage = `✨ My Numerology Reading ✨\n\n` +
+        `🌟 Life Path ${profile.lifePathNumber}: ${lifePathInfo?.title || 'The Seeker'}\n\n` +
+        `${characterAnalysis?.substring(0, 200)}...\n\n` +
+        `Discover your cosmic blueprint with Lovelock! 💫`;
+
+      await Share.share({
+        message: shareMessage,
+        title: "My Numerology Reading",
+      });
+    } catch (error) {
+      Alert.alert("Error", "Unable to share at this time");
+    }
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor="#000000" />
@@ -87,6 +105,9 @@ export default function NumerologyReadingScreen({
         </TouchableOpacity>
 
         <View style={styles.headerActions}>
+          <TouchableOpacity style={styles.iconButton} onPress={handleShare}>
+            <Ionicons name="share-social" size={20} color="#10B981" />
+          </TouchableOpacity>
           <TouchableOpacity style={styles.iconButton} onPress={onShowAIChat}>
             <Ionicons name="sparkles" size={20} color="#8B5CF6" />
           </TouchableOpacity>
