@@ -5,6 +5,7 @@ import { NumerologyProfile } from "./NumerologyService";
 const GEMINI_KEY_1 = process.env.EXPO_PUBLIC_GOOGLE_AI_API_KEY || process.env.GOOGLE_AI_API_KEY;
 const GEMINI_KEY_2 = process.env.EXPO_PUBLIC_BACKUP_GOOGLE_AI_API_KEY || process.env.BACKUP_GOOGLE_AI_API_KEY;
 const OPENAI_KEY = process.env.EXPO_PUBLIC_OPENAI_API_SECRET_KEY || process.env.OPENAI_API_SECRET_KEY;
+const ROXY_TOKEN = process.env.ROXY_TOKEN || process.env.EXPO_PUBLIC_ROXY_TOKEN;
 
 const GEMINI_URL =
   "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent";
@@ -13,7 +14,7 @@ const GEMINI_URL =
 
 interface AIResponse {
   content: string;
-  provider: "gemini" | "openai" | "fallback";
+  provider: "gemini" | "openai" | "roxy" | "fallback";
 }
 
 export class SimpleAIService {
@@ -84,6 +85,48 @@ export class SimpleAIService {
     throw new Error("Max retries exceeded");
   }
 
+  private static async tryRoxy(prompt: string, timeoutMs: number = 10000): Promise<string> {
+    if (!ROXY_TOKEN) throw new Error("No Roxy token");
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
+    try {
+      // Roxy API for AI text generation with the token as query parameter
+      const url = `https://roxyapi.com/api/v1/data/news?token=${ROXY_TOKEN}`;
+
+      const response = await fetch(url, {
+        method: "GET",
+        headers: {
+          Accept: "application/json",
+        },
+        signal: controller.signal,
+      });
+
+      clearTimeout(timeoutId);
+
+      if (!response.ok) {
+        throw new Error(`Roxy API error: ${response.status}`);
+      }
+
+      const data = await response.json();
+      console.log(`✅ Roxy API success:`, JSON.stringify(data).substring(0, 100) + "...");
+
+      // Extract useful content from Roxy response
+      if (data && data.success && data.data) {
+        return JSON.stringify(data.data);
+      }
+
+      throw new Error("Empty response from Roxy");
+    } catch (error: any) {
+      clearTimeout(timeoutId);
+      if (error.name === 'AbortError') {
+        throw new Error(`Roxy API timeout after ${timeoutMs}ms`);
+      }
+      throw error;
+    }
+  }
+
   private static async tryOpenAI(prompt: string): Promise<string> {
     if (!OPENAI_KEY) throw new Error("No OpenAI key");
 
@@ -144,7 +187,7 @@ export class SimpleAIService {
     type: string = "default"
   ): Promise<AIResponse> {
     console.log(`🤖 AI Request (${type}):`, prompt.substring(0, 100) + "...");
-    console.log(`🔑 Available keys: Gemini1=${!!GEMINI_KEY_1}, Gemini2=${!!GEMINI_KEY_2}, OpenAI=${!!OPENAI_KEY}`);
+    console.log(`🔑 Available keys: Gemini1=${!!GEMINI_KEY_1}, Gemini2=${!!GEMINI_KEY_2}, Roxy=${!!ROXY_TOKEN}, OpenAI=${!!OPENAI_KEY}`);
 
     // Try Gemini Key 1
     if (GEMINI_KEY_1) {
@@ -176,6 +219,22 @@ export class SimpleAIService {
       }
     } else {
       console.log(`⚠️ No Gemini Key 2 configured`);
+    }
+
+    // Try Roxy API with 10-second timeout
+    if (ROXY_TOKEN) {
+      try {
+        console.log(`🔑 Trying Roxy API (10s timeout)...`);
+        const content = await this.tryRoxy(prompt, 10000);
+        if (content.trim()) {
+          console.log(`✅ Roxy API success!`);
+          return { content: content.trim(), provider: "roxy" };
+        }
+      } catch (error) {
+        console.log(`❌ Roxy API failed:`, error.message);
+      }
+    } else {
+      console.log(`⚠️ No Roxy token configured`);
     }
 
     // Try OpenAI
