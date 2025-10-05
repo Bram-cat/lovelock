@@ -1,6 +1,11 @@
-import 'dotenv/config';
+// Try to load dotenv, but don't fail if it's not available (e.g., in npx context)
+try {
+  require('dotenv/config');
+} catch (error) {
+  console.log('dotenv not available, using environment variables directly');
+}
 
-export default {
+module.exports = {
   "expo": {
     "name": "Lovelock",
     "slug": "lovelock",

@@ -4,17 +4,19 @@ import { NumerologyProfile } from "./NumerologyService";
 // Environment variables (use EXPO_PUBLIC_ prefix for client-side access)
 const GEMINI_KEY_1 = process.env.EXPO_PUBLIC_GOOGLE_AI_API_KEY || process.env.GOOGLE_AI_API_KEY;
 const GEMINI_KEY_2 = process.env.EXPO_PUBLIC_BACKUP_GOOGLE_AI_API_KEY || process.env.BACKUP_GOOGLE_AI_API_KEY;
+const DEEPSEEK_KEY = process.env.EXPO_PUBLIC_DEEPSEEK_AI_API_KEY || process.env.DEEPSEEK_AI_API_KEY;
 const OPENAI_KEY = process.env.EXPO_PUBLIC_OPENAI_API_SECRET_KEY || process.env.OPENAI_API_SECRET_KEY;
 const ROXY_TOKEN = process.env.ROXY_TOKEN || process.env.EXPO_PUBLIC_ROXY_TOKEN;
 
 const GEMINI_URL =
   "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent";
+const DEEPSEEK_URL = "https://api.deepseek.com/v1/chat/completions";
 
 // Environment keys loaded for production use
 
 interface AIResponse {
   content: string;
-  provider: "gemini" | "openai" | "roxy" | "fallback";
+  provider: "gemini" | "deepseek" | "openai" | "roxy" | "fallback";
 }
 
 export class SimpleAIService {
@@ -127,6 +129,31 @@ export class SimpleAIService {
     }
   }
 
+  private static async tryDeepSeek(prompt: string): Promise<string> {
+    if (!DEEPSEEK_KEY) throw new Error("No DeepSeek key");
+
+    const response = await fetch(DEEPSEEK_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${DEEPSEEK_KEY}`,
+      },
+      body: JSON.stringify({
+        model: "deepseek-chat",
+        messages: [{ role: "user", content: prompt }],
+        max_tokens: 1000,
+        temperature: 0.7,
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`DeepSeek API error: ${response.status}`);
+    }
+
+    const data = await response.json();
+    return data.choices?.[0]?.message?.content || "";
+  }
+
   private static async tryOpenAI(prompt: string): Promise<string> {
     if (!OPENAI_KEY) throw new Error("No OpenAI key");
 
@@ -187,7 +214,7 @@ export class SimpleAIService {
     type: string = "default"
   ): Promise<AIResponse> {
     console.log(`🤖 AI Request (${type}):`, prompt.substring(0, 100) + "...");
-    console.log(`🔑 Available keys: Gemini1=${!!GEMINI_KEY_1}, Gemini2=${!!GEMINI_KEY_2}, Roxy=${!!ROXY_TOKEN}, OpenAI=${!!OPENAI_KEY}`);
+    console.log(`🔑 Available keys: Gemini1=${!!GEMINI_KEY_1}, Gemini2=${!!GEMINI_KEY_2}, DeepSeek=${!!DEEPSEEK_KEY}, Roxy=${!!ROXY_TOKEN}, OpenAI=${!!OPENAI_KEY}`);
 
     // Try Gemini Key 1
     if (GEMINI_KEY_1) {
@@ -219,6 +246,22 @@ export class SimpleAIService {
       }
     } else {
       console.log(`⚠️ No Gemini Key 2 configured`);
+    }
+
+    // Try DeepSeek AI
+    if (DEEPSEEK_KEY) {
+      try {
+        console.log(`🔑 Trying DeepSeek AI...`);
+        const content = await this.tryDeepSeek(prompt);
+        if (content.trim()) {
+          console.log(`✅ DeepSeek success!`);
+          return { content: content.trim(), provider: "deepseek" };
+        }
+      } catch (error) {
+        console.log(`❌ DeepSeek failed:`, error.message);
+      }
+    } else {
+      console.log(`⚠️ No DeepSeek key configured`);
     }
 
     // Try Roxy API with 10-second timeout
@@ -409,25 +452,33 @@ Use emojis. Be specific. Stay positive. Reference their numbers.`;
     name: string,
     prokeralaData: any
   ): Promise<string> {
-    const prompt = `CHARACTER ANALYSIS for ${name}
+    const prompt = `You are analyzing ${name}'s life character and soul essence. Write a deeply personal narrative that feels like you truly know them.
 
-PROFILE DATA:
-- Strengths: ${prokeralaData?.strengths?.join(", ") || "Leadership, Intuition"}
-- Challenges: ${prokeralaData?.challenges?.join(", ") || "Impatience, Perfectionism"}  
-- Life Description: ${prokeralaData?.life_path_description || "Natural leader"}
-- Career Guidance: ${prokeralaData?.career_guidance || "Leadership roles"}
+THEIR CORE TRAITS:
+- Natural Gifts: ${prokeralaData?.strengths?.join(", ") || "Leadership, Intuition, Vision"}
+- Growth Areas: ${prokeralaData?.challenges?.join(", ") || "Impatience, Perfectionism"}
+- Life Theme: ${prokeralaData?.life_path_description || "Natural-born leader destined to inspire"}
+- Career Path: ${prokeralaData?.career_guidance || "Leadership and creative roles"}
+- Love Style: ${prokeralaData?.relationship_guidance || "Passionate, loyal, needs independence"}
 
-Write 4 engaging paragraphs (45-55 words each):
+Write a flowing narrative in 4 rich paragraphs (60-75 words each):
 
-1. **Core Essence**: Describe their natural personality, inner drive, and what makes them magnetic to others. Focus on how they show up in the world.
+**Paragraph 1 - WHO THEY ARE**: Paint a vivid picture of their personality. How do they walk into a room? What energy do they radiate? What do people feel when they meet ${name}? Focus on their magnetic qualities, their vibe, how they make others feel. Describe their spirit, not their numbers.
 
-2. **Hidden Shadows**: Balance the positive with gentle insights about their challenging traits - what they struggle with, blind spots, or patterns that hold them back. Be kind but honest.
+**Paragraph 2 - THEIR INNER WORLD**: Dive into what drives them emotionally. What keeps them up at night? What makes their heart race? What are they secretly afraid of? What shadows do they wrestle with? Be compassionate but truthful about their struggles and the lessons they're learning.
 
-3. **Love & Relationships**: How they love, what they need from partners, their relationship patterns (both positive and areas for growth).
+**Paragraph 3 - HOW THEY LOVE**: Describe their love language and relationship dynamics. How do they fall in love? What do they crave from a partner? Where do they shine in intimacy? What patterns sabotage their connections? What does ${name} need to learn about vulnerability and trust?
 
-4. **Life Mission**: Their deeper purpose, what they're here to learn/teach, and how they can fulfill their potential.
+**Paragraph 4 - THEIR DESTINY**: What is ${name} here to do? Not in abstract terms, but in real life. What impact will they have? What legacy are they building? How will they transform themselves and others? What's their unique gift to the world?
 
-Use "you" voice. Be specific to ${name}. Don't mention numbers. Focus on character impact and real-life implications.`;
+STYLE GUIDELINES:
+- Use "you" and "${name}" interchangeably for intimacy
+- Write like a wise friend who truly sees them
+- Be poetic but grounded in real life
+- NO numerology jargon or number references
+- Focus on lived experience, emotions, relationships, purpose
+- Balance encouragement with honest insight
+- Make it feel personal, not generic`;
 
     try {
       const result = await this.generateResponse(prompt, "numerology");

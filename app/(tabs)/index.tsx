@@ -422,7 +422,7 @@ Use "you" language. Be specific. Stay positive. Include emojis.`;
       />
       <Animated.ScrollView
         style={styles.scrollView}
-        showsVerticalScrollIndicator={false}
+        showsVerticalScrollIndicator={true}
         onScroll={Animated.event(
           [{ nativeEvent: { contentOffset: { y: scrollY } } }],
           { useNativeDriver: true }

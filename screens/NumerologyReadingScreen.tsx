@@ -13,8 +13,10 @@ import {
   Dimensions,
   Share,
   Alert,
+  Image,
 } from "react-native";
 import SimpleAIService from "../services/SimpleAIService";
+import { getArchetypeIcon } from "../utils/archetypeIcons";
 
 const { width } = Dimensions.get('window');
 
@@ -25,6 +27,7 @@ interface NumerologyReadingScreenProps {
   characterAnalysis: string;
   onBack: () => void;
   onShowAIChat?: () => void;
+  onShowNumberDetail?: (numberType: "LifePathNumber" | "DestinyNumber" | "SoulUrgeNumber", number: number | string) => void;
   birthDate?: string;
   name?: string;
   userId?: string;
@@ -37,6 +40,7 @@ export default function NumerologyReadingScreen({
   characterAnalysis,
   onBack,
   onShowAIChat,
+  onShowNumberDetail,
   birthDate,
   name,
   userId,
@@ -145,47 +149,81 @@ export default function NumerologyReadingScreen({
         {/* Bento Grid Layout */}
         <View style={styles.bentoGrid}>
           {/* Life Path Card - Large */}
-          <View style={[styles.bentoCard, styles.bentoCardLarge, styles.lifePathCard]}>
+          <TouchableOpacity
+            style={[styles.bentoCard, styles.bentoCardLarge, styles.lifePathCard]}
+            onPress={() => onShowNumberDetail?.("LifePathNumber", profile.lifePathNumber)}
+            activeOpacity={0.8}
+          >
             <View style={styles.bentoCardHeader}>
               <Text style={styles.bentoNumber}>{profile.lifePathNumber}</Text>
-              <View style={styles.bentoIcon}>
-                <Text style={styles.bentoIconText}>🌟</Text>
+              <View style={styles.bentoIconImageContainer}>
+                <Image
+                  source={getArchetypeIcon(profile.lifePathNumber)}
+                  style={styles.bentoIconImage}
+                  resizeMode="contain"
+                />
               </View>
             </View>
             <Text style={styles.bentoTitle}>Life Path</Text>
             <Text style={styles.bentoDescription}>
               Your life's purpose and the path you're meant to walk
             </Text>
-          </View>
+            <View style={styles.tapHint}>
+              <Ionicons name="information-circle" size={16} color="rgba(255,255,255,0.7)" />
+              <Text style={styles.tapHintText}>Tap to explore</Text>
+            </View>
+          </TouchableOpacity>
 
           <View style={styles.bentoRow}>
             {/* Destiny Card - Medium */}
-            <View style={[styles.bentoCard, styles.bentoCardMedium, styles.destinyCard]}>
+            <TouchableOpacity
+              style={[styles.bentoCard, styles.bentoCardMedium, styles.destinyCard]}
+              onPress={() => onShowNumberDetail?.("DestinyNumber", profile.destinyNumber)}
+              activeOpacity={0.8}
+            >
               <View style={styles.bentoCardHeader}>
                 <Text style={styles.bentoNumber}>{profile.destinyNumber}</Text>
-                <View style={styles.bentoIcon}>
-                  <Text style={styles.bentoIconText}>🎯</Text>
+                <View style={styles.bentoIconImageContainerSmall}>
+                  <Image
+                    source={getArchetypeIcon(profile.destinyNumber)}
+                    style={styles.bentoIconImageSmall}
+                    resizeMode="contain"
+                  />
                 </View>
               </View>
               <Text style={styles.bentoTitle}>Destiny</Text>
               <Text style={styles.bentoDescriptionSmall}>
                 What you're destined to achieve
               </Text>
-            </View>
+              <View style={styles.tapHintSmall}>
+                <Ionicons name="arrow-forward-circle" size={14} color="rgba(255,255,255,0.7)" />
+              </View>
+            </TouchableOpacity>
 
             {/* Soul Urge Card - Medium */}
-            <View style={[styles.bentoCard, styles.bentoCardMedium, styles.soulUrgeCard]}>
+            <TouchableOpacity
+              style={[styles.bentoCard, styles.bentoCardMedium, styles.soulUrgeCard]}
+              onPress={() => onShowNumberDetail?.("SoulUrgeNumber", profile.soulUrgeNumber)}
+              activeOpacity={0.8}
+            >
               <View style={styles.bentoCardHeader}>
                 <Text style={styles.bentoNumber}>{profile.soulUrgeNumber}</Text>
-                <View style={styles.bentoIcon}>
-                  <Text style={styles.bentoIconText}>💫</Text>
+                <View style={styles.bentoIconImageContainerSmall}>
+                  <Image
+                    source={getArchetypeIcon(profile.soulUrgeNumber)}
+                    style={styles.bentoIconImageSmall}
+                    resizeMode="contain"
+                  />
                 </View>
               </View>
               <Text style={styles.bentoTitle}>Soul Urge</Text>
               <Text style={styles.bentoDescriptionSmall}>
                 Your heart's deepest desires
               </Text>
-            </View>
+              <View style={styles.tapHintSmall}>
+                <Ionicons name="arrow-forward-circle" size={14} color="rgba(255,255,255,0.7)" />
+              </View>
+            </TouchableOpacity>
           </View>
 
           {/* Expression Number Card - If exists */}
@@ -468,6 +506,44 @@ const styles = StyleSheet.create({
   },
   bentoIconText: {
     fontSize: 24,
+  },
+  bentoIconImageContainer: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: "rgba(255, 255, 255, 0.95)",
+    justifyContent: "center",
+    alignItems: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 3,
+    overflow: "hidden",
+  },
+  bentoIconImage: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+  },
+  bentoIconImageContainerSmall: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: "rgba(255, 255, 255, 0.95)",
+    justifyContent: "center",
+    alignItems: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 3,
+    overflow: "hidden",
+  },
+  bentoIconImageSmall: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
   },
   bentoTitle: {
     fontSize: 22,
@@ -760,5 +836,21 @@ const styles = StyleSheet.create({
     color: "#FFFFFF",
     marginBottom: 12,
     letterSpacing: -0.3,
+  },
+  tapHint: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    marginTop: 12,
+  },
+  tapHintText: {
+    fontSize: 13,
+    fontWeight: "500",
+    color: "rgba(255, 255, 255, 0.7)",
+  },
+  tapHintSmall: {
+    position: "absolute",
+    bottom: 12,
+    right: 12,
   },
 });

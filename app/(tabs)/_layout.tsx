@@ -15,6 +15,7 @@ import { useDeepLinking } from "../../hooks/useDeepLinking";
 import { useUserSync } from "../../lib/user-sync";
 import { OnboardingService } from "../../services/OnboardingService";
 import { SubscriptionService } from "../../services/SubscriptionService";
+import "react-native-reanimated"; // 👈 This must be at the top
 
 // Wrapper component that uses the profile context
 function TabsWithOnboarding() {

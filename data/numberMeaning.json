@@ -1,0 +1,281 @@
+{
+  "LifePathNumber": {
+    "meaning": "The Life Path Number is derived from your full birth date and represents the journey you are destined to take in this lifetime. It reflects your innate traits, challenges, and the core lessons you are here to learn. Often compared to a numerological 'zodiac sign,' it is considered the most significant number in your chart, shaping your character, life direction, and overall purpose.",
+    "impacts": {
+      "1": {
+        "description": "As a Life Path 1, you are a natural-born leader, independent, ambitious, and driven by a strong sense of individuality. You thrive on initiating new projects and paving your own path. Your life journey involves learning self-reliance, asserting your identity, and mastering the balance between leadership and collaboration. You are here to inspire through innovation and courage.",
+        "archetype": "The Leader",
+        "alternateArchetype": "The Pioneer",
+        "keywords": ["Independence", "Leadership", "Innovation", "Courage", "Ambition", "Originality"],
+        "lifeLesson": "Learning to balance fierce independence with collaboration and accepting support from others",
+        "soulPurpose": "To forge new paths, inspire others through bold action, and teach the world about self-reliance",
+        "shadow": "Can become domineering, impatient, or isolated when refusing help or failing to acknowledge others' contributions",
+        "affirmation": "I am a powerful leader who creates my own destiny while honoring the strength in unity"
+      },
+      "2": {
+        "description": "Life Path 2 individuals are diplomatic, sensitive, and deeply attuned to relationships and harmony. Your path revolves around cooperation, emotional intelligence, and serving as a peacemaker. You learn to balance your own needs with those of others, developing patience and empathy. Careers in counseling, partnerships, or teamwork align well with your journey.",
+        "archetype": "The Peacemaker",
+        "alternateArchetype": "The Diplomat",
+        "keywords": ["Harmony", "Cooperation", "Sensitivity", "Balance", "Partnership", "Intuition"],
+        "lifeLesson": "Honoring your own needs while nurturing others, and learning that peace starts within",
+        "soulPurpose": "To bring harmony to the world through compassion, mediation, and deep emotional understanding",
+        "shadow": "May become codependent, overly accommodating, or lose themselves in pleasing others",
+        "affirmation": "I honor my sensitivity as strength and create harmony without sacrificing myself"
+      },
+      "3": {
+        "description": "With a Life Path 3, you are creative, expressive, and full of joy. Your journey is about mastering self-expression through art, communication, or performance. You are here to uplift others with your optimism and imagination. Life lessons include overcoming self-doubt and learning to focus your abundant energy constructively.",
+        "archetype": "The Creator",
+        "alternateArchetype": "The Artist",
+        "keywords": ["Creativity", "Expression", "Joy", "Communication", "Optimism", "Imagination"],
+        "lifeLesson": "Channeling creative energy into focused work while maintaining childlike wonder and spontaneity",
+        "soulPurpose": "To inspire joy, beauty, and authentic self-expression in yourself and others",
+        "shadow": "Can scatter energy, avoid depth through superficiality, or use charm to mask insecurity",
+        "affirmation": "My creativity flows freely and I express my authentic truth with joyful confidence"
+      },
+      "4": {
+        "description": "Life Path 4 is grounded in practicality, discipline, and hard work. Your path involves building stability, structure, and long-term success through persistence and attention to detail. You are the foundation-builder, learning to balance routine with flexibility and to trust in the value of consistent effort over time.",
+        "archetype": "The Builder",
+        "alternateArchetype": "The Architect",
+        "keywords": ["Stability", "Structure", "Discipline", "Reliability", "Foundation", "Perseverance"],
+        "lifeLesson": "Building solid foundations while remaining flexible to change and trusting in divine timing",
+        "soulPurpose": "To create lasting structures, systems, and security that benefit future generations",
+        "shadow": "Can become rigid, controlling, or overly cautious, resisting necessary change",
+        "affirmation": "I build with patience and purpose, creating stability while embracing life's natural flow"
+      },
+      "5": {
+        "description": "Life Path 5 is marked by adventure, freedom, and adaptability. Your journey is one of constant change, exploration, and personal growth. You crave variety and new experiences, learning to embrace transformation without losing your sense of self. Your challenge is to find freedom without recklessness and to channel your dynamic energy purposefully.",
+        "archetype": "The Explorer",
+        "alternateArchetype": "The Adventurer",
+        "keywords": ["Freedom", "Adventure", "Change", "Versatility", "Curiosity", "Experience"],
+        "lifeLesson": "Finding freedom through discipline and learning that true liberation comes from within",
+        "soulPurpose": "To teach others to embrace change, live authentically, and find joy in life's journey",
+        "shadow": "May become restless, irresponsible, or addicted to stimulation and new experiences",
+        "affirmation": "I embrace change with courage and find freedom in commitment to my highest path"
+      },
+      "6": {
+        "description": "As a Life Path 6, you are nurturing, responsible, and deeply committed to family and community. Your path centers on love, service, and healing. You are drawn to roles in caregiving, teaching, or healing arts. Life lessons involve balancing self-care with service and learning to set healthy boundaries while maintaining compassion.",
+        "archetype": "The Nurturer",
+        "alternateArchetype": "The Caretaker",
+        "keywords": ["Love", "Service", "Healing", "Responsibility", "Compassion", "Family"],
+        "lifeLesson": "Learning to fill your own cup first so you can genuinely serve others from overflow",
+        "soulPurpose": "To heal, nurture, and create loving spaces where others feel safe to grow",
+        "shadow": "Can become martyred, controlling through care, or neglect self-care while serving others",
+        "affirmation": "I nurture myself and others with equal love, knowing my wellbeing serves the whole"
+      },
+      "7": {
+        "description": "Life Path 7 individuals are introspective, analytical, and spiritually inclined. Your journey is one of seeking truth, knowledge, and deeper understanding. You are drawn to philosophy, science, or spirituality. Life lessons include overcoming isolation, trusting your intuition, and sharing your wisdom without becoming overly detached.",
+        "archetype": "The Mystic",
+        "alternateArchetype": "The Seeker",
+        "keywords": ["Wisdom", "Spirituality", "Analysis", "Truth", "Introspection", "Mysticism"],
+        "lifeLesson": "Balancing solitude with connection and integrating spiritual wisdom into everyday life",
+        "soulPurpose": "To seek truth, uncover hidden knowledge, and guide others toward spiritual awakening",
+        "shadow": "May become isolated, overly skeptical, or use intellect to avoid emotional vulnerability",
+        "affirmation": "I trust my inner wisdom and share my spiritual gifts while staying connected to humanity"
+      },
+      "8": {
+        "description": "Life Path 8 is associated with power, ambition, and material success. Your journey involves mastering the balance between financial abundance and spiritual integrity. You are here to achieve greatness in the material world while learning to use your influence responsibly. Challenges include overcoming greed and understanding that true power comes from service.",
+        "archetype": "The Mogul",
+        "alternateArchetype": "The Powerhouse",
+        "keywords": ["Power", "Abundance", "Success", "Authority", "Achievement", "Manifestation"],
+        "lifeLesson": "Learning that true power comes from integrity and that wealth is meant to be circulated",
+        "soulPurpose": "To master material success while using resources and influence to uplift others",
+        "shadow": "Can become materialistic, power-hungry, or use success to mask inner emptiness",
+        "affirmation": "I wield power with integrity and create abundance that serves the highest good"
+      },
+      "9": {
+        "description": "Life Path 9 is the humanitarian path, marked by compassion, idealism, and a desire to serve humanity. Your journey is about completing cycles and preparing for new beginnings on a global scale. You are drawn to causes, healing, and creative expression with a purpose. Life lessons include letting go of the past, embracing forgiveness, and understanding the value of selfless service.",
+        "archetype": "The Humanitarian",
+        "alternateArchetype": "The Sage",
+        "keywords": ["Compassion", "Wisdom", "Service", "Completion", "Universality", "Idealism"],
+        "lifeLesson": "Releasing the past with forgiveness and understanding that endings create space for new beginnings",
+        "soulPurpose": "To serve humanity, heal collective wounds, and leave a legacy of love and wisdom",
+        "shadow": "May become bitter from disappointment, sacrifice self to the point of martyrdom, or struggle to let go",
+        "affirmation": "I release the past with love and serve the world from a place of wholeness and wisdom"
+      },
+      "11": {
+        "description": "As a Life Path 11, you are a master number with heightened intuition, sensitivity, and spiritual insight. Your journey is one of inspiration and enlightenment. You are here to be a visionary or healer, but must first master your own fears and insecurities. Your path demands balance between idealism and practicality, and learning to channel your intense energy without becoming overwhelmed.",
+        "archetype": "The Visionary",
+        "alternateArchetype": "The Lightworker",
+        "keywords": ["Intuition", "Inspiration", "Illumination", "Spirituality", "Vision", "Sensitivity"],
+        "lifeLesson": "Grounding high spiritual vision into practical reality while managing heightened sensitivity",
+        "soulPurpose": "To illuminate the path for others through intuitive wisdom and spiritual inspiration",
+        "shadow": "Can become anxious, overwhelmed by sensitivity, or stuck in spiritual idealism without action",
+        "affirmation": "I channel divine inspiration with grounded clarity and trust my intuitive gifts"
+      },
+      "22": {
+        "description": "Life Path 22, the 'Master Builder,' combines vision with practicality. Your journey is to turn grand dreams into tangible reality on a large scale—whether in business, architecture, or social reform. You have the potential to leave a lasting legacy. Challenges include overcoming self-doubt and learning to manage immense responsibility without burnout.",
+        "archetype": "The Master Builder",
+        "alternateArchetype": "The Dream Weaver",
+        "keywords": ["Manifestation", "Vision", "Legacy", "Mastery", "Transformation", "Leadership"],
+        "lifeLesson": "Manifesting grand visions into reality while maintaining balance and avoiding burnout",
+        "soulPurpose": "To build lasting structures and systems that transform society and serve future generations",
+        "shadow": "May become overwhelmed by the scope of their vision or sacrifice wellbeing for achievement",
+        "affirmation": "I manifest my grandest visions into reality and build a legacy that serves all"
+      },
+      "33": {
+        "description": "Life Path 33 is the 'Master Teacher,' the highest expression of compassion and service. Your journey is deeply spiritual, focused on nurturing, healing, and uplifting humanity. You are called to lead through love and example. This path requires immense selflessness and the ability to maintain personal strength while giving endlessly to others.",
+        "archetype": "The Master Teacher",
+        "alternateArchetype": "The Healer",
+        "keywords": ["Compassion", "Teaching", "Healing", "Unconditional Love", "Service", "Spiritual Mastery"],
+        "lifeLesson": "Embodying unconditional love while maintaining healthy boundaries and self-care",
+        "soulPurpose": "To teach through example, heal through compassion, and awaken others to divine love",
+        "shadow": "Can become depleted from over-giving or feel burdened by the weight of serving humanity",
+        "affirmation": "I embody divine love and teach through my example while honoring my sacred vessel"
+      }
+    }
+  },
+  "DestinyNumber": {
+    "meaning": "Also known as the Expression Number, the Destiny Number is calculated from the numerical values of all the letters in your full birth name. It reveals your innate talents, potential, and the purpose you are meant to fulfill in life. It represents the 'outer self'—how you express your abilities and what you are capable of becoming when aligned with your true path.",
+    "impacts": {
+      "1": {
+        "description": "Your Destiny is to lead, innovate, and initiate. You possess original ideas and a strong will, destined to stand out and make a unique impact. You are here to pioneer new paths and inspire others through your independence and determination.",
+        "archetype": "The Leader",
+        "talents": ["Leadership", "Innovation", "Courage", "Initiative"],
+        "expression": "You express yourself through bold action, original thinking, and fearless independence"
+      },
+      "2": {
+        "description": "Your Destiny involves diplomacy, cooperation, and emotional support. You excel in partnerships and roles requiring sensitivity and tact. You are here to bring harmony, mediate conflicts, and foster deep connections through empathy and understanding.",
+        "archetype": "The Peacemaker",
+        "talents": ["Diplomacy", "Mediation", "Empathy", "Partnership"],
+        "expression": "You express yourself through gentle strength, harmonious relationships, and intuitive understanding"
+      },
+      "3": {
+        "description": "You are destined for creative expression, joy, and communication. Your talents lie in the arts, writing, speaking, or performance. You are here to uplift others with your charisma and imagination, spreading optimism and inspiration.",
+        "archetype": "The Creator",
+        "talents": ["Creativity", "Communication", "Performance", "Inspiration"],
+        "expression": "You express yourself through art, words, joy, and contagious enthusiasm for life"
+      },
+      "4": {
+        "description": "Your Destiny is built on reliability, structure, and hard work. You are here to create order, manage systems, and provide stability. Excellence in detail-oriented, organized environments is your strength, and you succeed through consistency and integrity.",
+        "archetype": "The Builder",
+        "talents": ["Organization", "Reliability", "Discipline", "Systems-thinking"],
+        "expression": "You express yourself through practical action, solid foundations, and dependable service"
+      },
+      "5": {
+        "description": "Your Destiny is one of freedom, versatility, and change. You are meant to explore, adapt, and inspire through dynamic experiences. Careers in travel, sales, or media suit you. You are here to embrace transformation and teach others the value of flexibility.",
+        "archetype": "The Explorer",
+        "talents": ["Adaptability", "Communication", "Versatility", "Adventure"],
+        "expression": "You express yourself through variety, change, fearless exploration, and inspiring freedom"
+      },
+      "6": {
+        "description": "You are destined to nurture, heal, and protect. Your purpose lies in service—whether through family, teaching, healthcare, or community work. You are here to create love, balance, and responsibility, guiding others toward emotional well-being.",
+        "archetype": "The Nurturer",
+        "talents": ["Healing", "Teaching", "Counseling", "Caregiving"],
+        "expression": "You express yourself through compassionate service, creating beauty, and nurturing growth"
+      },
+      "7": {
+        "description": "Your Destiny is to seek truth, wisdom, and spiritual insight. You are a natural analyst, researcher, or spiritual guide. You are here to uncover hidden knowledge, question the status quo, and share profound understanding with the world.",
+        "archetype": "The Mystic",
+        "talents": ["Analysis", "Research", "Spirituality", "Wisdom"],
+        "expression": "You express yourself through deep thinking, spiritual seeking, and sharing mystical wisdom"
+      },
+      "8": {
+        "description": "You are destined for power, success, and material achievement. Your path involves leadership in business, finance, or executive roles. You are here to master the material world, use your influence wisely, and demonstrate that abundance and integrity can coexist.",
+        "archetype": "The Mogul",
+        "talents": ["Business", "Finance", "Leadership", "Manifestation"],
+        "expression": "You express yourself through powerful achievement, material mastery, and influential leadership"
+      },
+      "9": {
+        "description": "Your Destiny is to serve humanity and leave a lasting legacy. You are idealistic, compassionate, and globally aware. You are here to heal, inspire, and advocate for justice. Your creative and humanitarian efforts aim to make the world a better place.",
+        "archetype": "The Humanitarian",
+        "talents": ["Compassion", "Artistry", "Teaching", "Global thinking"],
+        "expression": "You express yourself through selfless service, creative healing, and universal compassion"
+      },
+      "11": {
+        "description": "As a Destiny 11, you are a spiritual visionary or healer. You are here to inspire through intuition, enlightenment, and higher awareness. Your challenge is to live up to your high ideals and share your gifts without succumbing to anxiety or self-doubt.",
+        "archetype": "The Visionary",
+        "talents": ["Intuition", "Inspiration", "Healing", "Spiritual leadership"],
+        "expression": "You express yourself through inspired vision, spiritual gifts, and illuminating truth"
+      },
+      "22": {
+        "description": "You are the 'Master Builder'—destined to manifest large-scale visions into reality. Your purpose is to create structures, organizations, or movements that benefit society. You combine practical skill with grand vision, making lasting, tangible change.",
+        "archetype": "The Master Builder",
+        "talents": ["Manifestation", "Organization", "Vision", "Legacy-building"],
+        "expression": "You express yourself through turning dreams into reality and creating lasting transformation"
+      },
+      "33": {
+        "description": "You are the 'Master Teacher,' here to uplift humanity through unconditional love and service. Your destiny involves healing, mentoring, and leading by example. You are called to inspire compassion and spiritual growth on a global scale.",
+        "archetype": "The Master Teacher",
+        "talents": ["Teaching", "Healing", "Compassion", "Spiritual mastery"],
+        "expression": "You express yourself through embodied wisdom, compassionate teaching, and divine love"
+      }
+    }
+  },
+  "SoulUrgeNumber": {
+    "meaning": "Also called the Heart's Desire Number, the Soul Urge Number is calculated from the vowels in your full birth name. It reveals your innermost desires, emotional needs, and the unconscious motivations that drive your decisions. This number represents your 'inner self'—what truly fulfills you on a soul level.",
+    "impacts": {
+      "1": {
+        "description": "Your soul deeply desires independence, recognition, and the freedom to lead. You crave being seen as unique and self-reliant. Your inner fulfillment comes from initiating projects, asserting your identity, and achieving personal goals on your own terms.",
+        "archetype": "The Leader",
+        "desire": "To be independent, recognized, and free to forge your own path",
+        "fulfillment": "Achieved through self-reliant success, leadership opportunities, and being first"
+      },
+      "2": {
+        "description": "Your soul yearns for love, harmony, and deep emotional connection. You are driven by the need to belong, to be appreciated, and to maintain peace in relationships. Your deepest joy comes from partnership, empathy, and being a supportive presence.",
+        "archetype": "The Peacemaker",
+        "desire": "To love and be loved, to create harmony, and to belong deeply",
+        "fulfillment": "Achieved through meaningful partnerships, peaceful environments, and emotional intimacy"
+      },
+      "3": {
+        "description": "Your soul seeks creative expression, joy, and being heard. You are motivated by the desire to share your talents, laugh freely, and inspire others. Inner fulfillment comes from artistic outlets, social connection, and living authentically with optimism.",
+        "archetype": "The Creator",
+        "desire": "To express yourself creatively and bring joy to the world",
+        "fulfillment": "Achieved through creative projects, self-expression, and sharing your unique gifts"
+      },
+      "4": {
+        "description": "Your soul desires stability, security, and a solid foundation. You are driven by the need for order, reliability, and practical achievement. Peace comes from knowing your life is structured, dependable, and built to last.",
+        "archetype": "The Builder",
+        "desire": "To create security, order, and lasting foundations",
+        "fulfillment": "Achieved through building something meaningful, creating stability, and practical success"
+      },
+      "5": {
+        "description": "Your soul craves freedom, adventure, and new experiences. You are motivated by the desire to explore, change, and live without restrictions. Inner fulfillment comes from variety, movement, and the ability to adapt and grow through life's twists.",
+        "archetype": "The Explorer",
+        "desire": "To be free, to explore, and to experience life's infinite variety",
+        "fulfillment": "Achieved through travel, adventure, change, and unrestricted self-expression"
+      },
+      "6": {
+        "description": "Your soul longs to nurture, care for others, and create a loving home. You are driven by responsibility, compassion, and emotional support. Your deepest fulfillment comes from healing, protecting, and being a source of comfort for family and community.",
+        "archetype": "The Nurturer",
+        "desire": "To love, nurture, and create harmony in your inner circle",
+        "fulfillment": "Achieved through serving others, creating beauty, and building loving relationships"
+      },
+      "7": {
+        "description": "Your soul seeks knowledge, solitude, and spiritual truth. You are motivated by introspection, wisdom, and understanding life's deeper mysteries. Inner peace comes from study, meditation, and connecting with the unseen realms.",
+        "archetype": "The Mystic",
+        "desire": "To understand truth, connect with the divine, and find inner wisdom",
+        "fulfillment": "Achieved through spiritual practice, solitary reflection, and seeking deeper meaning"
+      },
+      "8": {
+        "description": "Your soul is driven by the desire for success, power, and material security. You seek recognition through achievement and financial independence. Fulfillment comes from mastering the material world and knowing you are capable and influential.",
+        "archetype": "The Mogul",
+        "desire": "To achieve success, wield power, and create material abundance",
+        "fulfillment": "Achieved through financial success, positions of authority, and tangible accomplishment"
+      },
+      "9": {
+        "description": "Your soul's deepest desire is to serve humanity, heal the world, and leave a meaningful legacy. You are motivated by compassion, idealism, and a sense of global responsibility. Inner fulfillment comes from altruism, creativity with purpose, and making a difference.",
+        "archetype": "The Humanitarian",
+        "desire": "To serve humanity and leave the world better than you found it",
+        "fulfillment": "Achieved through compassionate service, creative contribution, and universal love"
+      },
+      "11": {
+        "description": "Your soul yearns to inspire, enlighten, and connect with higher consciousness. You are driven by intuition, spiritual insight, and the desire to guide others. Fulfillment comes from living authentically in your truth and sharing your vision without fear.",
+        "archetype": "The Visionary",
+        "desire": "To connect with the divine and inspire spiritual awakening in others",
+        "fulfillment": "Achieved through spiritual practice, intuitive service, and illuminating truth"
+      },
+      "22": {
+        "description": "Your soul desires to build something lasting and impactful on a grand scale. You are motivated by the vision of creating real, tangible change in the world. Inner fulfillment comes from turning dreams into reality and leaving a legacy of transformation.",
+        "archetype": "The Master Builder",
+        "desire": "To manifest grand visions and create lasting change for humanity",
+        "fulfillment": "Achieved through large-scale projects, building legacy, and transforming systems"
+      },
+      "33": {
+        "description": "Your soul is called to unconditional love, healing, and spiritual service. You are driven by a deep need to uplift others, teach with compassion, and embody divine love. Fulfillment comes from selfless giving and being a light for humanity.",
+        "archetype": "The Master Teacher",
+        "desire": "To heal, teach, and embody unconditional love for all beings",
+        "fulfillment": "Achieved through compassionate service, spiritual teaching, and being love in action"
+      }
+    }
+  }
+}

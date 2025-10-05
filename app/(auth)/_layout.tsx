@@ -1,4 +1,5 @@
 import { Stack } from "expo-router";
+import "react-native-reanimated"; // 👈 This must be at the top
 
 export default function AuthLayout() {
   return (

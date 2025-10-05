@@ -22,6 +22,7 @@ import { DesignSystem } from "../../constants/DesignSystem";
 import { useProfile } from "../../contexts/ProfileContext";
 import { useSubscription } from "../../hooks/useSubscription";
 import NumerologyReadingScreen from "../../screens/NumerologyReadingScreen";
+import NumberDetailScreen from "../../screens/NumberDetailScreen";
 import NumerologyService from "../../services/NumerologyService";
 import { OnboardingService } from "../../services/OnboardingService";
 import { RoxyNumerologyService } from "../../services/ProkeralaNumerologyService";
@@ -46,6 +47,11 @@ export default function NumerologyScreen() {
   const [showUpgradePrompt, setShowUpgradePrompt] = useState(false);
   const [upgradePromptConfig, setUpgradePromptConfig] = useState<any>(null);
   const [userIsEditing, setUserIsEditing] = useState(false);
+
+  // Number detail screen state
+  const [showNumberDetail, setShowNumberDetail] = useState(false);
+  const [selectedNumberType, setSelectedNumberType] = useState<"LifePathNumber" | "DestinyNumber" | "SoulUrgeNumber">("LifePathNumber");
+  const [selectedNumber, setSelectedNumber] = useState<number | string>(1);
 
   // Animation values
   const fadeAnim = useState(new Animated.Value(0))[0];
@@ -425,6 +431,19 @@ export default function NumerologyScreen() {
     }
   };
 
+  const handleShowNumberDetail = (
+    numberType: "LifePathNumber" | "DestinyNumber" | "SoulUrgeNumber",
+    number: number | string
+  ) => {
+    setSelectedNumberType(numberType);
+    setSelectedNumber(number);
+    setShowNumberDetail(true);
+  };
+
+  const handleBackFromNumberDetail = () => {
+    setShowNumberDetail(false);
+  };
+
   const onRefresh = async () => {
     setRefreshing(true);
     await generateNumerology();
@@ -433,6 +452,16 @@ export default function NumerologyScreen() {
 
   if (loading) {
     return <NumerologyLoadingSkeleton />;
+  }
+
+  if (showNumberDetail) {
+    return (
+      <NumberDetailScreen
+        numberType={selectedNumberType}
+        number={selectedNumber}
+        onBack={handleBackFromNumberDetail}
+      />
+    );
   }
 
   if (profile && lifePathInfo) {
@@ -444,6 +473,7 @@ export default function NumerologyScreen() {
         characterAnalysis={characterAnalysis}
         onBack={resetReading}
         onShowAIChat={showAIChatScreen}
+        onShowNumberDetail={handleShowNumberDetail}
         birthDate={birthDate}
         name={fullName}
         userId={user?.id}

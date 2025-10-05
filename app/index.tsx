@@ -1,5 +1,6 @@
 import { useUser } from "@clerk/clerk-expo";
 import { Redirect } from "expo-router";
+import "react-native-reanimated"; // 👈 This must be at the top
 
 export default function Index() {
   const { isSignedIn, isLoaded, user } = useUser();
